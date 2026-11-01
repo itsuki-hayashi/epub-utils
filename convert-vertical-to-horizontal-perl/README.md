@@ -89,6 +89,47 @@ from the checkout without installing, use
 bootstrap sources are included, while local installations, caches, generated
 build files and result directories are excluded. `LICENSE` contains GPLv3.
 
+## XML::LibXML installation for MSVC-built Windows Perl
+
+Run the dedicated installer from a Visual Studio Developer PowerShell or command
+prompt with the compiler and Windows SDK matching your Perl architecture:
+
+```powershell
+perl tools/install-xml-libxml-msvc.pl --check
+perl tools/install-xml-libxml-msvc.pl
+```
+
+The default installs CPAN modules into the running interpreter's normal site
+directories. It builds and tests static libxml2 2.15.4, creates a native
+`xml2-config.bat` with an absolute `.lib` filename and `-DLIBXML_STATIC`, corrects
+PkgConfig's symlink capability test, installs Module::Pluggable 6.3, and
+reinstalls Alien::Libxml2 0.20 and XML::LibXML 2.0213 with their CPAN tests enabled.
+XML::LibXML's runtime source is unchanged. Installation needs HTTPS access to
+CPAN and permission to write to the selected Perl's site directories.
+
+The native library defaults to
+`%LOCALAPPDATA%/Perl-native/libxml2-2.15.4/<Perl-archname>/`, outside the checkout.
+Keep that directory in place for subsequent XS builds. Override it with
+`--native-prefix DIR`; use an ASCII path without quotes, percent signs,
+exclamation marks or line breaks because the path is embedded in a batch file.
+Each run uses fresh build sources and caches under `.cpanm/msvc-xml/run-*`,
+prints the log location, and stops immediately on any failed command or test.
+
+For an isolated module installation instead of site installation:
+
+```powershell
+perl tools/install-xml-libxml-msvc.pl --local-lib C:/PerlModules/xml
+$env:PERL5LIB = 'C:/PerlModules/xml/lib/perl5'
+```
+
+The script clears inherited local::lib and Perl installation overrides for its
+child processes, then verifies loading and XML parsing with the selected
+installation. It makes no permanent environment changes. It always reinstalls
+Alien to refresh saved native paths; rerun after changing the native prefix.
+Use the Perl interpreter you intend to install into, rather than a different
+`cpanm` executable found on PATH. This installer targets MSVC/nmake Perl;
+Strawberry/MinGW and Unix Perl should use their normal dependency workflows.
+
 ## Local installation
 
 To install dependencies and development tools locally:
@@ -266,7 +307,7 @@ perl tools/check-perl.pl --format
 perl -Ilocal/lib/perl5 -MTest::Harness -e "runtests(@ARGV)" -- t/01-text.t t/02-book-parity.t t/03-cli.t t/04-edge-cases.t
 ```
 
-All **14 owned Perl files** pass `.perltidyrc` and `.perlcriticrc`. All default
+All **15 owned Perl files** pass `.perltidyrc` and `.perlcriticrc`. All default
 severity-1-or-higher Perl::Critic policies remain enabled: no disabled policies
 or inline lint waivers. CPAN dependencies and the vendored `tools/cpanm` are
 not part of the owned-source formatting inventory.

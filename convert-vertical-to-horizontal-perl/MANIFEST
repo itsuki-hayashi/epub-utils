@@ -66,6 +66,7 @@ t/fixtures/README.md
 tools/check-perl.pl
 tools/cpanm
 tools/install-dependencies.pl
+tools/install-xml-libxml-msvc.pl
 vendor/libxml2-2.15.4.tar.xz
 vendor/Module-Pluggable-6.3.tar.gz
 vendor/PkgConfig-0.26026.tar.gz

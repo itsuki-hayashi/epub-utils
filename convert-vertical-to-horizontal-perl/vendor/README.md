@@ -1,7 +1,10 @@
 # Dependency source provenance
 
 CPAN modules are installed into `local/` according to `cpanfile`, using
-`tools/install-dependencies.pl`. These original source archives support the
+`tools/install-dependencies.pl`. The dedicated `tools/install-xml-libxml-msvc.pl`
+also uses these archives to provision XML::LibXML for MSVC-built Perl. It checks
+the archives and cpanminus bootstrap against the hashes below before use.
+These original source archives support the
 native Windows bootstrap; each retains its upstream license files. No archive
 has been modified. The installer verifies their SHA-256 before use.
 
