@@ -121,19 +121,26 @@ sub _inspect_spine ( $archive, $package, $manifest ) {
         my $document = parse_xml( $payload->{text} );
         $scan->{documents}{$path} = $payload;
 
-        for my $node ( $document->findnodes('//*[@class]') ) {
+        my $class_nodes = <<'XPATH';
+//*[@class]
+XPATH
+        for my $node ( $document->findnodes($class_nodes) ) {
             for my $class ( grep {length} split /\s+/xms,
                 ( $node->getAttribute('class') // q{} ) )
             {
                 $scan->{classes}{$class} = true;
             }
         }
-        for my $node ( $document->findnodes('//*[@id]') ) {
+        my $id_nodes = <<'XPATH';
+//*[@id]
+XPATH
+        for my $node ( $document->findnodes($id_nodes) ) {
             $scan->{ids}{ ( $node->getAttribute('id') // q{} ) } = true;
         }
-        for my $link (
-            $document->findnodes('//*[local-name()="link"][@href]') )
-        {
+        my $stylesheet_links = <<'XPATH';
+//*[local-name()="link"][@href]
+XPATH
+        for my $link ( $document->findnodes($stylesheet_links) ) {
             next
                 if ( $link->getAttribute('rel') // q{} )
                 !~ /(?:\A|\s) stylesheet (?:\s|\z)/ixms;

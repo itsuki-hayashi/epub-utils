@@ -16,8 +16,8 @@ if ( $OSNAME eq 'MSWin32' ) {
 }
 
 my %modules;
-for my $source ( glob('lib/Epub/Convert/*.pm'),
-    glob('lib/Epub/Convert/VerticalToHorizontal/*.pm') )
+for my $source ( ( glob 'lib/Epub/Convert/*.pm' ),
+    ( glob 'lib/Epub/Convert/VerticalToHorizontal/*.pm' ) )
 {
     my $target = $source;
     $target =~ s{\Alib/}{\$(INST_LIB)/}xms;

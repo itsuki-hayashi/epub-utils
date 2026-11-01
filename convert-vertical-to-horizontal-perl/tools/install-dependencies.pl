@@ -21,7 +21,7 @@ my $local   = File::Spec->catdir( $root, 'local' );
 my $cpanm   = File::Spec->catfile( $RealBin, 'cpanm' );
 my @install = (
     $EXECUTABLE_NAME, $cpanm, '--local-lib-contained', $local,
-    '--mirror',       'https://cpan.metacpan.org', '--mirror-only'
+    '--mirror',       'https://cpan.metacpan.org', '--mirror-only',
 );
 
 # These overrides apply only to the installer and its children. ANSI color
@@ -100,12 +100,16 @@ sub native_xml () {
 
     # Alien::Libxml2's Unix shell config cannot execute on native Windows.
     # Use absolute .lib paths because MSVC's linker does not accept -L flags.
+    my $batch_config = <<"BATCH";
+\@echo off
+if "%~1"=="--version" echo 2.15.4
+if "%~1"=="--cflags" echo -I"$prefix/include/libxml2" -DLIBXML_STATIC
+if "%~1"=="--libs" echo "$prefix/lib/libxml2s.lib" bcrypt.lib
+BATCH
+    $batch_config =~ s/\r?\n/\r\n/gxms;
     open my $handle, '>:raw', $config
         or croak "Cannot create native XML config: $OS_ERROR";
-    print {$handle} join "\r\n", '@echo off',
-        'if "%~1"=="--version" echo 2.15.4',
-        qq{if "%~1"=="--cflags" echo -I"$prefix/include/libxml2" -DLIBXML_STATIC},
-        qq{if "%~1"=="--libs" echo "$prefix/lib/libxml2s.lib" bcrypt.lib}, q{}
+    print {$handle} $batch_config
         or croak "Cannot write native XML config: $OS_ERROR";
     close $handle or croak "Cannot close native XML config: $OS_ERROR";
     return $bin;

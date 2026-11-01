@@ -58,11 +58,10 @@ is resolve_entry(
     'OPS/package.opf', 'text/%E6%97%A5%E6%9C%AC%E8%AA%9E.xhtml'
     ),
     'OPS/text/日本語.xhtml', 'percent-encoded Japanese resource';
-is_deeply [
-    css_imports(
-        q{ /* @import 'unused.css'; */ @import url(extra.css); @import "more.css"; p {content:"@import 'example.css'";}}
-    )
-    ],
+my $import_css = <<'CSS';
+ /* @import 'unused.css'; */ @import url(extra.css); @import "more.css"; p {content:"@import 'example.css'";}
+CSS
+is_deeply [ css_imports($import_css) ],
     [ 'extra.css', 'more.css' ], 'CSS import tokens';
 ok !css_uses_vertical( '.vrtl {writing-mode:vertical-rl}',
     { hltr => 1 }, {} ),

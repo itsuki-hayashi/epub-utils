@@ -267,7 +267,7 @@ perl -Ilocal/lib/perl5 -MTest::Harness -e "runtests(@ARGV)" -- t/01-text.t t/02-
 ```
 
 All **14 owned Perl files** pass `.perltidyrc` and `.perlcriticrc`. All default
-severity-2-or-higher Perl::Critic policies remain enabled: no disabled policies
+severity-1-or-higher Perl::Critic policies remain enabled: no disabled policies
 or inline lint waivers. CPAN dependencies and the vendored `tools/cpanm` are
 not part of the owned-source formatting inventory.
 

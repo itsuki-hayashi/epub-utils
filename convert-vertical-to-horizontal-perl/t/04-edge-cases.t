@@ -81,17 +81,17 @@ my @failures = (
     [   'UTF32 CSS',
         sub ($zip) {
             $zip->memberNamed('OPS/styles/main.css')
-                ->contents( pack( 'H*', 'fffe0000' ) );
+                ->contents( pack 'H*', 'fffe0000' );
             return;
         },
         qr/UTF-32/xms
     ],
     [   'external import',
         sub ($zip) {
-            $zip->memberNamed('OPS/styles/main.css')
-                ->contents(
-                q{@import "https://elsewhere.invalid/style.css"; body {writing-mode:vertical-rl}}
-                );
+            my $css = <<'CSS';
+@import "https://elsewhere.invalid/style.css"; body {writing-mode:vertical-rl}
+CSS
+            $zip->memberNamed('OPS/styles/main.css')->contents($css);
             return;
         },
         qr/Unsupported\s+external/xms

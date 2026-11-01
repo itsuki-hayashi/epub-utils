@@ -70,17 +70,23 @@ for my $file ( sort @files ) {
     }
     if ( $source ne $formatted ) {
         if ($format) { write_source( $file, $formatted ); }
-        else { say {*STDERR} "Perl::Tidy mismatch: $file"; $failures++; }
+        else {
+            say {*STDERR} "Perl::Tidy mismatch: $file"
+                or croak "Cannot print formatting diagnostic: $OS_ERROR";
+            $failures++;
+        }
     }
     my @violations = $critic->critique($file);
     for my $violation (@violations) {
-        say {*STDERR} "$file: $violation";
+        say {*STDERR} "$file: $violation"
+            or croak "Cannot print critic diagnostic: $OS_ERROR";
         $failures++;
     }
 }
 croak "$failures formatting/critic checks failed." if $failures;
 say scalar(@files)
-    . ' owned Perl files pass Perl::Tidy and Perl::Critic (severity 2).';
+    . ' owned Perl files pass Perl::Tidy and Perl::Critic (severity 1).'
+    or croak "Cannot print check summary: $OS_ERROR";
 
 __END__
 
@@ -97,7 +103,7 @@ check-perl.pl - Check or format owned Perl sources without checking dependencies
 
 Checks the application, modules, tests and installer. Vendored CPAN bootstrap
 code and local dependencies are excluded from this source-file inventory.
-Every default severity-2-or-higher Perl::Critic policy remains enabled.
+Every default severity-1-or-higher Perl::Critic policy remains enabled.
 
 =head1 USAGE
 
@@ -126,7 +132,7 @@ or if a source file cannot be processed.
 =head1 CONFIGURATION
 
 Reads .perltidyrc and .perlcriticrc from the distribution root. The profile
-selects the requested themes at severity 2. Workspace-local modules are found
+selects the requested themes at severity 1. Workspace-local modules are found
 under local/lib/perl5 relative to the root.
 
 =head1 DEPENDENCIES

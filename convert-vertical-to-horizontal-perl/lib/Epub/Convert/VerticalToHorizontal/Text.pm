@@ -23,7 +23,7 @@ our @EXPORT_OK = qw(
     parse_xml resolve_entry css_imports css_uses_vertical
 );
 
-my $css_comment = qr{ /\* .*? \*/ }xms;
+my $css_comment = qr{ /[*] .*? [*]/ }xms;
 my $css_string  = qr{ " (?: \\. | [^"\\] )* " | ' (?: \\. | [^'\\] )* ' }xms;
 my $css_skip    = qr{ $css_comment | $css_string }xms;
 my $css_gap     = qr{ (?> (?: \s+ | $css_comment )* ) }xms;
@@ -31,14 +31,14 @@ my $vertical_mode
     = qr{ vertical-rl | vertical-lr | sideways-rl | sideways-lr | tb-rl | tb-lr }ixms;
 my $vendor_prefix = qr{ -(?:webkit|epub|ms|moz)- }ixms;
 my $css_property  = qr{ (?<property> $vendor_prefix? writing-mode ) }ixms;
-my $css_start     = qr{ (?<![^;\{]) $css_gap $css_property }ixms;
+my $css_start     = qr/ (?<![^;{]) $css_gap $css_property /ixms;
 my $css_prefix    = qr{ (?<prefix> $css_start $css_gap : $css_gap ) }ixms;
 my $css_value_end
-    = qr{ (?= $css_gap (?: ! $css_gap important $css_gap )? (?: [;\}] | \z ) ) }ixms;
+    = qr/ (?= $css_gap (?: ! $css_gap important $css_gap )? (?: [;}] | \z ) ) /ixms;
 my $css_direction = qr{ (?<token>
     $css_prefix (?<value> $vertical_mode ) $css_value_end | $css_skip
 ) }ixms;
-my $xml_encoding = qr{ <\?xml [^>]*? encoding \s*=\s* }ixms;
+my $xml_encoding = qr{ <[?]xml [^>]*? encoding \s*=\s* }ixms;
 my $encoding_declaration
     = qr{ \A \s* (?: $xml_encoding | \@charset \s+ ) ["'] (?<encoding> [^"']+ ) }ixms;
 my $markup_comment = qr{ <!-- .*? --> }xms;
@@ -48,7 +48,7 @@ my $script_element
 my $style_start = qr{ < $element_prefix style \b [^>]* > }ixms;
 my $style_end   = qr{ </ $element_prefix style \s* > }ixms;
 my $markup_tag
-    = qr{ < [A-Za-z] [^>"']* (?: (?: "[^"]*" | '[^']*' ) [^>"']* )* > }xms;
+    = qr{ < [[:alpha:]] [^>"']* (?: (?: "[^"]*" | '[^']*' ) [^>"']* )* > }axms;
 my $attribute_value = qr{ (?<quote> ["'] ) (?<value> .*? ) \k<quote> }xms;
 my $attribute_name  = qr{ (?<name> style | writing-mode ) }ixms;
 my $style_attribute
@@ -62,7 +62,7 @@ my $markup_token
 my $quoted_import = qr{ ["'] (?<quoted> [^"']+ ) ["'] }xms;
 my $bare_import   = qr{ (?<bare> [^\s)"']+ ) }xms;
 my $import_url
-    = qr{ url\( \s* (?: $quoted_import | $bare_import ) \s* \) }ixms;
+    = qr{ url[(] \s* (?: $quoted_import | $bare_import ) \s* [)] }ixms;
 my $import_token = qr{
     $css_skip | \@import \s+ (?: $import_url | ["'] (?<direct> [^"']+ ) ["'] )
 }ixms;
@@ -235,7 +235,8 @@ sub css_imports ($text) {
 
 sub css_uses_vertical ( $text, $classes, $ids ) {
     $text =~ s{$css_comment}{}gxms;
-    while ( $text =~ / (?<selector> [^{}]+ ) \{ (?<body> [^{}]* ) \} /gxms ) {
+    while ( $text =~ / (?<selector> [^{}]+ ) [{] (?<body> [^{}]* ) [}] /gxms )
+    {
         my $selector_list = $LAST_PAREN_MATCH{selector};
         my $body          = $LAST_PAREN_MATCH{body};
         next if convert_css($body) eq $body;

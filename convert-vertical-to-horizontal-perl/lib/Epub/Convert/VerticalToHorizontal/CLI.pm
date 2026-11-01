@@ -86,7 +86,10 @@ sub _run_batch ( $options, $paths ) {
     my @results;
 
     for my $book ( epub_files( $paths->{input} )->@* ) {
-        if ( $options->{verbose} ) { say {*STDERR} "Inspecting $book"; }
+        if ( $options->{verbose} ) {
+            say {*STDERR} "Inspecting $book"
+                or croak "Cannot print progress: $OS_ERROR";
+        }
         my $destination
             = File::Spec->catfile( $paths->{output}, basename($book) );
         my $result = process_book( $book, $destination, $options );
@@ -115,7 +118,8 @@ sub run_cli ( $arguments, $script_directory ) {
     my $failures = grep { $_->{Status} eq 'Error' } @{$results};
     if ($failures) {
         say {*STDERR}
-            "$failures EPUB(s) failed; other books were processed independently.";
+            "$failures EPUB(s) failed; other books were processed independently."
+            or croak "Cannot print failure summary: $OS_ERROR";
     }
     return $failures ? 1 : 0;
 }
