@@ -1,12 +1,12 @@
-package Epub::Horizontal::Book;
+package Epub::Convert::VerticalToHorizontal::Book;
 
-use 5.044;
+use 5.040;
 
 use Carp     qw(croak);
 use Exporter qw(import);
 
-use Epub::Horizontal::Archive qw(member_bytes);
-use Epub::Horizontal::Text    qw(
+use Epub::Convert::VerticalToHorizontal::Archive qw(member_bytes);
+use Epub::Convert::VerticalToHorizontal::Text    qw(
     convert_css convert_markup convert_package decode_payload encode_payload
     parse_xml resolve_entry css_imports css_uses_vertical
 );
@@ -199,7 +199,7 @@ __END__
 
 =head1 NAME
 
-Epub::Horizontal::Book - Inspect EPUB layouts and plan minimal resource changes
+Epub::Convert::VerticalToHorizontal::Book - Inspect EPUB layouts and plan minimal resource changes
 
 =head1 DESCRIPTION
 

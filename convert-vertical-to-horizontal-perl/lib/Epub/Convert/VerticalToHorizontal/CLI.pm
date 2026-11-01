@@ -1,6 +1,6 @@
-package Epub::Horizontal::CLI;
+package Epub::Convert::VerticalToHorizontal::CLI;
 
-use 5.044;
+use 5.040;
 
 use Carp           qw(croak);
 use English        qw(-no_match_vars);
@@ -10,17 +10,17 @@ use File::Spec;
 use Getopt::Long qw(GetOptionsFromArray);
 use JSON::PP;
 
-use Epub::Horizontal        qw(process_book write_report);
-use Epub::Horizontal::Files qw(absolute_path epub_files file_exists);
+use Epub::Convert::VerticalToHorizontal        qw(process_book write_report);
+use Epub::Convert::VerticalToHorizontal::Files qw(absolute_path epub_files file_exists);
 
 our @EXPORT_OK = qw(run_cli);
 
 sub _usage () {
     return <<'USAGE';
-Usage: perl Convert-EpubToHorizontal.pl [options]
+Usage: epub-v2h [options]
 
-  --input-path PATH        EPUB file or directory (default: script directory)
-  --output-directory DIR   Output directory (default: SCRIPT/horizontal)
+  --input-path PATH        EPUB file or directory (default: working directory)
+  --output-directory DIR   Output directory (default: BASE/horizontal)
   --analyze-only           Inspect without creating output EPUBs
   --what-if                Preview without writing books or a report
   --report-path FILE       Write JSON verification report; never overwrite
@@ -114,7 +114,7 @@ __END__
 
 =head1 NAME
 
-Epub::Horizontal::CLI - Cross-platform command-line interface and JSON reports
+Epub::Convert::VerticalToHorizontal::CLI - Cross-platform command-line interface and JSON reports
 
 =head1 DESCRIPTION
 

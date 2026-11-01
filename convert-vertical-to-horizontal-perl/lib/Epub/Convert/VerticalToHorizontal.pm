@@ -1,6 +1,6 @@
-package Epub::Horizontal;
+package Epub::Convert::VerticalToHorizontal;
 
-use 5.044;
+use 5.040;
 
 use Carp           qw(croak);
 use English        qw(-no_match_vars);
@@ -9,12 +9,14 @@ use File::Basename qw(basename dirname);
 use File::Copy     qw(copy);
 use File::Spec;
 
-use Epub::Horizontal::Archive qw(open_archive close_archive repack_archive);
-use Epub::Horizontal::Book    qw(plan_book);
-use Epub::Horizontal::Files   qw(
+use Epub::Convert::VerticalToHorizontal::Archive qw(open_archive close_archive repack_archive);
+use Epub::Convert::VerticalToHorizontal::Book    qw(plan_book);
+use Epub::Convert::VerticalToHorizontal::Files   qw(
     ensure_directory file_exists file_size open_read open_exclusive
     publish_file remove_file sha256_file
 );
+
+our $VERSION = '0.001';
 
 our @EXPORT_OK = qw(process_book write_report);
 my $temporary_sequence = 0;
@@ -126,7 +128,7 @@ __END__
 
 =head1 NAME
 
-Epub::Horizontal - Inspect, convert, verify and safely publish one EPUB
+Epub::Convert::VerticalToHorizontal - Inspect, convert, verify and safely publish one EPUB
 
 =head1 DESCRIPTION
 

@@ -1,6 +1,6 @@
-package Epub::Horizontal::Archive;
+package Epub::Convert::VerticalToHorizontal::Archive;
 
-use 5.044;
+use 5.040;
 
 use Archive::Zip qw(AZ_OK COMPRESSION_LEVEL_BEST_COMPRESSION COMPRESSION_STORED);
 use Carp         qw(croak);
@@ -8,7 +8,7 @@ use English      qw(-no_match_vars);
 use Digest::SHA  qw(sha256_hex);
 use Exporter     qw(import);
 
-use Epub::Horizontal::Files qw(open_read);
+use Epub::Convert::VerticalToHorizontal::Files qw(open_read);
 
 our @EXPORT_OK = qw(open_archive close_archive member_bytes repack_archive);
 
@@ -138,7 +138,7 @@ __END__
 
 =head1 NAME
 
-Epub::Horizontal::Archive - Maximum-deflate ZIP writing and payload verification
+Epub::Convert::VerticalToHorizontal::Archive - Maximum-deflate ZIP writing and payload verification
 
 =head1 DESCRIPTION
 

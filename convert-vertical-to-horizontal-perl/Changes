@@ -1,0 +1,5 @@
+Revision history for Epub-Convert-VerticalToHorizontal
+
+0.001  2026-11-01
+    Package the converter with ExtUtils::MakeMaker and an installed CLI.
+    Support stable Perl 5.40 features on Windows and Linux.

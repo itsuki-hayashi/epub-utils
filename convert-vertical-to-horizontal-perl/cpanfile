@@ -1,6 +1,6 @@
-requires 'perl', '5.044000';
+requires 'perl', '5.040000';
 requires 'Archive::Zip', '1.68';
-requires 'XML::LibXML', '2.0210';
+requires 'XML::LibXML', '2.0207';
 requires 'URI', '5.0';
 
 if ( $^O eq 'MSWin32' ) {
@@ -9,8 +9,11 @@ if ( $^O eq 'MSWin32' ) {
 }
 
 on configure => sub {
-    # Native XML build support; the installer keeps its source and cache local.
-    requires 'PkgConfig', '0.26026';
+    requires 'ExtUtils::MakeMaker', '7.70';
+};
+
+on test => sub {
+    requires 'Test::More', '1.302199';
 };
 
 on develop => sub {

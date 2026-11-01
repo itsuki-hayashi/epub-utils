@@ -1,38 +1,49 @@
 #!/usr/bin/env perl
 
-use 5.044;
+use 5.040;
 
 use Carp qw(croak);
 
 use English qw(-no_match_vars);
 use File::Spec;
-use File::Temp qw(tempdir);
+use File::Temp qw(tempdir tempfile);
 use FindBin    qw($RealBin);
 use lib "$RealBin/../local/lib/perl5", "$RealBin/../lib";
 use IPC::Open3 qw(open3);
 use JSON::PP;
-use Symbol qw(gensym);
 use Test::More;
 
-use Epub::Horizontal::Files qw(ensure_directory file_exists open_read open_exclusive);
+use Epub::Convert::VerticalToHorizontal::Files
+    qw(ensure_directory file_exists open_read open_exclusive);
 
-my $script        = File::Spec->catfile( $RealBin, '..', 'Convert-EpubToHorizontal.pl' );
+my $build  = File::Spec->catdir( $RealBin, '..', 'blib' );
+my $script = File::Spec->catfile( $RealBin, '..', 'bin', 'epub-v2h' );
+$script = File::Spec->catfile( $build, 'script', 'epub-v2h' )
+    if -d $build;
 my $evidence_root = File::Spec->catdir( $RealBin, '..', 'test-results' );
 ensure_directory($evidence_root);
 my $root  = tempdir( 'perl-cli-XXXXXXXX', DIR => $evidence_root, CLEANUP => 0 );
 my $input = File::Spec->catdir( $RealBin, 'fixtures', 'input' );
 
 sub run_command (@arguments) {
-    my $error = gensym();
-    my $pid =
-        open3( my $input_handle, my $output_handle, $error, $EXECUTABLE_NAME, $script, @arguments );
+    my ( $error, $error_path ) = tempfile( DIR => $root, UNLINK => 1 );
+    my $pid = open3(
+        my $input_handle,      my $output_handle,
+        '>&' . fileno($error), $EXECUTABLE_NAME,
+        '-I',    File::Spec->catdir( $build,   'lib' ),
+        '-I',    File::Spec->catdir( $RealBin, '..', 'lib' ),
+        '-I',    File::Spec->catdir( $RealBin, '..', 'local', 'lib', 'perl5' ),
+        $script, @arguments
+    );
     close $input_handle or croak "Cannot close child input: $OS_ERROR";
-    my $output      = do { local $INPUT_RECORD_SEPARATOR = undef; <$output_handle> };
+    my $output = do { local $INPUT_RECORD_SEPARATOR = undef; <$output_handle> };
+    waitpid $pid, 0;
+    my $status = $CHILD_ERROR >> 8;
+    seek $error, 0, 0 or croak "Cannot rewind child diagnostics: $OS_ERROR";
     my $diagnostics = do { local $INPUT_RECORD_SEPARATOR = undef; <$error> };
     close $output_handle or croak "Cannot close child output: $OS_ERROR";
     close $error         or croak "Cannot close child error output: $OS_ERROR";
-    waitpid $pid, 0;
-    return { status => $CHILD_ERROR >> 8, output => $output, error => $diagnostics };
+    return { status => $status, output => $output, error => $diagnostics };
 }
 
 my $help = run_command('--help');

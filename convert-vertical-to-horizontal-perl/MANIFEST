@@ -1,0 +1,72 @@
+.gitignore
+.perlcriticrc
+.perltidyrc
+bin/epub-v2h
+Changes
+cpanfile
+lib/Epub/Convert/VerticalToHorizontal.pm
+lib/Epub/Convert/VerticalToHorizontal/Archive.pm
+lib/Epub/Convert/VerticalToHorizontal/Book.pm
+lib/Epub/Convert/VerticalToHorizontal/CLI.pm
+lib/Epub/Convert/VerticalToHorizontal/Files.pm
+lib/Epub/Convert/VerticalToHorizontal/Text.pm
+LICENSE
+Makefile.PL
+MANIFEST
+perl-dependency-versions.json
+README.md
+t/01-text.t
+t/02-book-parity.t
+t/03-cli.t
+t/04-edge-cases.t
+'t/fixtures/expected/embedded style and literal text.epub'
+'t/fixtures/expected/EPUB2 fixed layout comic.epub'
+'t/fixtures/expected/fixed layout comic.epub'
+'t/fixtures/expected/horizontal commented and quoted examples.epub'
+'t/fixtures/expected/horizontal CSS custom property example.epub'
+'t/fixtures/expected/horizontal English [literal].epub'
+'t/fixtures/expected/horizontal quoted HTML attribute example.epub'
+'t/fixtures/expected/horizontal RTL Arabic.epub'
+'t/fixtures/expected/horizontal unused vertical toolkit.epub'
+'t/fixtures/expected/image comic with text credits.epub'
+'t/fixtures/expected/image only comic.epub'
+'t/fixtures/expected/inline vertical.epub'
+'t/fixtures/expected/SVG image comic accessible title.epub'
+'t/fixtures/expected/SVG image comic.epub'
+'t/fixtures/expected/SVG live vertical text attribute.epub'
+'t/fixtures/expected/vertical CSS variants.epub'
+'t/fixtures/expected/vertical imported class toolkit.epub'
+'t/fixtures/expected/vertical many stylesheet comments.epub'
+'t/fixtures/expected/vertical primary metadata.epub'
+'t/fixtures/expected/vertical UTF16 CSS.epub'
+'t/fixtures/expected/vertical UTF8 BOM import.epub'
+'t/fixtures/input/embedded style and literal text.epub'
+'t/fixtures/input/EPUB2 fixed layout comic.epub'
+'t/fixtures/input/fixed layout comic.epub'
+'t/fixtures/input/horizontal commented and quoted examples.epub'
+'t/fixtures/input/horizontal CSS custom property example.epub'
+'t/fixtures/input/horizontal English [literal].epub'
+'t/fixtures/input/horizontal quoted HTML attribute example.epub'
+'t/fixtures/input/horizontal RTL Arabic.epub'
+'t/fixtures/input/horizontal unused vertical toolkit.epub'
+'t/fixtures/input/image comic with text credits.epub'
+'t/fixtures/input/image only comic.epub'
+'t/fixtures/input/inline vertical.epub'
+'t/fixtures/input/SVG image comic accessible title.epub'
+'t/fixtures/input/SVG image comic.epub'
+'t/fixtures/input/SVG live vertical text attribute.epub'
+'t/fixtures/input/vertical CSS variants.epub'
+'t/fixtures/input/vertical imported class toolkit.epub'
+'t/fixtures/input/vertical many stylesheet comments.epub'
+'t/fixtures/input/vertical primary metadata.epub'
+'t/fixtures/input/vertical UTF16 CSS.epub'
+'t/fixtures/input/vertical UTF8 BOM import.epub'
+t/fixtures/manifest.json
+t/fixtures/README.md
+tools/check-perl.pl
+tools/cpanm
+tools/install-dependencies.pl
+vendor/libxml2-2.15.4.tar.xz
+vendor/Module-Pluggable-6.3.tar.gz
+vendor/PkgConfig-0.26026.tar.gz
+vendor/README.md

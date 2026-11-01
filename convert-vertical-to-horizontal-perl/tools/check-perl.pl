@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use 5.044;
+use 5.040;
 
 use Carp       qw(croak);
 use Encode     qw(encode);
@@ -16,7 +16,7 @@ use Perl::Tidy;
 my $format = false;
 GetOptions( 'format' => \$format ) or croak 'Usage: perl tools/check-perl.pl [--format]';
 my $root  = File::Spec->rel2abs( File::Spec->catdir( $RealBin, '..' ) );
-my @files = ( File::Spec->catfile( $root, 'Convert-EpubToHorizontal.pl' ) );
+my @files = map { File::Spec->catfile( $root, $_ ) } qw(Makefile.PL bin/epub-v2h);
 find(
     {
         no_chdir => 1,

@@ -8,3 +8,12 @@
 *.tdy
 *.bak
 *.ERR
+
+/blib/
+/Makefile
+/Makefile.old
+/MYMETA.*
+/META.*
+/pm_to_blib
+/Epub-Convert-VerticalToHorizontal-*/
+/Epub-Convert-VerticalToHorizontal-*.tar.gz

@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use 5.044;
+use 5.040;
 use utf8;
 
 use Carp    qw(croak);
@@ -13,10 +13,10 @@ use lib "$RealBin/../local/lib/perl5", "$RealBin/../lib";
 use Archive::Zip qw(AZ_OK);
 use Test::More;
 
-use Epub::Horizontal          qw(process_book);
-use Epub::Horizontal::Archive qw(open_archive close_archive member_bytes);
-use Epub::Horizontal::Files   qw(ensure_directory file_exists open_exclusive);
-use Epub::Horizontal::Text    qw(decode_payload parse_xml);
+use Epub::Convert::VerticalToHorizontal          qw(process_book);
+use Epub::Convert::VerticalToHorizontal::Archive qw(open_archive close_archive member_bytes);
+use Epub::Convert::VerticalToHorizontal::Files   qw(ensure_directory file_exists open_exclusive);
+use Epub::Convert::VerticalToHorizontal::Text    qw(decode_payload parse_xml);
 
 my $fixture  = File::Spec->catfile( $RealBin, 'fixtures', 'input', 'vertical CSS variants.epub' );
 my $evidence = File::Spec->catdir( $RealBin, '..', 'test-results' );

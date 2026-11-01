@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use 5.044;
+use 5.040;
 
 use Carp qw(croak);
 use utf8;
@@ -14,9 +14,9 @@ use lib "$RealBin/../local/lib/perl5", "$RealBin/../lib";
 use JSON::PP;
 use Test::More;
 
-use Epub::Horizontal          qw(process_book);
-use Epub::Horizontal::Archive qw(open_archive close_archive member_bytes);
-use Epub::Horizontal::Files   qw(
+use Epub::Convert::VerticalToHorizontal          qw(process_book);
+use Epub::Convert::VerticalToHorizontal::Archive qw(open_archive close_archive member_bytes);
+use Epub::Convert::VerticalToHorizontal::Files   qw(
     absolute_path ensure_directory file_exists open_read open_exclusive sha256_file
 );
 

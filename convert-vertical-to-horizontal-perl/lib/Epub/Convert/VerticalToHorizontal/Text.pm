@@ -1,6 +1,6 @@
-package Epub::Horizontal::Text;
+package Epub::Convert::VerticalToHorizontal::Text;
 
-use 5.044;
+use 5.040;
 use utf8;
 
 use Carp     qw(croak);
@@ -219,7 +219,7 @@ __END__
 
 =head1 NAME
 
-Epub::Horizontal::Text - Encoding-preserving EPUB direction substitutions
+Epub::Convert::VerticalToHorizontal::Text - Encoding-preserving EPUB direction substitutions
 
 =head1 DESCRIPTION
 

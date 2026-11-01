@@ -1,6 +1,6 @@
-package Epub::Horizontal::Files;
+package Epub::Convert::VerticalToHorizontal::Files;
 
-use 5.044;
+use 5.040;
 use utf8;
 
 use Carp    qw(croak);
@@ -184,7 +184,7 @@ __END__
 
 =head1 NAME
 
-Epub::Horizontal::Files - Literal Unicode paths and verified file operations
+Epub::Convert::VerticalToHorizontal::Files - Literal Unicode paths and verified file operations
 
 =head1 DESCRIPTION
 

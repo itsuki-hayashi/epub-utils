@@ -1,8 +1,8 @@
-# Horizontal EPUB converter — Perl 5.44
+# Epub::Convert::VerticalToHorizontal — horizontal EPUB converter (Perl 5.40+)
 
-`Convert-EpubToHorizontal.pl` preserves horizontal and image-based EPUBs as
+`epub-v2h` preserves horizontal and image-based EPUBs as
 exact copies and converts reflowable vertical text with minimal resource edits.
-It uses **Perl 5.44**, with CPAN dependencies installed inside this workspace.
+It requires **Perl 5.40 or newer** and supports CPAN or workspace-local dependencies.
 The original PowerShell implementation remains as a reference and independent
 collection verifier. Originals and existing outputs are never replaced.
 
@@ -32,9 +32,66 @@ No fixed-layout or image-only books were detected in this collection. Comic
 preservation is verified with synthetic fixtures; classification protects
 layouts rather than attempting to identify a book's genre.
 
+## CPAN / system installation
+
+From this directory (or an unpacked `Epub-Convert-VerticalToHorizontal-0.001.tar.gz`):
+
+```sh
+perl Makefile.PL
+make
+make test
+make install
+```
+
+Use the make utility configured for your Perl (`perl -V:make`): native MSVC
+Perl uses `nmake`; Strawberry Perl generally uses `gmake`. A matching build
+utility must be on PATH. MakeMaker installs all six modules and the executable
+`epub-v2h` into Perl's standard site bin directory.
+On Windows, MakeMaker runs `pl2bat` and installs the corresponding `.bat`
+launcher, usable by name from PATH. Add Perl's site bin directory to PATH if
+your Perl installation has not done so already.
+
+MakeMaker declares runtime, configure and test prerequisites; it does not fetch
+them itself. Install prerequisites with your CPAN client (`cpanm --installdeps .`
+or `cpan .`), or use the local installer below. XML::LibXML needs its usual
+system libxml2 development library or Alien build prerequisites. The local
+installer handles the native MSVC libxml2 build as described below.
+For a local dependency tree, set `PERL5LIB` to the absolute `local/lib/perl5`
+directory before running the four commands. On Unix, for example:
+
+```sh
+perl tools/install-dependencies.pl
+export PERL5LIB="$PWD/local/lib/perl5${PERL5LIB:+:$PERL5LIB}"
+perl Makefile.PL
+make
+make test
+make install
+```
+
+In PowerShell, use `$env:PERL5LIB = (Resolve-Path local/lib/perl5).Path`.
+A normal system installation should use system-installed prerequisites instead
+and needs no `PERL5LIB`. For an unprivileged installation use
+`perl Makefile.PL INSTALL_BASE=/your/prefix` and configure PATH/PERL5LIB for
+that prefix. System installation may require elevated permissions.
+
+```sh
+epub-v2h --input-path book.epub --output-directory horizontal
+epub-v2h --analyze-only --json
+```
+
+The installed command defaults to the current working directory, with output
+in its `horizontal/` subdirectory. To run the entry point
+from the checkout without installing, use
+`perl -Ilib -Ilocal/lib/perl5 bin/epub-v2h --help`.
+
+`make disttest` tests the exact release file inventory in `MANIFEST`;
+`make dist` creates the CPAN archive. Development tools and native dependency
+bootstrap sources are included, while local installations, caches, generated
+build files and result directories are excluded. `LICENSE` contains GPLv3.
+
 ## Local installation
 
-Dependencies are already installed. To install or verify them again:
+To install dependencies and development tools locally:
 
 ```text
 perl tools/install-dependencies.pl
@@ -69,23 +126,23 @@ source URLs, checksums, and the scope of these accommodations.
 ## Usage
 
 ```text
-# Inspect the EPUBs beside the script without creating output books.
-perl Convert-EpubToHorizontal.pl --analyze-only
+# Inspect the EPUBs in the current directory without creating output books.
+epub-v2h --analyze-only
 
 # Convert/copy the collection into a fresh directory and write a JSON report.
-perl Convert-EpubToHorizontal.pl --output-directory horizontal-new --report-path new-report.json
+epub-v2h --output-directory horizontal-new --report-path new-report.json
 
 # Process one literal filename, including brackets or Japanese characters.
-perl Convert-EpubToHorizontal.pl --input-path "book.epub" --output-directory one-output
+epub-v2h --input-path "book.epub" --output-directory one-output
 
 # Preview without creating books, directories, or a report.
-perl Convert-EpubToHorizontal.pl --output-directory preview --what-if
+epub-v2h --output-directory preview --what-if
 
 # Machine-readable stdout; diagnostics go to stderr.
-perl Convert-EpubToHorizontal.pl --analyze-only --json
+epub-v2h --analyze-only --json
 ```
 
-The default input directory is the script directory; the default output is
+The default input directory is the current working directory; the default output is
 `horizontal/`, matching PowerShell. Directory input is nonrecursive. Existing
 outputs and reports are never overwritten; choose a fresh destination for a
 repeat run. An explicit report requires an existing parent directory.
@@ -167,19 +224,31 @@ Archive::Zip's name-reset and undefined-empty-payload behaviors.
 
 The script is a small CLI entry point. Stable native signatures, `try`/`catch`,
 named regex fragments and focused modules keep the implementation readable.
-It enables no experimental features. `use 5.044` selects the Perl 5.44 feature
+It enables no experimental features. `use 5.040` selects the Perl 5.40 feature
 bundle while satisfying Perl::Critic's default version-notation policy.
 
 | File | Responsibility |
 | --- | --- |
-| `lib/Epub/Horizontal.pm` | Convert, verify and publish one book; report failures safely |
-| `lib/Epub/Horizontal/CLI.pm` | Options, batches, diagnostics and JSON reports |
-| `lib/Epub/Horizontal/Book.pm` | Package, manifest, spine and stylesheet inspection |
-| `lib/Epub/Horizontal/Text.pm` | Encoding-preserving direction transformations |
-| `lib/Epub/Horizontal/Archive.pm` | Compression and ZIP/payload verification |
-| `lib/Epub/Horizontal/Files.pm` | Literal Unicode paths, portable file operations and Windows arguments |
+| `Makefile.PL`, `MANIFEST`, `Changes`, `LICENSE` | CPAN build, release inventory, history and license |
+| `bin/epub-v2h` | Installed command using the current directory by default |
+| `lib/Epub/Convert/VerticalToHorizontal.pm` | Convert, verify and publish one book; report failures safely |
+| `lib/Epub/Convert/VerticalToHorizontal/CLI.pm` | Options, batches, diagnostics and JSON reports |
+| `lib/Epub/Convert/VerticalToHorizontal/Book.pm` | Package, manifest, spine and stylesheet inspection |
+| `lib/Epub/Convert/VerticalToHorizontal/Text.pm` | Encoding-preserving direction transformations |
+| `lib/Epub/Convert/VerticalToHorizontal/Archive.pm` | Compression and ZIP/payload verification |
+| `lib/Epub/Convert/VerticalToHorizontal/Files.pm` | Literal Unicode paths, portable file operations and Windows arguments |
 
 ## Quality and parity checks
+
+The CPAN packaging was verified on native Windows Perl 5.44.0 with nmake and
+WSL Ubuntu Perl 5.40.1 with GNU make. Both release builds pass all 90 tests.
+Windows installation into an isolated `INSTALL_BASE` produces the executable
+and its pl2bat wrapper; the wrapper runs through PATH outside the source tree
+with local dependencies available through `PERL5LIB`. Linux installation into
+system Perl provides `/usr/local/bin/epub-v2h`,
+usable outside the source tree without `PERL5LIB`. XML::LibXML 2.0207 is the
+minimum supported version, verified by the complete Linux suite. Release
+metadata declares dynamic configuration for platform-specific prerequisites.
 
 ```text
 # Read-only formatting/lint check.
@@ -192,7 +261,7 @@ perl tools/check-perl.pl --format
 perl -Ilocal/lib/perl5 -MTest::Harness -e "runtests(@ARGV)" -- t/01-text.t t/02-book-parity.t t/03-cli.t t/04-edge-cases.t
 ```
 
-All **13 owned Perl files** pass `.perltidyrc` and `.perlcriticrc`. All default
+All **14 owned Perl files** pass `.perltidyrc` and `.perlcriticrc`. All default
 severity-3-or-higher Perl::Critic policies remain enabled: no disabled policies
 or inline lint waivers. CPAN dependencies and the vendored `tools/cpanm` are
 not part of the owned-source formatting inventory.
@@ -212,7 +281,7 @@ The final read-only gate and harness logs are saved as
 The final publisher regression also converts the two original publisher-toolkit
 books with empty directories, checks that stderr is empty, and independently
 compares all 146 entries. Native Windows Perl 5.44.0 was used for execution;
-Linux/macOS runtime execution has not been performed in this workspace.
+WSL Linux Perl 5.40.1 is also used for distribution build, test and installation checks.
 
 The retained PowerShell verifier can independently check a Perl report:
 

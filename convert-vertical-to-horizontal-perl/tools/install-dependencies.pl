@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use 5.044;
+use 5.040;
 
 use Archive::Tar;
 use Config;

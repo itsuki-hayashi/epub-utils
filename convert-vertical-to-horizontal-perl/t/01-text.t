@@ -1,6 +1,6 @@
 #!/usr/bin/env perl
 
-use 5.044;
+use 5.040;
 
 use Carp qw(croak);
 use utf8;
@@ -10,7 +10,7 @@ use FindBin qw($RealBin);
 use lib "$RealBin/../local/lib/perl5", "$RealBin/../lib";
 use Test::More;
 
-use Epub::Horizontal::Text qw(
+use Epub::Convert::VerticalToHorizontal::Text qw(
     convert_css convert_markup convert_package decode_payload encode_payload
     parse_xml resolve_entry css_imports css_uses_vertical
 );
