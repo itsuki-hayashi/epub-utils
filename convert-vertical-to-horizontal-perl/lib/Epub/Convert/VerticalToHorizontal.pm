@@ -23,10 +23,11 @@ my $temporary_sequence = 0;
 
 sub _temporary_output ($directory) {
     my $path;
-    do {
+    while (true) {
         $path = File::Spec->catfile( $directory,
-            '.epub-horizontal-' . $PID . '-' . ++$temporary_sequence . '.tmp' );
-    } while ( file_exists($path) );
+            q{.epub-horizontal-} . $PID . q{-} . ++$temporary_sequence . q{.tmp} );
+        last if !file_exists($path);
+    }
     return { path => $path, handle => open_exclusive($path) };
 }
 
@@ -57,9 +58,9 @@ sub _publish_book ( $input, $archive, $plan, $result ) {
         publish_file( $temporary->{path}, $result->{Output} );
     }
     catch ($error) {
-        close $temporary->{handle}
-            or croak "Cannot close temporary output: $OS_ERROR"
-            if defined $temporary->{handle};
+        if ( defined $temporary->{handle} ) {
+            close $temporary->{handle} or croak "Cannot close temporary output: $OS_ERROR";
+        }
         remove_file( $temporary->{path} );
         croak $error;
     };
@@ -113,9 +114,9 @@ sub write_report ( $path, $json ) {
         publish_file( $temporary->{path}, $path );
     }
     catch ($error) {
-        close $temporary->{handle}
-            or croak "Cannot close report: $OS_ERROR"
-            if defined $temporary->{handle};
+        if ( defined $temporary->{handle} ) {
+            close $temporary->{handle} or croak "Cannot close report: $OS_ERROR";
+        }
         remove_file( $temporary->{path} );
         croak $error;
     };
@@ -136,5 +137,59 @@ C<process_book($input, $destination, \%options)> returns the same per-book
 report fields as the PowerShell converter. Options C<analyze_only> and
 C<what_if> prevent output creation. Failures become C<Error> records so a
 batch can continue; partially written temporary files are removed.
+
+=head1 VERSION
+
+Version 0.001.
+
+=head1 SYNOPSIS
+
+    use Epub::Convert::VerticalToHorizontal qw(process_book write_report);
+    my $result = process_book('vertical.epub', 'horizontal/book.epub');
+    die $result->{Error} if $result->{Status} eq 'Error';
+
+=head1 SUBROUTINES/METHODS
+
+C<process_book($input, $destination, \%options)> returns status, reason,
+changed entry names, verification count, sizes and hashes for one EPUB.
+C<analyze_only> suppresses book output; C<what_if> previews publication.
+Existing destination files are rejected. Operational failures are returned in
+C<Error> with C<Status> set to C<Error>.
+
+C<write_report($path, $json)> publishes already serialized JSON to a new file.
+It refuses existing reports and requires an existing parent directory.
+Private helpers manage temporary files, verified copying and publication.
+
+=head1 DIAGNOSTICS
+
+Book failures appear in returned records. Report failures throw exceptions.
+Messages identify missing resources, invalid archives and overwrite attempts.
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+No configuration files are read. Paths and options are supplied by the caller.
+
+=head1 DEPENDENCIES
+
+Perl 5.40, this distribution's Archive, Book and Files modules, and their
+prerequisites. See Makefile.PL or cpanfile for supported versions.
+
+=head1 INCOMPATIBILITIES
+
+Signed or encrypted vertical books and unsupported encodings cannot be edited.
+
+=head1 BUGS AND LIMITATIONS
+
+Conversion changes direction declarations, not rendered page layout.
+See README.md for preservation guarantees and classification limitations.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut

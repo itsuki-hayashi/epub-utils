@@ -2,6 +2,8 @@
 
 use 5.040;
 
+our $VERSION = '0.001';
+
 use Carp qw(croak);
 use utf8;
 
@@ -21,7 +23,8 @@ is convert_css('body {-epub-writing-mode: vertical-lr !important}'),
     'body {-epub-writing-mode: horizontal-tb !important}', 'EPUB prefix and importance';
 is convert_css('body {-ms-writing-mode:tb-rl}'), 'body {-ms-writing-mode:lr-tb}',
     'legacy Microsoft mode';
-my $comments = '/* writing-mode:vertical-rl */ ' x 500;
+sub COMMENT_REPETITIONS () { return 500; }
+my $comments = '/* writing-mode:vertical-rl */ ' x COMMENT_REPETITIONS;
 is convert_css( $comments . 'p {writing-mode:vertical-rl}' ),
     $comments . 'p {writing-mode:horizontal-tb}', 'large comment sequences stay intact';
 my $quoted = q{body {content:'writing-mode:vertical-rl'; --example: writing-mode:vertical-rl;}};
@@ -57,8 +60,11 @@ ok css_uses_vertical( '.vrtl {writing-mode:vertical-rl}', { vrtl => 1 }, {} ),
     'used class triggers conversion';
 
 for my $encoding (qw(UTF-8 UTF-16LE UTF-16BE cp932)) {
-    my $text    = qq{\@charset "$encoding";\r\nbody {writing-mode:vertical-rl} /* 日本語 */};
-    my $prefix  = $encoding eq 'UTF-16LE' ? "\xFF\xFE" : $encoding eq 'UTF-16BE' ? "\xFE\xFF" : q{};
+    my $text = qq{\@charset "$encoding";\r\nbody {writing-mode:vertical-rl} /* 日本語 */};
+    my $prefix =
+          $encoding eq 'UTF-16LE' ? pack( 'H*', 'fffe' )
+        : $encoding eq 'UTF-16BE' ? pack( 'H*', 'feff' )
+        :                           q{};
     my $bytes   = $prefix . encode( $encoding, $text );
     my $payload = decode_payload($bytes);
     is encode_payload( $payload, $text ), $bytes, "$encoding unchanged round trip";

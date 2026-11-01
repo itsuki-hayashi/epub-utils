@@ -2,6 +2,8 @@ package Epub::Convert::VerticalToHorizontal::CLI;
 
 use 5.040;
 
+our $VERSION = '0.001';
+
 use Carp           qw(croak);
 use English        qw(-no_match_vars);
 use Exporter       qw(import);
@@ -80,7 +82,7 @@ sub _run_batch ( $options, $paths ) {
     my @results;
 
     for my $book ( epub_files( $paths->{input} )->@* ) {
-        say {*STDERR} "Inspecting $book" if $options->{verbose};
+        if ( $options->{verbose} ) { say {*STDERR} "Inspecting $book"; }
         my $destination = File::Spec->catfile( $paths->{output}, basename($book) );
         my $result      = process_book( $book, $destination, $options );
         push @results, $result;
@@ -120,5 +122,57 @@ Epub::Convert::VerticalToHorizontal::CLI - Cross-platform command-line interface
 
 Provides inspection, dry runs, batch conversion, independent per-book errors
 and reports compatible with Test-EpubCollection.ps1.
+
+=head1 VERSION
+
+Version 0.001.
+
+=head1 SYNOPSIS
+
+    use Epub::Convert::VerticalToHorizontal::CLI qw(run_cli);
+    my @arguments = ('--input-path', 'book.epub', '--analyze-only');
+    my $status = run_cli(\@arguments, $base_directory);
+
+=head1 SUBROUTINES/METHODS
+
+C<run_cli(\@arguments, $base_directory)> consumes options, processes a file
+or nonrecursive directory and returns zero on success or one on book failure.
+The supplied base directory determines default input and output paths.
+Private helpers parse options, resolve paths, run batches and print records.
+
+=head1 DIAGNOSTICS
+
+Book diagnostics go to standard error while later books continue. Invalid
+options, invalid paths and report failures throw exceptions for the executable
+to catch. Use C<--json> for machine-readable standard output.
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+Options include C<--input-path>, C<--output-directory>, C<--report-path>,
+C<--analyze-only>, C<--what-if>, C<--json>, C<--verbose> and C<--help>.
+No configuration file is read.
+
+=head1 DEPENDENCIES
+
+Perl 5.40, Getopt::Long, JSON::PP, the main converter and Files modules.
+
+=head1 INCOMPATIBILITIES
+
+Existing output books and reports are never replaced. Directory scans are
+nonrecursive and filenames are literal rather than shell patterns.
+
+=head1 BUGS AND LIMITATIONS
+
+A conversion report establishes byte preservation and supported direction
+changes; it cannot establish visual appearance in a particular reader.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut

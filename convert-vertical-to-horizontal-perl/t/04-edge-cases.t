@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 
 use 5.040;
+
+our $VERSION = '0.001';
 use utf8;
 
 use Carp    qw(croak);
@@ -19,7 +21,7 @@ use Epub::Convert::VerticalToHorizontal::Files   qw(ensure_directory file_exists
 use Epub::Convert::VerticalToHorizontal::Text    qw(decode_payload parse_xml);
 
 my $fixture  = File::Spec->catfile( $RealBin, 'fixtures', 'input', 'vertical CSS variants.epub' );
-my $evidence = File::Spec->catdir( $RealBin, '..', 'test-results' );
+my $evidence = File::Spec->catdir( $RealBin, q{..}, 'test-results' );
 ensure_directory($evidence);
 my $root = tempdir( 'perl-edge-cases-XXXXXXXX', DIR => $evidence, CLEANUP => 0 );
 
@@ -69,7 +71,7 @@ my @failures = (
     [
         'UTF32 CSS',
         sub ($zip) {
-            $zip->memberNamed('OPS/styles/main.css')->contents("\xFF\xFE\x00\x00");
+            $zip->memberNamed('OPS/styles/main.css')->contents( pack( 'H*', 'fffe0000' ) );
             return;
         },
         qr/UTF-32/xms
@@ -119,7 +121,7 @@ my $utf16 = variant(
     sub ($zip) {
         my $member = $zip->memberNamed('OPS/package.opf');
         my $text   = member_bytes($member) =~ s/encoding="UTF-8"/encoding="UTF-16LE"/rxms;
-        $member->contents( "\xFF\xFE" . encode( 'UTF-16LE', $text ) );
+        $member->contents( pack( 'H*', 'fffe' ) . encode( 'UTF-16LE', $text ) );
         return;
     }
 );
@@ -129,7 +131,7 @@ is $utf16_result->{Status}, 'Converted', 'UTF16 package conversion';
 my $archive       = open_archive($utf16_output);
 my $package_bytes = member_bytes( $archive->{entries}{'OPS/package.opf'} );
 close_archive($archive);
-is substr( $package_bytes, 0, 2 ), "\xFF\xFE", 'package BOM preserved';
+is substr( $package_bytes, 0, 2 ), pack( 'H*', 'fffe' ), 'package BOM preserved';
 like decode_payload($package_bytes)->{text}, qr/page-progression-direction='ltr'/xms,
     'UTF16 metadata converted';
 

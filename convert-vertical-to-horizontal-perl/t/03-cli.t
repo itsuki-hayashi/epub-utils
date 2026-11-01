@@ -2,6 +2,8 @@
 
 use 5.040;
 
+our $VERSION = '0.001';
+
 use Carp qw(croak);
 
 use English qw(-no_match_vars);
@@ -13,14 +15,16 @@ use IPC::Open3 qw(open3);
 use JSON::PP;
 use Test::More;
 
+sub EXIT_STATUS_SHIFT ()    { return 8; }
+sub REFERENCE_CASE_COUNT () { return 21; }
+
 use Epub::Convert::VerticalToHorizontal::Files
     qw(ensure_directory file_exists open_read open_exclusive);
 
-my $build  = File::Spec->catdir( $RealBin, '..', 'blib' );
-my $script = File::Spec->catfile( $RealBin, '..', 'bin', 'epub-v2h' );
-$script = File::Spec->catfile( $build, 'script', 'epub-v2h' )
-    if -d $build;
-my $evidence_root = File::Spec->catdir( $RealBin, '..', 'test-results' );
+my $build  = File::Spec->catdir( $RealBin, q{..}, 'blib' );
+my $script = File::Spec->catfile( $RealBin, q{..}, 'bin', 'epub-v2h' );
+if ( -d $build ) { $script = File::Spec->catfile( $build, 'script', 'epub-v2h' ); }
+my $evidence_root = File::Spec->catdir( $RealBin, q{..}, 'test-results' );
 ensure_directory($evidence_root);
 my $root  = tempdir( 'perl-cli-XXXXXXXX', DIR => $evidence_root, CLEANUP => 0 );
 my $input = File::Spec->catdir( $RealBin, 'fixtures', 'input' );
@@ -31,14 +35,14 @@ sub run_command (@arguments) {
         my $input_handle,      my $output_handle,
         '>&' . fileno($error), $EXECUTABLE_NAME,
         '-I',    File::Spec->catdir( $build,   'lib' ),
-        '-I',    File::Spec->catdir( $RealBin, '..', 'lib' ),
-        '-I',    File::Spec->catdir( $RealBin, '..', 'local', 'lib', 'perl5' ),
+        '-I',    File::Spec->catdir( $RealBin, q{..}, 'lib' ),
+        '-I',    File::Spec->catdir( $RealBin, q{..}, 'local', 'lib', 'perl5' ),
         $script, @arguments
     );
     close $input_handle or croak "Cannot close child input: $OS_ERROR";
     my $output = do { local $INPUT_RECORD_SEPARATOR = undef; <$output_handle> };
     waitpid $pid, 0;
-    my $status = $CHILD_ERROR >> 8;
+    my $status = $CHILD_ERROR >> EXIT_STATUS_SHIFT;
     seek $error, 0, 0 or croak "Cannot rewind child diagnostics: $OS_ERROR";
     my $diagnostics = do { local $INPUT_RECORD_SEPARATOR = undef; <$error> };
     close $output_handle or croak "Cannot close child output: $OS_ERROR";
@@ -57,7 +61,7 @@ is $preview->{status}, 0, 'CLI dry run succeeds';
 ok !file_exists($preview_directory), 'CLI dry run creates no output directory';
 ok !file_exists($preview_report),    'CLI dry run creates no report';
 my $preview_results = JSON::PP->new()->utf8()->decode( $preview->{output} );
-is scalar @{$preview_results}, 21, 'CLI visits all reference cases';
+is scalar @{$preview_results}, REFERENCE_CASE_COUNT, 'CLI visits all reference cases';
 ok !( grep { $_->{Status} ne 'WhatIf' } @{$preview_results} ), 'dry-run statuses';
 
 my $analysis_report = File::Spec->catfile( $root, 'analysis.json' );

@@ -1,6 +1,8 @@
 package Epub::Convert::VerticalToHorizontal::Files;
 
 use 5.040;
+
+our $VERSION = '0.001';
 use utf8;
 
 use Carp    qw(croak);
@@ -13,6 +15,8 @@ use Exporter       qw(import);
 use Fcntl          qw(O_CREAT O_EXCL O_RDWR);
 use File::Basename qw(dirname);
 use File::Spec;
+
+sub SHA256_BITS () { return 256; }
 
 our @EXPORT_OK = qw(
     absolute_path command_arguments ensure_directory epub_files file_exists
@@ -84,7 +88,7 @@ sub epub_files ($path) {
         my $candidate = File::Spec->catfile( $path, $name );
         my $is_file =
             $OSNAME eq 'MSWin32' ? Win32::LongPath::testL( 'f', $candidate ) : -f $candidate;
-        push @files, $candidate if $is_file;
+        if ($is_file) { push @files, $candidate; }
     }
     croak 'No EPUB files found.' if !@files;
     return \@files;
@@ -140,7 +144,7 @@ sub remove_file ($path) {
 
 sub sha256_file ($path) {
     my $handle = open_read($path);
-    my $digest = Digest::SHA->new(256)->addfile($handle)->hexdigest();
+    my $digest = Digest::SHA->new(SHA256_BITS)->addfile($handle)->hexdigest();
     close $handle or croak "Cannot close $path: $OS_ERROR";
     return uc $digest;
 }
@@ -191,5 +195,66 @@ Epub::Convert::VerticalToHorizontal::Files - Literal Unicode paths and verified 
 Uses wide Windows APIs for directory names, filenames and command-line
 arguments. ZIP libraries receive binary filehandles rather than ANSI paths.
 Output creation and publication refuse existing files.
+
+=head1 VERSION
+
+Version 0.001.
+
+=head1 SYNOPSIS
+
+    use Epub::Convert::VerticalToHorizontal::Files qw(open_read sha256_file);
+    my $digest = sha256_file('book.epub');
+    my $handle = open_read('book.epub');
+    close $handle or die 'Cannot close input';
+
+=head1 SUBROUTINES/METHODS
+
+C<absolute_path($path)> resolves a literal path. C<epub_files($path)> returns
+an array reference containing a single EPUB path or sorted directory entries.
+C<file_exists($path)> and C<file_size($path)> inspect files.
+C<ensure_directory($path)> creates missing parent directories.
+
+C<open_read($path)> opens a binary input handle. C<open_exclusive($path)>
+creates a new binary file and rejects existing names. C<publish_file($temp,
+$destination)> publishes without replacing an existing file.
+C<remove_file($path)> removes a temporary file if present.
+C<sha256_file($path)> returns its uppercase SHA-256 hex digest.
+C<command_arguments()> returns Unicode command-line arguments.
+Private helpers decode paths and call Windows wide APIs. C<SHA256_BITS>
+names the digest size.
+
+=head1 DIAGNOSTICS
+
+Throws exceptions for invalid paths, failed file operations, invalid UTF-8,
+Windows API failures and attempted overwrites.
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+Relative paths use the current directory. Windows arguments are recovered
+from the process's wide command line; Unix arguments are interpreted as UTF-8.
+
+=head1 DEPENDENCIES
+
+Perl 5.40 and core modules including Digest::SHA and Encode. Windows also
+requires Win32::LongPath and Win32::API.
+
+=head1 INCOMPATIBILITIES
+
+Unix publication requires hard-link support within the output filesystem.
+Non-UTF-8 Unix filenames and command-line arguments are unsupported.
+
+=head1 BUGS AND LIMITATIONS
+
+The caller must close returned handles. Publication protects destination
+names; it does not provide a general filesystem transaction.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut

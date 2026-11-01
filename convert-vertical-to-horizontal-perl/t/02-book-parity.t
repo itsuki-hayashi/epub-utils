@@ -2,6 +2,8 @@
 
 use 5.040;
 
+our $VERSION = '0.001';
+
 use Carp qw(croak);
 use utf8;
 
@@ -14,6 +16,9 @@ use lib "$RealBin/../local/lib/perl5", "$RealBin/../lib";
 use JSON::PP;
 use Test::More;
 
+sub LONG_SEGMENT_CHARACTERS () { return 25; }
+sub LONG_PATH_SEGMENTS ()      { return 5; }
+
 use Epub::Convert::VerticalToHorizontal          qw(process_book);
 use Epub::Convert::VerticalToHorizontal::Archive qw(open_archive close_archive member_bytes);
 use Epub::Convert::VerticalToHorizontal::Files   qw(
@@ -25,7 +30,7 @@ my $manifest_handle = open_read( File::Spec->catfile( $fixture_root, 'manifest.j
 my $manifest_text   = do { local $INPUT_RECORD_SEPARATOR = undef; <$manifest_handle> };
 close $manifest_handle or croak "Cannot close fixture manifest: $OS_ERROR";
 my $cases         = JSON::PP->new()->utf8()->decode($manifest_text);
-my $evidence_root = File::Spec->catdir( $RealBin, '..', 'test-results' );
+my $evidence_root = File::Spec->catdir( $RealBin, q{..}, 'test-results' );
 ensure_directory($evidence_root);
 my $output_root = tempdir( 'perl-fixtures-XXXXXXXX', DIR => $evidence_root, CLEANUP => 0 );
 my $second_root = File::Spec->catdir( $output_root, 'second' );
@@ -69,9 +74,10 @@ for my $case ( @{$cases} ) {
             is $repeat->{Status}, 'Preserved', 'second pass preserves';
             is $repeat->{InputSHA256}, $repeat->{OutputSHA256},
                 'second pass is an exact archive copy';
-            is $result->{InputSHA256}, $result->{OutputSHA256},
-                'unchanged books are exact file copies'
-                if $case->{Reason} ne 'VerticalText';
+            if ( $case->{Reason} ne 'VerticalText' ) {
+                is $result->{InputSHA256}, $result->{OutputSHA256},
+                    'unchanged books are exact file copies';
+            }
         }
         else { diag $result->{Error}; }
         done_testing();
@@ -82,7 +88,7 @@ for my $case ( @{$cases} ) {
 my $unicode_root = File::Spec->catdir(
     $output_root,
     '日本語 📚 [literal]',
-    map { 'directory-' . $_ . '-' . ( '長' x 25 ) } 1 .. 5
+    map { 'directory-' . $_ . q{-} . ( '長' x LONG_SEGMENT_CHARACTERS ) } 1 .. LONG_PATH_SEGMENTS
 );
 ensure_directory($unicode_root);
 my $unicode_input = File::Spec->catfile( $unicode_root, '縦書きの本.epub' );
@@ -95,7 +101,7 @@ close $destination            or croak "Cannot close Unicode fixture: $OS_ERROR"
 my $unicode_output = File::Spec->catfile( $unicode_root, '出力', '横書きの本.epub' );
 my $unicode_result = process_book( $unicode_input, $unicode_output );
 is $unicode_result->{Status}, 'Converted', 'Unicode filesystem input/output';
-diag $unicode_result->{Error} if $unicode_result->{Status} eq 'Error';
+if ( $unicode_result->{Status} eq 'Error' ) { diag $unicode_result->{Error}; }
 
 my $preview_directory = File::Spec->catdir( $output_root, 'preview' );
 my $preview           = process_book(

@@ -1,6 +1,8 @@
 #!/usr/bin/env perl
 
 use 5.040;
+
+our $VERSION = '0.001';
 use utf8;
 
 use English qw(-no_match_vars);
@@ -9,10 +11,12 @@ use Cwd     qw(getcwd);
 use Epub::Convert::VerticalToHorizontal::CLI   qw(run_cli);
 use Epub::Convert::VerticalToHorizontal::Files qw(command_arguments);
 
+sub UTF8_CODE_PAGE () { return 65_001; }
+
 if ( $OSNAME eq 'MSWin32' ) {
     require Win32;
-    Win32::SetConsoleCP(65001);
-    Win32::SetConsoleOutputCP(65001);
+    Win32::SetConsoleCP(UTF8_CODE_PAGE);
+    Win32::SetConsoleOutputCP(UTF8_CODE_PAGE);
 }
 binmode STDOUT, ':encoding(UTF-8)' or die "Cannot configure standard output: $OS_ERROR\n";
 binmode STDERR, ':encoding(UTF-8)' or die "Cannot configure standard error: $OS_ERROR\n";
@@ -44,5 +48,63 @@ epub-v2h - Preserve horizontal EPUBs and convert vertical text
 
 Requires Perl 5.40 and dependencies declared in Makefile.PL or cpanfile.
 See README.md for installation, verification and layout limitations.
+
+=head1 USAGE
+
+    epub-v2h --input-path book.epub --output-directory horizontal
+    epub-v2h --analyze-only --json
+
+=head1 REQUIRED ARGUMENTS
+
+None. Without C<--input-path>, scans the current working directory.
+
+=head1 OPTIONS
+
+C<--input-path PATH> selects a file or nonrecursive directory.
+C<--output-directory DIR> selects the output folder, defaulting to
+C<horizontal/> in the current directory. C<--report-path FILE> writes JSON.
+C<--analyze-only> inspects without producing books. C<--what-if> previews
+without writing books, directories or reports. C<--json> selects JSON stdout;
+C<--verbose> prints input paths to stderr. C<--help> prints usage.
+
+=head1 DIAGNOSTICS
+
+Diagnostics go to standard error. An invalid book does not stop later books.
+Existing outputs and reports are rejected rather than overwritten.
+
+=head1 EXIT STATUS
+
+Zero for successful processing or help, one for invalid arguments, operational
+failures or a batch containing at least one failed book.
+
+=head1 CONFIGURATION
+
+No configuration files are read. Relative paths use the working directory.
+C<PERL5LIB> can select locally installed prerequisites. Windows console output
+uses UTF-8, and Unicode arguments are recovered using wide Windows APIs.
+
+=head1 DEPENDENCIES
+
+Perl 5.40 and Epub::Convert::VerticalToHorizontal with its declared prerequisites.
+Windows additionally uses the Win32 module supplied with native Windows Perl.
+
+=head1 INCOMPATIBILITIES
+
+Directory scans are nonrecursive. Unsupported encodings, signed or encrypted
+conversion targets and malformed resources produce explicit failures.
+
+=head1 BUGS AND LIMITATIONS
+
+The converter changes direction declarations, not reader rendering. Consult
+README.md for preservation guarantees and classification limitations.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut

@@ -2,6 +2,8 @@ package Epub::Convert::VerticalToHorizontal::Archive;
 
 use 5.040;
 
+our $VERSION = '0.001';
+
 use Archive::Zip qw(AZ_OK COMPRESSION_LEVEL_BEST_COMPRESSION COMPRESSION_STORED);
 use Carp         qw(croak);
 use English      qw(-no_match_vars);
@@ -9,6 +11,10 @@ use Digest::SHA  qw(sha256_hex);
 use Exporter     qw(import);
 
 use Epub::Convert::VerticalToHorizontal::Files qw(open_read);
+
+sub ZIP_LOCAL_HEADER_LENGTH () { return 30; }
+sub ZIP_EXTRA_LENGTH_OFFSET () { return 28; }
+sub ZIP_LOCAL_SIGNATURE ()     { return 0x04_03_4b_50; }
 
 our @EXPORT_OK = qw(open_archive close_archive member_bytes repack_archive);
 
@@ -57,13 +63,13 @@ sub member_bytes ($member) {
 sub _verify_mimetype_header ($path) {
     my $handle = open_read($path);
     my $header;
-    my $read = read $handle, $header, 30;
+    my $read = read $handle, $header, ZIP_LOCAL_HEADER_LENGTH;
     close $handle or croak "Cannot close $path: $OS_ERROR";
-    croak 'Incomplete EPUB ZIP header.' if !defined $read || $read != 30;
+    croak 'Incomplete EPUB ZIP header.' if !defined $read || $read != ZIP_LOCAL_HEADER_LENGTH;
     my ( $signature, $version, $flags, $method ) = unpack 'Vvvv', $header;
-    my $extra_length = unpack 'v', substr $header, 28, 2;
+    my $extra_length = unpack 'v', substr $header, ZIP_EXTRA_LENGTH_OFFSET, 2;
     croak 'Invalid EPUB mimetype ZIP header.'
-        if $signature != 0x0403_4b50
+        if $signature != ZIP_LOCAL_SIGNATURE
         || $flags != 0
         || $method != COMPRESSION_STORED
         || $extra_length != 0;
@@ -115,7 +121,7 @@ sub repack_archive ( $archive, $patches, $output ) {
 
         # The ZipFileMember-to-StringMember transition reads its local header
         # too, so restore a decoded UTF-8 name after the setter as well.
-        $member->fileName($name)                               if $member->fileName() ne $name;
+        if ( $member->fileName() ne $name ) { $member->fileName($name); }
         croak "Unsupported noncanonical ZIP entry name: $name" if $member->fileName() ne $name;
         $member->desiredCompressionLevel(
             $name eq 'mimetype' ? 0 : COMPRESSION_LEVEL_BEST_COMPRESSION );
@@ -145,5 +151,64 @@ Epub::Convert::VerticalToHorizontal::Archive - Maximum-deflate ZIP writing and p
 Rebuilds converted EPUBs at zlib level 9 with mimetype stored first. Every entry
 is read back and checked against its expected SHA-256, original name, order,
 DOS timestamp and external attributes before publication.
+
+=head1 VERSION
+
+Version 0.001.
+
+=head1 SYNOPSIS
+
+    use Epub::Convert::VerticalToHorizontal::Archive
+        qw(open_archive close_archive member_bytes);
+    my $archive = open_archive('book.epub');
+    my $bytes = member_bytes($archive->{entries}{mimetype});
+    close_archive($archive);
+
+=head1 SUBROUTINES/METHODS
+
+C<open_archive($path)> returns a hash containing the ZIP object, binary
+filehandle and entries keyed by name. Duplicate names are rejected.
+C<close_archive($archive)> closes its filehandle.
+C<member_bytes($member)> decompresses a member, restores its Unicode name
+and returns bytes, including an empty string for an empty directory.
+
+C<repack_archive($archive, \%patches, $output)> writes to the open handle in
+C<$output>, whose C<path> identifies the temporary destination. It replaces
+named payloads, recompresses the archive, closes the output handle and verifies
+entry metadata, hashes and the mimetype header. It returns the verified entry
+count. Private helpers implement verification; uppercase helpers name fixed
+ZIP-header sizes and the local-header signature.
+
+=head1 DIAGNOSTICS
+
+Throws exceptions for unreadable archives, duplicate or noncanonical names,
+decompression errors and verification mismatches. Callers own cleanup.
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+No configuration or environment variables are consumed directly.
+
+=head1 DEPENDENCIES
+
+Perl 5.40, Archive::Zip, Digest::SHA and this distribution's Files module.
+
+=head1 INCOMPATIBILITIES
+
+The first entry must be an EPUB mimetype payload. Unsupported ZIP member
+names are rejected rather than silently normalized.
+
+=head1 BUGS AND LIMITATIONS
+
+Repacking preserves payloads and specified entry metadata, but does not
+promise identical compressed bytes or archive-level metadata.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut

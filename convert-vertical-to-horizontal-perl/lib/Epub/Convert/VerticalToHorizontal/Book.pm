@@ -2,6 +2,8 @@ package Epub::Convert::VerticalToHorizontal::Book;
 
 use 5.040;
 
+our $VERSION = '0.001';
+
 use Carp     qw(croak);
 use Exporter qw(import);
 
@@ -12,6 +14,9 @@ use Epub::Convert::VerticalToHorizontal::Text    qw(
 );
 
 our @EXPORT_OK = qw(plan_book);
+
+sub MINIMUM_IMAGE_PAGES () { return 10; }
+sub IMAGE_PAGE_FRACTION () { return 0.8; }
 
 my %markup_media = map { $_ => true } qw(application/xhtml+xml image/svg+xml text/html);
 my $visible_text = <<'XPATH';
@@ -106,8 +111,10 @@ sub _inspect_spine ( $archive, $package, $manifest ) {
         $scan->{documents}{$path} = $payload;
 
         for my $node ( $document->findnodes('//*[@class]') ) {
-            $scan->{classes}{$_} = true
-                for grep {length} split /\s+/xms, ( $node->getAttribute('class') // q{} );
+            for my $class ( grep {length} split /\s+/xms, ( $node->getAttribute('class') // q{} ) )
+            {
+                $scan->{classes}{$class} = true;
+            }
         }
         for my $node ( $document->findnodes('//*[@id]') ) {
             $scan->{ids}{ ( $node->getAttribute('id') // q{} ) } = true;
@@ -154,7 +161,7 @@ sub _patch_resources ( $archive, $manifest, $scan, $styles ) {
             $media eq 'text/css'
             ? convert_css( $payload->{text} )
             : convert_markup( $payload->{text} );
-        $patches{$path} = encode_payload( $payload, $text ) if $text ne $payload->{text};
+        if ( $text ne $payload->{text} ) { $patches{$path} = encode_payload( $payload, $text ); }
     }
     return \%patches;
 }
@@ -166,8 +173,9 @@ sub plan_book ($archive) {
     my $manifest = _manifest( $archive, $package );
     my $scan     = _inspect_spine( $archive, $package, $manifest );
     if ( !$scan->{text_pages} ) { $plan->{reason} = 'ImageOnly'; return $plan; }
-    if (   $scan->{image_pages} >= 10
-        && $scan->{image_pages} / ( $scan->{image_pages} + $scan->{text_pages} ) >= 0.8 )
+    if (   $scan->{image_pages} >= MINIMUM_IMAGE_PAGES
+        && $scan->{image_pages} / ( $scan->{image_pages} + $scan->{text_pages} ) >=
+        IMAGE_PAGE_FRACTION )
     {
         $plan->{reason} = 'ImageDominated';
         return $plan;
@@ -206,5 +214,55 @@ Epub::Convert::VerticalToHorizontal::Book - Inspect EPUB layouts and plan minima
 Discovers the package, manifest, spine and imported stylesheets. Preserves
 horizontal, fixed-layout, image-only and image-dominated books. Plans direction
 substitutions for vertical reflowable books without extracting or rewriting XML.
+
+=head1 VERSION
+
+Version 0.001.
+
+=head1 SYNOPSIS
+
+    use Epub::Convert::VerticalToHorizontal::Book qw(plan_book);
+    my $plan = plan_book($archive);
+    # $archive comes from Archive::open_archive().
+
+=head1 SUBROUTINES/METHODS
+
+C<plan_book($archive)> returns C<kind>, C<reason> and a C<patches> hash mapping
+entry names to replacement bytes. Preserved books have no patches. The archive
+remains open and its payloads are inspected without extraction.
+Private helpers resolve resources, classify spine content and inspect styles.
+C<MINIMUM_IMAGE_PAGES> and C<IMAGE_PAGE_FRACTION> name the image dominance
+thresholds used to preserve illustrated books.
+
+=head1 DIAGNOSTICS
+
+Throws exceptions for missing or duplicate resources, invalid XML, unsupported
+external references, empty spines and signed or encrypted conversion targets.
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+Classification rules are fixed. No environment variables are read directly.
+
+=head1 DEPENDENCIES
+
+Perl 5.40 and this distribution's Archive and Text modules.
+
+=head1 INCOMPATIBILITIES
+
+Multiple package rootfiles and incomplete or malformed EPUBs are unsupported.
+
+=head1 BUGS AND LIMITATIONS
+
+Class and ID detection is a declaration heuristic, not a browser CSS cascade.
+The image dominance heuristic may preserve heavily illustrated text books.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut

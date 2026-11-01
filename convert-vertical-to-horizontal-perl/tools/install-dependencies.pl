@@ -2,6 +2,8 @@
 
 use 5.040;
 
+our $VERSION = '0.001';
+
 use Archive::Tar;
 use Config;
 use Carp        qw(croak);
@@ -13,7 +15,7 @@ use File::Spec;
 use FindBin qw($RealBin);
 use Module::Metadata;
 
-my $root = File::Spec->rel2abs( File::Spec->catdir( $RealBin, '..' ) );
+my $root = File::Spec->rel2abs( File::Spec->catdir( $RealBin, q{..} ) );
 $root =~ s{\\}{/}gxms;
 my $local   = File::Spec->catdir( $root, 'local' );
 my $cpanm   = File::Spec->catfile( $RealBin, 'cpanm' );
@@ -135,18 +137,18 @@ PROBE
 
 if ( $OSNAME eq 'MSWin32' && !installed_version('PkgConfig') ) {
     chdir patched_pkg_config() or croak "Cannot enter PkgConfig source: $OS_ERROR";
-    install('.');
+    install(q{.});
 }
 chdir $root or croak "Cannot enter workspace: $OS_ERROR";
 if ( installed_version('Module::Pluggable') ne '6.3' ) {
     checked_archive( 'Module-Pluggable-6.3.tar.gz',
         '58512bb9c654746d0937770b98b559b30872d85ac24073485e5830890dd1b2a0' );
-    install('./vendor/Module-Pluggable-6.3.tar.gz');
+    install(q{./vendor/Module-Pluggable-6.3.tar.gz});
 }
 local $ENV{PATH} =
     $OSNAME eq 'MSWin32' ? native_xml() . $Config{path_sep} . $ENV{PATH} : $ENV{PATH};
 local $ENV{ALIEN_INSTALL_TYPE} = $OSNAME eq 'MSWin32' ? 'system' : $ENV{ALIEN_INSTALL_TYPE};
-install( '--installdeps', '.', '--with-develop' );
+install( '--installdeps', q{.}, '--with-develop' );
 
 __END__
 
@@ -159,5 +161,60 @@ install-dependencies.pl - Install cpanfile dependencies into workspace-local loc
 Uses the vendored cpanminus bootstrap. CPAN tests remain enabled. Native Windows
 uses an otherwise unmodified PkgConfig distribution with an accurate symlink
 capability probe in its tests. No runtime PkgConfig code is patched.
+
+=head1 USAGE
+
+    perl tools/install-dependencies.pl
+
+=head1 REQUIRED ARGUMENTS
+
+None. The workspace root is resolved relative to this script.
+
+=head1 OPTIONS
+
+No command-line options are supported. Dependencies are selected by cpanfile.
+
+=head1 DIAGNOSTICS
+
+Prints CPAN and native build progress. Raises exceptions for failed commands,
+checksum mismatches, unsupported patch contexts or failed file operations.
+
+=head1 EXIT STATUS
+
+Zero after successful installation; nonzero for any failed prerequisite,
+command or verification step. Dependency test suites are not skipped.
+
+=head1 CONFIGURATION
+
+Installs into local/ and keeps caches under .cpanm/. Uses the HTTPS MetaCPAN
+mirror. It sets child locale variables to C, removes inherited color disabling
+variables for dependency tests, and selects native Windows libxml2 when needed.
+On Windows, a matching MSVC developer environment, CMake, nmake and tar must
+be available on PATH. Unix-like systems use XML::LibXML's normal build path.
+
+=head1 DEPENDENCIES
+
+Perl 5.40, the vendored cpanminus bootstrap and checked vendored native sources.
+Internet access and platform build tools may be needed for CPAN prerequisites.
+
+=head1 INCOMPATIBILITIES
+
+Native Windows builds require tools matching the Perl installation. A local
+installation cannot be shared between Windows and Linux Perl interpreters.
+
+=head1 BUGS AND LIMITATIONS
+
+The installer provisions dependencies, not the application itself. Use
+Makefile.PL and make install to install the executable. Vendored portability
+patches depend on exact upstream source versions and are checksum checked.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut

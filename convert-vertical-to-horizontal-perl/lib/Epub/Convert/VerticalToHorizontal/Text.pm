@@ -1,14 +1,22 @@
 package Epub::Convert::VerticalToHorizontal::Text;
 
 use 5.040;
+
+our $VERSION = '0.001';
 use utf8;
 
-use Carp     qw(croak);
-use Encode   qw(decode encode FB_CROAK LEAVE_SRC);
-use Exporter qw(import);
+use Carp       qw(croak);
+use Encode     qw(decode encode FB_CROAK LEAVE_SRC);
+use Exporter   qw(import);
+use English    qw(-no_match_vars);
+use List::Util qw(any);
 use URI;
 use URI::Escape qw(uri_unescape);
 use XML::LibXML;
+
+sub UTF16_LE_BOM ()         { return pack 'H*', 'fffe'; }
+sub UTF16_BE_BOM ()         { return pack 'H*', 'feff'; }
+sub ENCODING_PROBE_BYTES () { return 256; }
 
 our @EXPORT_OK = qw(
     convert_css convert_markup convert_package decode_payload encode_payload
@@ -60,10 +68,10 @@ sub decode_payload ($bytes) {
     if ( $bytes =~ /\A (\xFF\xFE | \xFE\xFF | \xEF\xBB\xBF)/xms ) {
         $prefix = $1;
         $encoding =
-            $prefix eq "\xFF\xFE" ? 'UTF-16LE' : $prefix eq "\xFE\xFF" ? 'UTF-16BE' : 'UTF-8';
+            $prefix eq UTF16_LE_BOM ? 'UTF-16LE' : $prefix eq UTF16_BE_BOM ? 'UTF-16BE' : 'UTF-8';
     }
-    elsif ( substr( $bytes, 0, 256 ) =~ $encoding_declaration ) {
-        $encoding = $+{encoding};
+    elsif ( substr( $bytes, 0, ENCODING_PROBE_BYTES ) =~ $encoding_declaration ) {
+        $encoding = $LAST_PAREN_MATCH{encoding};
     }
     my $body = substr $bytes, length $prefix;
     my $text = decode( $encoding, $body, FB_CROAK | LEAVE_SRC );
@@ -113,7 +121,7 @@ sub parse_xml ($text) {
     my $document = $parser->load_xml( string => encode( 'UTF-8', $text, FB_CROAK | LEAVE_SRC ) );
     my $dtd      = $document->internalSubset();
     croak 'XML entity declarations require manual review.'
-        if defined $dtd && grep { $_->nodeType() == XML::LibXML::XML_ENTITY_DECL() }
+        if defined $dtd && any { $_->nodeType() == XML::LibXML::XML_ENTITY_DECL() }
         $dtd->childNodes();
     return $document;
 }
@@ -137,7 +145,7 @@ sub _css_replacement ( $matched, $prefix, $property, $value ) {
 sub convert_css ($text) {
     return $text if $text !~ /writing-mode/ixms;
     $text =~
-        s{$css_direction}{ _css_replacement( $+{token}, $+{prefix}, $+{property}, $+{value} ) }egxms;
+        s{$css_direction}{ _css_replacement( $LAST_PAREN_MATCH{token}, $LAST_PAREN_MATCH{prefix}, $LAST_PAREN_MATCH{property}, $LAST_PAREN_MATCH{value} ) }egxms;
     return $text;
 }
 
@@ -155,14 +163,14 @@ sub _convert_markup_token ( $matched, $style, $css, $end, $tag ) {
     return $style . convert_css($css) . $end if defined $style;
     return $matched                          if !defined $tag;
     $tag =~ s{$attribute_token}
-        { _convert_attribute( $+{attribute}, $+{prefix}, $+{name}, $+{quote}, $+{value} ) }egixms;
+        { _convert_attribute( $LAST_PAREN_MATCH{attribute}, $LAST_PAREN_MATCH{prefix}, $LAST_PAREN_MATCH{name}, $LAST_PAREN_MATCH{quote}, $LAST_PAREN_MATCH{value} ) }egixms;
     return $tag;
 }
 
 sub convert_markup ($text) {
     return $text if $text !~ /writing-mode/ixms;
     $text =~ s{$markup_token}
-        { _convert_markup_token( $+{token}, $+{style}, $+{css}, $+{end}, $+{tag} ) }egixms;
+        { _convert_markup_token( $LAST_PAREN_MATCH{token}, $LAST_PAREN_MATCH{style}, $LAST_PAREN_MATCH{css}, $LAST_PAREN_MATCH{end}, $LAST_PAREN_MATCH{tag} ) }egixms;
     return $text;
 }
 
@@ -181,7 +189,7 @@ sub _convert_package_tag ( $tag, $kind ) {
 sub convert_package ($text) {
     my $tag = qr{ < $element_prefix (?<kind> meta | spine ) \b [^>]* > }ixms;
     $text =~ s{ (?<token> $markup_comment | $tag ) }
-        { _convert_package_tag( $+{token}, $+{kind} ) }egixms;
+        { _convert_package_tag( $LAST_PAREN_MATCH{token}, $LAST_PAREN_MATCH{kind} ) }egixms;
     return $text;
 }
 
@@ -189,8 +197,9 @@ sub css_imports ($text) {
     $text =~ s{$css_comment}{}gxms;
     my @imports;
     while ( $text =~ /$import_token/gixms ) {
-        my $href = $+{quoted} // $+{bare} // $+{direct};
-        push @imports, $href if defined $href;
+        my $href = $LAST_PAREN_MATCH{quoted} // $LAST_PAREN_MATCH{bare}
+            // $LAST_PAREN_MATCH{direct};
+        if ( defined $href ) { push @imports, $href; }
     }
     return @imports;
 }
@@ -198,14 +207,14 @@ sub css_imports ($text) {
 sub css_uses_vertical ( $text, $classes, $ids ) {
     $text =~ s{$css_comment}{}gxms;
     while ( $text =~ / (?<selector> [^{}]+ ) \{ (?<body> [^{}]* ) \} /gxms ) {
-        my $selector_list = $+{selector};
-        my $body          = $+{body};
+        my $selector_list = $LAST_PAREN_MATCH{selector};
+        my $body          = $LAST_PAREN_MATCH{body};
         next if convert_css($body) eq $body;
         for my $selector ( split /,/xms, $selector_list ) {
             my $used = true;
             while ( $selector =~ / (?<type> [.#] ) (?<name> [\w-]+ ) /gxms ) {
-                my $names = $+{type} eq '.' ? $classes : $ids;
-                $used = false if !exists $names->{ $+{name} };
+                my $names = $LAST_PAREN_MATCH{type} eq q{.} ? $classes : $ids;
+                if ( !exists $names->{ $LAST_PAREN_MATCH{name} } ) { $used = false; }
             }
             return true if $used;
         }
@@ -227,5 +236,64 @@ Small, named transformations preserve comments, CSS strings, markup prose,
 original encodings and formatting. XML is inspected without serialization.
 Detection intentionally follows the PowerShell converter's declaration-based
 heuristics; this module does not implement a complete CSS cascade.
+
+=head1 VERSION
+
+Version 0.001.
+
+=head1 SYNOPSIS
+
+    use Epub::Convert::VerticalToHorizontal::Text
+        qw(decode_payload convert_css encode_payload);
+    my $payload = decode_payload($bytes);
+    my $output = encode_payload($payload, convert_css($payload->{text}));
+
+=head1 SUBROUTINES/METHODS
+
+C<decode_payload($bytes)> returns decoded C<text>, original C<bytes>,
+C<encoding> and BOM C<prefix>. C<encode_payload($payload, $text)> preserves
+original bytes when unchanged and checks exact encoding round trips.
+C<convert_css($text)>, C<convert_markup($text)> and C<convert_package($text)>
+return text with supported vertical declarations changed to horizontal ones.
+
+C<parse_xml($text)> returns a DOM for inspection and refuses external resources
+and entity declarations. C<resolve_entry($base, $href)> resolves an internal
+EPUB URI to an entry name. C<css_imports($text)> returns imported references.
+C<css_uses_vertical($text, \%classes, \%ids)> detects applicable vertical rules.
+Private helpers tokenize declarations and markup; uppercase helpers name
+byte-order marks and the encoding probe length.
+
+=head1 DIAGNOSTICS
+
+Throws exceptions for unsupported encodings, failed round trips, malformed
+XML, entity declarations and external or query-bearing resource references.
+
+=head1 CONFIGURATION AND ENVIRONMENT
+
+No configuration is read. XML parsing disables network access, external DTDs
+and external entity loading regardless of document declarations.
+
+=head1 DEPENDENCIES
+
+Perl 5.40, Encode, English, List::Util, URI, URI::Escape and XML::LibXML.
+
+=head1 INCOMPATIBILITIES
+
+UTF-32 and decoded text containing NUL are rejected. Resource encodings must
+round-trip exactly when an edit is required.
+
+=head1 BUGS AND LIMITATIONS
+
+The tokenizer does not implement full CSS parsing, selector matching or the
+browser cascade. XML is never serialized back into a converted resource.
+
+=head1 AUTHOR
+
+Itsuki Hayashi.
+
+=head1 LICENSE AND COPYRIGHT
+
+Copyright (c) 2026 Itsuki Hayashi.
+Distributed under the GNU General Public License version 3. See LICENSE.
 
 =cut
