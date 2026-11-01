@@ -22,7 +22,7 @@ Usage: perl tools/install-xml-libxml-msvc.pl [options]
 Run in a matching Visual Studio Developer PowerShell or command prompt.
 By default, installs CPAN modules into the running Perl's site directories.
 
-  --native-prefix DIR  Persistent libxml2 directory (default: under LOCALAPPDATA)
+  --native-prefix DIR  Native library directory (default: Perl siteprefix/native/libxml2/2.15.4)
   --local-lib DIR      Install CPAN modules into this isolated directory instead
   --check              Check platform, tools and source checksums without installing
   --help               Show this help
@@ -82,10 +82,10 @@ sub sources ($root) {
 sub native_prefix ($requested) {
     my $prefix = $requested;
     if ( !defined $prefix ) {
-        my $base = $ENV{LOCALAPPDATA}
-            // croak 'LOCALAPPDATA is unset; specify --native-prefix.';
-        $prefix = File::Spec->catdir( $base, 'Perl-native',
-            'libxml2-2.15.4', $Config{archname} );
+        my $base = $Config{siteprefix};
+        croak 'Perl siteprefix is unset; specify --native-prefix.'
+            if !defined $base || !length $base;
+        $prefix = File::Spec->catdir( $base, 'native', 'libxml2', '2.15.4' );
     }
     $prefix = File::Spec->rel2abs($prefix);
     $prefix =~ s{\\}{/}gxms;
@@ -309,7 +309,12 @@ None. Run from a matching Visual Studio Developer PowerShell or command prompt.
 =head1 OPTIONS
 
 C<--native-prefix DIR> selects the persistent native library directory. The
-default is LOCALAPPDATA/Perl-native/libxml2-2.15.4 followed by Perl's archname.
+default is C<$Config{siteprefix}/native/libxml2/2.15.4>, derived from the
+interpreter running this script. For the user-local Perl installation this is
+C<%LOCALAPPDATA%/Programs/Perl/site/native/libxml2/2.15.4>. The prefix contains
+C<bin>, C<include> and C<lib> directories alongside installed site modules.
+Separate Perl installations already isolate their architectures, so no extra
+architecture directory is added.
 Keep it in place for future XS builds. It must be an ASCII path without double
 quotes, percent signs, exclamation marks or line breaks.
 

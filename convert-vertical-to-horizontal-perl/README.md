@@ -107,8 +107,14 @@ reinstalls Alien::Libxml2 0.20 and XML::LibXML 2.0213 with their CPAN tests enab
 XML::LibXML's runtime source is unchanged. Installation needs HTTPS access to
 CPAN and permission to write to the selected Perl's site directories.
 
-The native library defaults to
-`%LOCALAPPDATA%/Perl-native/libxml2-2.15.4/<Perl-archname>/`, outside the checkout.
+The native library defaults to `$Config{siteprefix}/native/libxml2/2.15.4`,
+derived from the Perl interpreter running the installer. For the user-local
+Perl installation this is
+`%LOCALAPPDATA%/Programs/Perl/site/native/libxml2/2.15.4/`, outside the checkout.
+Its `bin/`, `include/` and `lib/` directories keep native tools, headers and
+libraries together alongside Perl's installed site modules. Each Perl
+installation already isolates its architecture, so no additional architecture
+directory is used. This layout is the installer's convention.
 Keep that directory in place for subsequent XS builds. Override it with
 `--native-prefix DIR`; use an ASCII path without quotes, percent signs,
 exclamation marks or line breaks because the path is embedded in a batch file.
@@ -126,6 +132,8 @@ The script clears inherited local::lib and Perl installation overrides for its
 child processes, then verifies loading and XML parsing with the selected
 installation. It makes no permanent environment changes. It always reinstalls
 Alien to refresh saved native paths; rerun after changing the native prefix.
+To adopt this default after an earlier installation, rerun without
+`--native-prefix`. The old native directory is left in place.
 Use the Perl interpreter you intend to install into, rather than a different
 `cpanm` executable found on PATH. This installer targets MSVC/nmake Perl;
 Strawberry/MinGW and Unix Perl should use their normal dependency workflows.
