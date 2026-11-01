@@ -1,6 +1,7 @@
 Revision history for Epub-Convert-VerticalToHorizontal
 
 0.001  2026-11-01
+    Add recursive conversion with a horizontal output folder per source directory.
     Package the converter with ExtUtils::MakeMaker and an installed CLI.
     Support stable Perl 5.40 features on Windows and Linux.
     Add a dedicated XML::LibXML installer for MSVC-built Windows Perl.

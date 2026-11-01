@@ -69,16 +69,17 @@ sub ensure_directory ($path) {
     return;
 }
 
-sub epub_files ($path) {
-    my $is_directory
-        = $OSNAME eq 'MSWin32'
-        ? Win32::LongPath::testL( 'd', $path )
-        : -d $path;
-    if ( !$is_directory ) {
-        croak 'Input must be an existing EPUB file or directory.'
-            if !file_exists($path) || $path !~ /[.]epub\z/ixms;
-        return [$path];
-    }
+sub _is_directory ($path) {
+    return Win32::LongPath::testL( 'd', $path ) if $OSNAME eq 'MSWin32';
+    return -d $path;
+}
+
+sub _is_directory_link ($path) {
+    return Win32::LongPath::testL( 'l', $path ) if $OSNAME eq 'MSWin32';
+    return -l $path;
+}
+
+sub _directory_names ($path) {
     my @names;
     if ( $OSNAME eq 'MSWin32' ) {
         my $directory = Win32::LongPath->new();
@@ -94,16 +95,44 @@ sub epub_files ($path) {
         closedir $directory
             or croak "Cannot close directory $path: $OS_ERROR";
     }
+    @names = sort @names;
+    return @names;
+}
+
+sub _directory_books ( $path, $recursive ) {
+    my @queue = ($path);
     my @files;
-    for my $name ( sort @names ) {
-        next if $name !~ /[.]epub\z/ixms;
-        my $candidate = File::Spec->catfile( $path, $name );
-        my $is_file
-            = $OSNAME eq 'MSWin32'
-            ? Win32::LongPath::testL( 'f', $candidate )
-            : -f $candidate;
-        if ($is_file) { push @files, $candidate; }
+    while (@queue) {
+        my $directory = shift @queue;
+        for my $name ( _directory_names($directory) ) {
+            next if $name eq q{.} || $name eq q{..};
+            my $candidate = File::Spec->catfile( $directory, $name );
+            if ( $recursive && _is_directory($candidate) ) {
+                if ( lc($name) ne 'horizontal'
+                    && !_is_directory_link($candidate) )
+                {
+                    push @queue, $candidate;
+                }
+                next;
+            }
+            next if $name !~ /[.]epub\z/ixms;
+            my $is_file
+                = $OSNAME eq 'MSWin32'
+                ? Win32::LongPath::testL( 'f', $candidate )
+                : -f $candidate;
+            if ($is_file) { push @files, $candidate; }
+        }
     }
+    return [ sort @files ];
+}
+
+sub epub_files ( $path, $recursive = false ) {
+    if ( !_is_directory($path) ) {
+        croak 'Input must be an existing EPUB file or directory.'
+            if !file_exists($path) || $path !~ /[.]epub\z/ixms;
+        return [$path];
+    }
+    my @files = _directory_books( $path, $recursive )->@*;
     croak 'No EPUB files found.' if !@files;
     return \@files;
 }
@@ -234,8 +263,13 @@ Version 0.001.
 
 =head1 SUBROUTINES/METHODS
 
-C<absolute_path($path)> resolves a literal path. C<epub_files($path)> returns
-an array reference containing a single EPUB path or sorted directory entries.
+C<absolute_path($path)> resolves a literal path. C<epub_files($path, $recursive)>
+returns an array reference containing a single EPUB path or sorted EPUB paths.
+The optional recursive flag defaults to false. Recursive scans include empty
+intermediate directories, skip descendant horizontal directories regardless of
+case, and do not follow directory links or Windows directory reparse points.
+An entirely empty search raises an exception. All paths are collected before
+conversion begins, so newly created output directories cannot enter the scan.
 C<file_exists($path)> and C<file_size($path)> inspect files.
 C<ensure_directory($path)> creates missing parent directories.
 

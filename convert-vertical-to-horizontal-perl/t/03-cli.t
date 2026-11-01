@@ -1,12 +1,14 @@
 #!/usr/bin/env perl
 
 use 5.040;
+use utf8;
 
 our $VERSION = '0.001';
 
 use Carp qw(croak);
 
-use English qw(-no_match_vars);
+use English    qw(-no_match_vars);
+use File::Copy qw(copy);
 use File::Spec;
 use File::Temp qw(tempdir tempfile);
 use FindBin    qw($RealBin);
@@ -19,7 +21,7 @@ sub EXIT_STATUS_SHIFT ()    { return 8; }
 sub REFERENCE_CASE_COUNT () { return 21; }
 
 use Epub::Convert::VerticalToHorizontal::Files
-    qw(ensure_directory file_exists open_read open_exclusive);
+    qw(absolute_path ensure_directory file_exists open_read open_exclusive sha256_file);
 
 my $build  = File::Spec->catdir( $RealBin, q{..}, 'blib' );
 my $script = File::Spec->catfile( $RealBin, q{..}, 'bin', 'epub-v2h' );
@@ -128,5 +130,101 @@ ok file_exists( File::Spec->catfile( $mixed_output, 'z-valid.epub' ) ),
     'valid output published';
 ok !file_exists( File::Spec->catfile( $mixed_output, 'a-invalid.epub' ) ),
     'invalid output not published';
+
+sub seed_book ( $source, $destination ) {
+    my $reader = open_read($source);
+    my $writer = open_exclusive($destination);
+    copy( $reader, $writer ) or croak "Cannot copy tree fixture: $OS_ERROR";
+    close $reader            or croak "Cannot close tree input: $OS_ERROR";
+    close $writer            or croak "Cannot close tree fixture: $OS_ERROR";
+    return;
+}
+
+subtest 'recursive conversion keeps outputs beside each source directory' =>
+    sub {
+    my $tree  = File::Spec->catdir( $root,  'tree' );
+    my $child = File::Spec->catdir( $tree,  'empty-parent', '日本語 [literal]' );
+    my $deep  = File::Spec->catdir( $child, 'deeper' );
+    ensure_directory($deep);
+    ensure_directory( File::Spec->catdir( $tree, 'empty-leaf' ) );
+    my $horizontal = File::Spec->catdir( $tree, 'horizontal' );
+    ensure_directory($horizontal);
+    my $existing = File::Spec->catfile( $horizontal, 'existing.epub' );
+    my $reference
+        = File::Spec->catfile( $input, 'vertical CSS variants.epub' );
+    seed_book( $reference, $existing );
+    my @sources = (
+        File::Spec->catfile( $tree,  'root.epub' ),
+        File::Spec->catfile( $child, 'same.epub' ),
+        File::Spec->catfile( $deep,  'same.EPUB' ),
+    );
+    for my $path (@sources) { seed_book( $reference, $path ); }
+    my @hashes       = map { sha256_file($_) } @sources;
+    my @destinations = (
+        File::Spec->catfile( $horizontal, 'root.epub' ),
+        File::Spec->catfile( $child,      'horizontal', 'same.epub' ),
+        File::Spec->catfile( $deep,       'horizontal', 'same.EPUB' ),
+    );
+    my $ignored   = File::Spec->catdir( $root, 'ignored-output' );
+    my $report    = File::Spec->catfile( $root, 'recursive-preview.json' );
+    my @arguments = (
+        '--input-path',       $tree,    '--recursive',
+        '--output-directory', $ignored, '--json',
+    );
+    my $tree_preview
+        = run_command( @arguments, '--what-if', '--report-path', $report );
+    is $tree_preview->{status}, 0, 'recursive preview succeeds';
+    my $records = JSON::PP->new()->utf8()->decode( $tree_preview->{output} );
+    is_deeply [ sort map { $_->{Output} } @{$records} ],
+        [ sort map { absolute_path($_) } @destinations ],
+        'root and nested books each use their own horizontal directory';
+    ok !( grep { file_exists($_) } @destinations ),
+        'preview creates no books';
+    ok !file_exists( File::Spec->catdir( $child, 'horizontal' ) ),
+        'preview creates no nested output directory';
+    ok !file_exists($report),  'preview creates no report';
+    ok !file_exists($ignored), 'ignored output directory is not created';
+
+    my $flat = run_command( '--input-path', $tree, '--output-directory',
+        $ignored, '--what-if', '--json' );
+    my $flat_records = JSON::PP->new()->utf8()->decode( $flat->{output} );
+    is scalar @{$flat_records}, 1, 'default mode remains nonrecursive';
+    is $flat_records->[0]{Output},
+        absolute_path( File::Spec->catfile( $ignored, 'root.epub' ) ),
+        'default mode still honors output-directory';
+
+    my $converted = run_command(@arguments);
+    is $converted->{status}, 0, 'recursive conversion succeeds';
+    my $converted_records
+        = JSON::PP->new()->utf8()->decode( $converted->{output} );
+    is_deeply [ map { $_->{Status} } @{$converted_records} ],
+        [ map {'Converted'} @sources ],
+        'all nested vertical books are converted';
+    ok !( grep { !file_exists($_) } @destinations ), 'all output books exist';
+    is_deeply [ map { sha256_file($_) } @sources ], \@hashes,
+        'all source books remain unchanged';
+    is sha256_file($existing), sha256_file($reference),
+        'preexisting horizontal directory is excluded and untouched';
+    ok !file_exists($ignored), 'conversion ignores output-directory';
+
+    my $tree_analysis = run_command( '--InputPath', $tree, '--Recursive',
+        '--AnalyzeOnly', '--json' );
+    my $analyzed
+        = JSON::PP->new()->utf8()->decode( $tree_analysis->{output} );
+    is $tree_analysis->{status}, 0, 'recursive analysis alias succeeds';
+    is_deeply [ map { $_->{Status} } @{$analyzed} ],
+        [ map {'Analyzed'} @sources ],
+        'analysis excludes generated output folders';
+    my $repeat = run_command(@arguments);
+    is $repeat->{status}, 1, 'repeat conversion refuses existing outputs';
+    my $repeated = JSON::PP->new()->utf8()->decode( $repeat->{output} );
+    is_deeply [ map { $_->{Status} } @{$repeated} ],
+        [ map {'Error'} @sources ],
+        'repeat visits sources rather than generated books';
+    ok !file_exists( File::Spec->catdir( $horizontal, 'horizontal' ) ),
+        'recursive conversion never nests horizontal output directories';
+    done_testing();
+    return;
+    };
 
 done_testing();

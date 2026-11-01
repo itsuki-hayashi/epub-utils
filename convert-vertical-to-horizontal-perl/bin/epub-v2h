@@ -62,9 +62,13 @@ None. Without C<--input-path>, scans the current working directory.
 
 =head1 OPTIONS
 
-C<--input-path PATH> selects a file or nonrecursive directory.
+C<--input-path PATH> selects a file or directory.
 C<--output-directory DIR> selects the output folder, defaulting to
 C<horizontal/> in the current directory. C<--report-path FILE> writes JSON.
+C<--recursive> (C<-r>, C<--Recursive>) includes subdirectories and ignores
+C<--output-directory>. Each book is written into C<horizontal/> inside its own
+source directory, including books directly in the input root. A file input in
+recursive mode similarly uses its containing directory's C<horizontal/> folder.
 C<--analyze-only> inspects without producing books. C<--what-if> previews
 without writing books, directories or reports. C<--json> selects JSON stdout;
 C<--verbose> prints input paths to stderr. C<--help> prints usage.
@@ -92,7 +96,9 @@ Windows additionally uses the Win32 module supplied with native Windows Perl.
 
 =head1 INCOMPATIBILITIES
 
-Directory scans are nonrecursive. Unsupported encodings, signed or encrypted
+Directory scans are nonrecursive unless C<--recursive> is set. Recursive scans
+skip descendant horizontal directories (case-insensitively), directory links
+and Windows directory reparse points. Unsupported encodings, signed or encrypted
 conversion targets and malformed resources produce explicit failures.
 
 =head1 BUGS AND LIMITATIONS

@@ -24,6 +24,7 @@ Usage: epub-v2h [options]
 
   --input-path PATH        EPUB file or directory (default: working directory)
   --output-directory DIR   Output directory (default: BASE/horizontal)
+  --recursive             Include subdirectories; write beside each source directory
   --analyze-only           Inspect without creating output EPUBs
   --what-if                Preview without writing books or a report
   --report-path FILE       Write JSON verification report; never overwrite
@@ -34,6 +35,8 @@ Usage: epub-v2h [options]
 Horizontal, fixed-layout and image-based books are exact copies.
 Converted text books use DEFLATE level 9, with mimetype stored first.
 Existing files are never replaced. A failed book does not stop later books.
+Recursive mode ignores --output-directory and uses SOURCE-DIRECTORY/horizontal.
+It skips horizontal directories and does not follow directory links or junctions.
 USAGE
 }
 
@@ -44,6 +47,7 @@ sub _options ($arguments) {
         $arguments,
         'input-path|InputPath=s'             => \$options{input},
         'output-directory|OutputDirectory=s' => \$options{output},
+        'recursive|Recursive|r'              => \$options{recursive},
         'analyze-only|AnalyzeOnly'           => \$options{analyze_only},
         'what-if|WhatIf'                     => \$options{what_if},
         'report-path|ReportPath=s'           => \$options{report},
@@ -56,8 +60,11 @@ sub _options ($arguments) {
 }
 
 sub _paths ( $options, $script_directory ) {
-    my $input  = absolute_path( $options->{input} // $script_directory );
-    my $output = absolute_path( $options->{output}
+    my $input = absolute_path( $options->{input} // $script_directory );
+    my $output
+        = $options->{recursive}
+        ? undef
+        : absolute_path( $options->{output}
             // File::Spec->catdir( $script_directory, 'horizontal' ) );
     my $report
         = defined $options->{report}
@@ -85,14 +92,18 @@ sub _show_result ( $result, $options ) {
 sub _run_batch ( $options, $paths ) {
     my @results;
 
-    for my $book ( epub_files( $paths->{input} )->@* ) {
+    for my $book ( epub_files( $paths->{input}, $options->{recursive} )->@* )
+    {
         if ( $options->{verbose} ) {
             say {*STDERR} "Inspecting $book"
                 or croak "Cannot print progress: $OS_ERROR";
         }
-        my $destination
-            = File::Spec->catfile( $paths->{output}, basename($book) );
-        my $result = process_book( $book, $destination, $options );
+        my $directory
+            = $options->{recursive}
+            ? File::Spec->catdir( dirname($book), 'horizontal' )
+            : $paths->{output};
+        my $destination = File::Spec->catfile( $directory, basename($book) );
+        my $result      = process_book( $book, $destination, $options );
         push @results, $result;
         _show_result( $result, $options );
     }
@@ -150,8 +161,10 @@ Version 0.001.
 =head1 SUBROUTINES/METHODS
 
 C<run_cli(\@arguments, $base_directory)> consumes options, processes a file
-or nonrecursive directory and returns zero on success or one on book failure.
+or directory and returns zero on success or one on book failure.
 The supplied base directory determines default input and output paths.
+With C<--recursive>, descendants are included and each source directory uses
+its own C<horizontal> output directory. C<--output-directory> is ignored.
 Private helpers parse options, resolve paths, run batches and print records.
 
 =head1 DIAGNOSTICS
@@ -163,7 +176,8 @@ to catch. Use C<--json> for machine-readable standard output.
 =head1 CONFIGURATION AND ENVIRONMENT
 
 Options include C<--input-path>, C<--output-directory>, C<--report-path>,
-C<--analyze-only>, C<--what-if>, C<--json>, C<--verbose> and C<--help>.
+C<--recursive> (C<-r> or C<--Recursive>), C<--analyze-only>, C<--what-if>,
+C<--json>, C<--verbose> and C<--help>.
 No configuration file is read.
 
 =head1 DEPENDENCIES
@@ -172,8 +186,10 @@ Perl 5.40, Getopt::Long, JSON::PP, the main converter and Files modules.
 
 =head1 INCOMPATIBILITIES
 
-Existing output books and reports are never replaced. Directory scans are
-nonrecursive and filenames are literal rather than shell patterns.
+Existing output books and reports are never replaced. Scans are nonrecursive
+unless requested. Recursive scans skip descendant directories named horizontal
+(case-insensitively), directory links and Windows directory reparse points.
+Filenames are literal rather than shell patterns.
 
 =head1 BUGS AND LIMITATIONS
 

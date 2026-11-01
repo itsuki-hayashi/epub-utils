@@ -191,10 +191,37 @@ epub-v2h --output-directory preview --what-if
 epub-v2h --analyze-only --json
 ```
 
-The default input directory is the current working directory; the default output is
-`horizontal/`, matching PowerShell. Directory input is nonrecursive. Existing
+The default input directory is the current working directory; the default output
+is `horizontal/`, matching PowerShell. Directory input is nonrecursive by default. Existing
 outputs and reports are never overwritten; choose a fresh destination for a
 repeat run. An explicit report requires an existing parent directory.
+
+Use `--recursive` (or `-r`, `--Recursive`) to include all descendant directories:
+
+```sh
+epub-v2h --input-path books --recursive
+epub-v2h --input-path books --recursive --what-if --json
+```
+
+Recursive mode **ignores `--output-directory`**. Each source directory gets its
+own `horizontal/` folder, including the input root:
+
+```text
+books/a.epub                 -> books/horizontal/a.epub
+books/author/b.epub          -> books/author/horizontal/b.epub
+books/author/series/c.epub   -> books/author/series/horizontal/c.epub
+```
+
+Directories without books are traversed without creating output folders. Books
+with the same filename in different directories keep their separate destinations.
+Descendant directories named `horizontal` are skipped case-insensitively, and
+directory symlinks, junctions and Windows directory reparse points are not followed.
+This keeps generated books out of subsequent scans and prevents directory-link
+cycles. Existing outputs are still rejected, so repeating a conversion reports
+errors instead of replacing books. Analysis and dry-run modes support recursive
+scans; a dry run creates no folders, books or report. An explicit report combines
+results from the whole tree. With a single-file input, recursive mode uses a
+`horizontal/` folder beside that file and likewise ignores `--output-directory`.
 
 Options also accept `--InputPath`, `--OutputDirectory`, `--AnalyzeOnly`,
 `--WhatIf`, `--ReportPath`, and `--Verbose` aliases. `--help` lists all options.
@@ -295,7 +322,7 @@ preset's stdout routing only because its Perl::Tidy API call captures formatted
 output in memory.
 
 The CPAN packaging was verified on native Windows Perl 5.44.0 with nmake and
-WSL Ubuntu Perl 5.40.1 with GNU make. Both release builds pass all 90 tests.
+WSL Ubuntu Perl 5.40.1 with GNU make. Both release builds pass all 91 tests.
 Windows installation into an isolated `INSTALL_BASE` produces the executable
 and its pl2bat wrapper; the wrapper runs through PATH outside the source tree
 with local dependencies available through `PERL5LIB`. Linux installation into
@@ -320,7 +347,7 @@ severity-1-or-higher Perl::Critic policies remain enabled: no disabled policies
 or inline lint waivers. CPAN dependencies and the vendored `tools/cpanm` are
 not part of the owned-source formatting inventory.
 
-The four test files pass **90 top-level tests/subtests**, including exact
+The four test files pass **91 top-level tests/subtests**, including exact
 payload and metadata comparisons against the 21 synthetic PowerShell fixture
 outputs and exact-copy second passes. Additional checks cover Unicode/emoji
 filesystem paths beyond 260 characters, Unicode ZIP member names, UTF-8/UTF-16
