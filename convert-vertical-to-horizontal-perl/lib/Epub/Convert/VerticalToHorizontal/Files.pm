@@ -45,26 +45,35 @@ sub file_exists ($path) {
 
 sub file_size ($path) {
     if ( $OSNAME eq 'MSWin32' ) {
-        my $stat = Win32::LongPath::statL($path) or croak "Cannot stat $path: $EXTENDED_OS_ERROR";
+        my $stat = Win32::LongPath::statL($path)
+            or croak "Cannot stat $path: $EXTENDED_OS_ERROR";
         return $stat->{size};
     }
     return -s $path // croak "Cannot stat $path: $OS_ERROR";
 }
 
 sub ensure_directory ($path) {
-    my $is_directory = $OSNAME eq 'MSWin32' ? Win32::LongPath::testL( 'd', $path ) : -d $path;
+    my $is_directory
+        = $OSNAME eq 'MSWin32'
+        ? Win32::LongPath::testL( 'd', $path )
+        : -d $path;
     return                                            if $is_directory;
     croak "Path exists but is not a directory: $path" if file_exists($path);
     my $parent = dirname($path);
     croak "Cannot create directory: $path" if $parent eq $path;
     ensure_directory($parent);
-    my $created = $OSNAME eq 'MSWin32' ? Win32::LongPath::mkdirL($path) : mkdir $path;
-    croak "Cannot create directory $path: $OS_ERROR $EXTENDED_OS_ERROR" if !$created;
+    my $created
+        = $OSNAME eq 'MSWin32' ? Win32::LongPath::mkdirL($path) : mkdir $path;
+    croak "Cannot create directory $path: $OS_ERROR $EXTENDED_OS_ERROR"
+        if !$created;
     return;
 }
 
 sub epub_files ($path) {
-    my $is_directory = $OSNAME eq 'MSWin32' ? Win32::LongPath::testL( 'd', $path ) : -d $path;
+    my $is_directory
+        = $OSNAME eq 'MSWin32'
+        ? Win32::LongPath::testL( 'd', $path )
+        : -d $path;
     if ( !$is_directory ) {
         croak 'Input must be an existing EPUB file or directory.'
             if !file_exists($path) || $path !~ /[.]epub\z/ixms;
@@ -73,21 +82,26 @@ sub epub_files ($path) {
     my @names;
     if ( $OSNAME eq 'MSWin32' ) {
         my $directory = Win32::LongPath->new();
-        $directory->opendirL($path) or croak "Cannot read directory $path: $EXTENDED_OS_ERROR";
+        $directory->opendirL($path)
+            or croak "Cannot read directory $path: $EXTENDED_OS_ERROR";
         @names = $directory->readdirL();
         $directory->closedirL();
     }
     else {
-        opendir my $directory, $path or croak "Cannot read directory $path: $OS_ERROR";
+        opendir my $directory, $path
+            or croak "Cannot read directory $path: $OS_ERROR";
         @names = map { _path_text($_) } readdir $directory;
-        closedir $directory or croak "Cannot close directory $path: $OS_ERROR";
+        closedir $directory
+            or croak "Cannot close directory $path: $OS_ERROR";
     }
     my @files;
     for my $name ( sort @names ) {
         next if $name !~ /[.]epub\z/ixms;
         my $candidate = File::Spec->catfile( $path, $name );
-        my $is_file =
-            $OSNAME eq 'MSWin32' ? Win32::LongPath::testL( 'f', $candidate ) : -f $candidate;
+        my $is_file
+            = $OSNAME eq 'MSWin32'
+            ? Win32::LongPath::testL( 'f', $candidate )
+            : -f $candidate;
         if ($is_file) { push @files, $candidate; }
     }
     croak 'No EPUB files found.' if !@files;
@@ -113,7 +127,8 @@ sub open_exclusive ($path) {
             or croak "Cannot create $path: $EXTENDED_OS_ERROR";
     }
     else {
-        sysopen $handle, $path, $flags or croak "Cannot create $path: $OS_ERROR";
+        sysopen $handle, $path, $flags
+            or croak "Cannot create $path: $OS_ERROR";
     }
     binmode $handle, ':raw' or croak "Cannot set binary mode: $OS_ERROR";
     return $handle;
@@ -129,7 +144,8 @@ sub publish_file ( $temporary, $destination ) {
     }
     else {
         # A hard link publishes without the overwrite race of POSIX rename().
-        link $temporary, $destination or croak "Cannot publish $destination: $OS_ERROR";
+        link $temporary, $destination
+            or croak "Cannot publish $destination: $OS_ERROR";
         remove_file($temporary);
     }
     return;
@@ -137,8 +153,12 @@ sub publish_file ( $temporary, $destination ) {
 
 sub remove_file ($path) {
     return if !file_exists($path);
-    my $removed = $OSNAME eq 'MSWin32' ? Win32::LongPath::unlinkL($path) : unlink $path;
-    croak "Cannot remove temporary file $path: $OS_ERROR $EXTENDED_OS_ERROR" if !$removed;
+    my $removed
+        = $OSNAME eq 'MSWin32'
+        ? Win32::LongPath::unlinkL($path)
+        : unlink $path;
+    croak "Cannot remove temporary file $path: $OS_ERROR $EXTENDED_OS_ERROR"
+        if !$removed;
     return;
 }
 
@@ -156,7 +176,8 @@ sub _windows_api ( $library, $name, $input, $output ) {
 
 sub _wide_string ($pointer) {
     state $length = _windows_api( 'kernel32', 'lstrlenW', 'N', 'I' );
-    my $bytes = Win32::API::ReadMemory( $pointer, 2 * $length->Call($pointer) );
+    my $bytes
+        = Win32::API::ReadMemory( $pointer, 2 * $length->Call($pointer) );
     return decode( 'UTF-16LE', $bytes, FB_CROAK | LEAVE_SRC );
 }
 
@@ -165,11 +186,14 @@ sub command_arguments () {
         return map { _path_text($_) } @ARGV;
     }
     return () if !@ARGV;
-    my $command      = _windows_api( 'kernel32', 'GetCommandLineW', q{}, 'N' )->Call();
+    my $command
+        = _windows_api( 'kernel32', 'GetCommandLineW', q{}, 'N' )->Call();
     my $count_buffer = pack 'L', 0;
-    my $argument_vector =
-        _windows_api( 'shell32', 'CommandLineToArgvW', 'NP', 'N' )->Call( $command, $count_buffer );
-    croak "Cannot read Unicode command line: $EXTENDED_OS_ERROR" if !$argument_vector;
+    my $argument_vector
+        = _windows_api( 'shell32', 'CommandLineToArgvW', 'NP', 'N' )
+        ->Call( $command, $count_buffer );
+    croak "Cannot read Unicode command line: $EXTENDED_OS_ERROR"
+        if !$argument_vector;
     my $count    = unpack 'L', $count_buffer;
     my @pointers = unpack 'J*',
         Win32::API::ReadMemory( $argument_vector, $count * $Config{ptrsize} );
@@ -178,7 +202,8 @@ sub command_arguments () {
 
     # Skip the interpreter, its switches and the script, without assuming how
     # Perl was launched. The final arguments correspond to Perl's original ARGV.
-    croak 'Unexpected Windows command-line argument count.' if @arguments < @ARGV;
+    croak 'Unexpected Windows command-line argument count.'
+        if @arguments < @ARGV;
     return @arguments[ @arguments - @ARGV .. $#arguments ];
 }
 

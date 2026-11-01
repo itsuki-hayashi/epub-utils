@@ -1,12 +1,8 @@
--i=4
--ci=4
--l=100
--vt=0
--cti=0
--pt=1
--bt=1
--sbt=1
--bbt=1
--nsfs
--noll
--utf8
+# Use Perl Best Practices as the formatting baseline.
+--perl-best-practices
+
+# Keep long comments indented; long quotes already follow the PBP preset.
+--nooutdent-long-lines
+
+# Source files contain Japanese text and use UTF-8.
+--character-encoding=utf8

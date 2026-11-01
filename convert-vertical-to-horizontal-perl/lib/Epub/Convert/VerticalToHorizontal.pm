@@ -9,9 +9,10 @@ use File::Basename qw(basename dirname);
 use File::Copy     qw(copy);
 use File::Spec;
 
-use Epub::Convert::VerticalToHorizontal::Archive qw(open_archive close_archive repack_archive);
-use Epub::Convert::VerticalToHorizontal::Book    qw(plan_book);
-use Epub::Convert::VerticalToHorizontal::Files   qw(
+use Epub::Convert::VerticalToHorizontal::Archive
+    qw(open_archive close_archive repack_archive);
+use Epub::Convert::VerticalToHorizontal::Book  qw(plan_book);
+use Epub::Convert::VerticalToHorizontal::Files qw(
     ensure_directory file_exists file_size open_read open_exclusive
     publish_file remove_file sha256_file
 );
@@ -25,7 +26,10 @@ sub _temporary_output ($directory) {
     my $path;
     while (true) {
         $path = File::Spec->catfile( $directory,
-            q{.epub-horizontal-} . $PID . q{-} . ++$temporary_sequence . q{.tmp} );
+                  q{.epub-horizontal-}
+                . $PID . q{-}
+                . ++$temporary_sequence
+                . q{.tmp} );
         last if !file_exists($path);
     }
     return { path => $path, handle => open_exclusive($path) };
@@ -50,7 +54,8 @@ sub _publish_book ( $input, $archive, $plan, $result ) {
         if ( $plan->{kind} eq 'Preserved' ) {
             _copy_exactly( $input, $temporary );
             croak 'Exact-copy verification failed.'
-                if sha256_file( $temporary->{path} ) ne $result->{InputSHA256};
+                if sha256_file( $temporary->{path} ) ne
+                $result->{InputSHA256};
         }
         else { repack_archive( $archive, $plan->{patches}, $temporary ); }
         $result->{OutputSHA256} = sha256_file( $temporary->{path} );
@@ -59,7 +64,8 @@ sub _publish_book ( $input, $archive, $plan, $result ) {
     }
     catch ($error) {
         if ( defined $temporary->{handle} ) {
-            close $temporary->{handle} or croak "Cannot close temporary output: $OS_ERROR";
+            close $temporary->{handle}
+                or croak "Cannot close temporary output: $OS_ERROR";
         }
         remove_file( $temporary->{path} );
         croak $error;
@@ -90,16 +96,21 @@ sub process_book ( $input, $destination, $options = {} ) {
         $result->{ChangedEntries} = [ sort keys $plan->{patches}->%* ];
         if ( $options->{analyze_only} ) { $result->{Status} = 'Analyzed'; }
         else {
-            croak "Refusing to overwrite: $destination" if file_exists($destination);
+            croak "Refusing to overwrite: $destination"
+                if file_exists($destination);
             if ( $options->{what_if} ) { $result->{Status} = 'WhatIf'; }
             else {
                 _publish_book( $input, $archive, $plan, $result );
-                $result->{Status}          = $plan->{kind};
-                $result->{EntriesVerified} = scalar $archive->{zip}->members();
+                $result->{Status} = $plan->{kind};
+                $result->{EntriesVerified}
+                    = scalar $archive->{zip}->members();
             }
         }
     }
-    catch ($error) { $result->{Status} = 'Error'; $result->{Error} = "$error"; };
+    catch ($error) {
+        $result->{Status} = 'Error';
+        $result->{Error}  = "$error";
+    };
     if ( defined $archive ) { close_archive($archive); }
     return $result;
 }
@@ -108,14 +119,16 @@ sub write_report ( $path, $json ) {
     croak "Refusing to overwrite report: $path" if file_exists($path);
     my $temporary = _temporary_output( dirname($path) );
     try {
-        print { $temporary->{handle} } $json or croak "Cannot write report: $OS_ERROR";
-        close $temporary->{handle}           or croak "Cannot finish report: $OS_ERROR";
+        print { $temporary->{handle} } $json
+            or croak "Cannot write report: $OS_ERROR";
+        close $temporary->{handle} or croak "Cannot finish report: $OS_ERROR";
         $temporary->{handle} = undef;
         publish_file( $temporary->{path}, $path );
     }
     catch ($error) {
         if ( defined $temporary->{handle} ) {
-            close $temporary->{handle} or croak "Cannot close report: $OS_ERROR";
+            close $temporary->{handle}
+                or croak "Cannot close report: $OS_ERROR";
         }
         remove_file( $temporary->{path} );
         croak $error;

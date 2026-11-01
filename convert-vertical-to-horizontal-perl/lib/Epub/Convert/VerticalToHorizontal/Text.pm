@@ -23,40 +23,47 @@ our @EXPORT_OK = qw(
     parse_xml resolve_entry css_imports css_uses_vertical
 );
 
-my $css_comment   = qr{ /\* .*? \*/ }xms;
-my $css_string    = qr{ " (?: \\. | [^"\\] )* " | ' (?: \\. | [^'\\] )* ' }xms;
-my $css_skip      = qr{ $css_comment | $css_string }xms;
-my $css_gap       = qr{ (?> (?: \s+ | $css_comment )* ) }xms;
-my $vertical_mode = qr{ vertical-rl | vertical-lr | sideways-rl | sideways-lr | tb-rl | tb-lr }ixms;
+my $css_comment = qr{ /\* .*? \*/ }xms;
+my $css_string  = qr{ " (?: \\. | [^"\\] )* " | ' (?: \\. | [^'\\] )* ' }xms;
+my $css_skip    = qr{ $css_comment | $css_string }xms;
+my $css_gap     = qr{ (?> (?: \s+ | $css_comment )* ) }xms;
+my $vertical_mode
+    = qr{ vertical-rl | vertical-lr | sideways-rl | sideways-lr | tb-rl | tb-lr }ixms;
 my $vendor_prefix = qr{ -(?:webkit|epub|ms|moz)- }ixms;
 my $css_property  = qr{ (?<property> $vendor_prefix? writing-mode ) }ixms;
 my $css_start     = qr{ (?<![^;\{]) $css_gap $css_property }ixms;
 my $css_prefix    = qr{ (?<prefix> $css_start $css_gap : $css_gap ) }ixms;
-my $css_value_end = qr{ (?= $css_gap (?: ! $css_gap important $css_gap )? (?: [;\}] | \z ) ) }ixms;
+my $css_value_end
+    = qr{ (?= $css_gap (?: ! $css_gap important $css_gap )? (?: [;\}] | \z ) ) }ixms;
 my $css_direction = qr{ (?<token>
     $css_prefix (?<value> $vertical_mode ) $css_value_end | $css_skip
 ) }ixms;
 my $xml_encoding = qr{ <\?xml [^>]*? encoding \s*=\s* }ixms;
-my $encoding_declaration =
-    qr{ \A \s* (?: $xml_encoding | \@charset \s+ ) ["'] (?<encoding> [^"']+ ) }ixms;
+my $encoding_declaration
+    = qr{ \A \s* (?: $xml_encoding | \@charset \s+ ) ["'] (?<encoding> [^"']+ ) }ixms;
 my $markup_comment = qr{ <!-- .*? --> }xms;
 my $element_prefix = qr{ (?:\w+:)? }xms;
-my $script_element =
-    qr{ < $element_prefix script \b [^>]* > .*? </ $element_prefix script \s* > }ixms;
-my $style_start     = qr{ < $element_prefix style \b [^>]* > }ixms;
-my $style_end       = qr{ </ $element_prefix style \s* > }ixms;
-my $markup_tag      = qr{ < [A-Za-z] [^>"']* (?: (?: "[^"]*" | '[^']*' ) [^>"']* )* > }xms;
+my $script_element
+    = qr{ < $element_prefix script \b [^>]* > .*? </ $element_prefix script \s* > }ixms;
+my $style_start = qr{ < $element_prefix style \b [^>]* > }ixms;
+my $style_end   = qr{ </ $element_prefix style \s* > }ixms;
+my $markup_tag
+    = qr{ < [A-Za-z] [^>"']* (?: (?: "[^"]*" | '[^']*' ) [^>"']* )* > }xms;
 my $attribute_value = qr{ (?<quote> ["'] ) (?<value> .*? ) \k<quote> }xms;
 my $attribute_name  = qr{ (?<name> style | writing-mode ) }ixms;
-my $style_attribute = qr{ (?<prefix> \s $attribute_name \s*=\s* ) $attribute_value }ixms;
-my $attribute_token = qr{ (?<attribute> $style_attribute | " [^"]* " | ' [^']* ' ) }ixms;
-my $style_element   = qr{ (?<style> $style_start ) (?<css> .*? ) (?<end> $style_end ) }ixms;
-my $markup_token =
-    qr{ (?<token> $markup_comment | $script_element | $style_element | (?<tag> $markup_tag ) ) }ixms;
+my $style_attribute
+    = qr{ (?<prefix> \s $attribute_name \s*=\s* ) $attribute_value }ixms;
+my $attribute_token
+    = qr{ (?<attribute> $style_attribute | " [^"]* " | ' [^']* ' ) }ixms;
+my $style_element
+    = qr{ (?<style> $style_start ) (?<css> .*? ) (?<end> $style_end ) }ixms;
+my $markup_token
+    = qr{ (?<token> $markup_comment | $script_element | $style_element | (?<tag> $markup_tag ) ) }ixms;
 my $quoted_import = qr{ ["'] (?<quoted> [^"']+ ) ["'] }xms;
 my $bare_import   = qr{ (?<bare> [^\s)"']+ ) }xms;
-my $import_url    = qr{ url\( \s* (?: $quoted_import | $bare_import ) \s* \) }ixms;
-my $import_token  = qr{
+my $import_url
+    = qr{ url\( \s* (?: $quoted_import | $bare_import ) \s* \) }ixms;
+my $import_token = qr{
     $css_skip | \@import \s+ (?: $import_url | ["'] (?<direct> [^"']+ ) ["'] )
 }ixms;
 
@@ -67,24 +74,38 @@ sub decode_payload ($bytes) {
         if $bytes =~ /\A (?: \x00\x00\xFE\xFF | \xFF\xFE\x00\x00 )/xms;
     if ( $bytes =~ /\A (\xFF\xFE | \xFE\xFF | \xEF\xBB\xBF)/xms ) {
         $prefix = $1;
-        $encoding =
-            $prefix eq UTF16_LE_BOM ? 'UTF-16LE' : $prefix eq UTF16_BE_BOM ? 'UTF-16BE' : 'UTF-8';
+        $encoding
+            = $prefix eq UTF16_LE_BOM ? 'UTF-16LE'
+            : $prefix eq UTF16_BE_BOM ? 'UTF-16BE'
+            :                           'UTF-8';
     }
-    elsif ( substr( $bytes, 0, ENCODING_PROBE_BYTES ) =~ $encoding_declaration ) {
+    elsif (
+        substr( $bytes, 0, ENCODING_PROBE_BYTES ) =~ $encoding_declaration )
+    {
         $encoding = $LAST_PAREN_MATCH{encoding};
     }
     my $body = substr $bytes, length $prefix;
     my $text = decode( $encoding, $body, FB_CROAK | LEAVE_SRC );
-    croak 'Unsupported text encoding (embedded NUL).' if index( $text, "\0" ) >= 0;
-    return { text => $text, encoding => $encoding, prefix => $prefix, bytes => $bytes };
+    croak 'Unsupported text encoding (embedded NUL).'
+        if index( $text, "\0" ) >= 0;
+    return {
+        text     => $text,
+        encoding => $encoding,
+        prefix   => $prefix,
+        bytes    => $bytes
+    };
 }
 
 sub encode_payload ( $payload, $text ) {
     return $payload->{bytes} if $text eq $payload->{text};
-    my $round_trip =
-        $payload->{prefix} . encode( $payload->{encoding}, $payload->{text}, FB_CROAK | LEAVE_SRC );
-    croak 'Resource encoding does not round-trip exactly.' if $round_trip ne $payload->{bytes};
-    return $payload->{prefix} . encode( $payload->{encoding}, $text, FB_CROAK | LEAVE_SRC );
+    my $round_trip
+        = $payload->{prefix}
+        . encode( $payload->{encoding}, $payload->{text},
+        FB_CROAK | LEAVE_SRC );
+    croak 'Resource encoding does not round-trip exactly.'
+        if $round_trip ne $payload->{bytes};
+    return $payload->{prefix}
+        . encode( $payload->{encoding}, $text, FB_CROAK | LEAVE_SRC );
 }
 
 sub _xml_parser () {
@@ -93,8 +114,7 @@ sub _xml_parser () {
     # the DOM only; output always comes from the original resource bytes.
     my $callbacks = XML::LibXML::InputCallback->new();
     $callbacks->register_callbacks(
-        [
-            sub { return true; },
+        [   sub { return true; },
             sub { croak 'External XML resources are unsupported.'; },
             sub { croak 'External XML resources are unsupported.'; },
             sub { return; },
@@ -105,7 +125,8 @@ sub _xml_parser () {
         load_ext_dtd    => 0,
         expand_entities => 0,
         recover         => 0,
-        ext_ent_handler => sub { croak 'External XML entities are unsupported.'; },
+        ext_ent_handler =>
+            sub { croak 'External XML entities are unsupported.'; },
     );
     $parser->input_callbacks($callbacks);
     return $parser;
@@ -118,10 +139,12 @@ sub parse_xml ($text) {
     # the original byte encoding, which must not be applied to a Unicode string.
     # Normalize only this inspection copy; never serialize it back into the ZIP.
     $text =~ s{ \A ($xml_encoding) (["']) [^"']+ \2 }{${1}${2}UTF-8${2}}xms;
-    my $document = $parser->load_xml( string => encode( 'UTF-8', $text, FB_CROAK | LEAVE_SRC ) );
-    my $dtd      = $document->internalSubset();
+    my $document = $parser->load_xml(
+        string => encode( 'UTF-8', $text, FB_CROAK | LEAVE_SRC ) );
+    my $dtd = $document->internalSubset();
     croak 'XML entity declarations require manual review.'
-        if defined $dtd && any { $_->nodeType() == XML::LibXML::XML_ENTITY_DECL() }
+        if defined $dtd
+        && any { $_->nodeType() == XML::LibXML::XML_ENTITY_DECL() }
         $dtd->childNodes();
     return $document;
 }
@@ -129,7 +152,9 @@ sub parse_xml ($text) {
 sub resolve_entry ( $base_path, $href ) {
     my $uri = URI->new_abs( $href, 'https://epub.invalid/' . $base_path );
     croak "Unsupported external/query resource: $href"
-        if $uri->scheme ne 'https' || $uri->host ne 'epub.invalid' || defined $uri->query;
+        if $uri->scheme ne 'https'
+        || $uri->host ne 'epub.invalid'
+        || defined $uri->query;
     my $path = uri_unescape( $uri->path );
     $path =~ s{\A /}{}xms;
     return decode( 'UTF-8', $path, FB_CROAK | LEAVE_SRC );
@@ -137,22 +162,24 @@ sub resolve_entry ( $base_path, $href ) {
 
 sub _css_replacement ( $matched, $prefix, $property, $value ) {
     return $matched if !defined $prefix;
-    my $horizontal =
-        lc($property) eq '-ms-writing-mode' || $value =~ /\A tb-/ixms ? 'lr-tb' : 'horizontal-tb';
+    my $horizontal = lc($property) eq '-ms-writing-mode'
+        || $value =~ /\A tb-/ixms ? 'lr-tb' : 'horizontal-tb';
     return $prefix . $horizontal;
 }
 
 sub convert_css ($text) {
     return $text if $text !~ /writing-mode/ixms;
-    $text =~
-        s{$css_direction}{ _css_replacement( $LAST_PAREN_MATCH{token}, $LAST_PAREN_MATCH{prefix}, $LAST_PAREN_MATCH{property}, $LAST_PAREN_MATCH{value} ) }egxms;
+    $text
+        =~ s{$css_direction}{ _css_replacement( $LAST_PAREN_MATCH{token}, $LAST_PAREN_MATCH{prefix}, $LAST_PAREN_MATCH{property}, $LAST_PAREN_MATCH{value} ) }egxms;
     return $text;
 }
 
 sub _convert_attribute ( $matched, $prefix, $name, $quote, $value ) {
     return $matched if !defined $prefix;
-    if    ( lc($name) eq 'style' ) { $value = convert_css($value); }
-    elsif ( $value =~ /\A (?: vertical-(?:rl|lr) | sideways-(?:rl|lr) ) \z/ixms ) {
+    if ( lc($name) eq 'style' ) { $value = convert_css($value); }
+    elsif (
+        $value =~ /\A (?: vertical-(?:rl|lr) | sideways-(?:rl|lr) ) \z/ixms )
+    {
         $value = 'horizontal-tb';
     }
     elsif ( $value =~ /\A tb-(?:rl|lr) \z/ixms ) { $value = 'lr-tb'; }
@@ -177,11 +204,13 @@ sub convert_markup ($text) {
 sub _convert_package_tag ( $tag, $kind ) {
     return $tag if !defined $kind;
     if ( lc($kind) eq 'spine' ) {
-        $tag =~ s{ (\s page-progression-direction \s*=\s* ["']) rtl (?=["']) }{${1}ltr}gixms;
+        $tag
+            =~ s{ (\s page-progression-direction \s*=\s* ["']) rtl (?=["']) }{${1}ltr}gixms;
     }
     elsif ( $tag =~ /\s name \s*=\s* (["']) primary-writing-mode \1/ixms ) {
         my $content = qr{ (\s content \s*=\s* ["']) }ixms;
-        $tag =~ s{ $content (?:vertical|tb) -(?:rl|lr) (?=["']) }{${1}horizontal-tb}gixms;
+        $tag
+            =~ s{ $content (?:vertical|tb) -(?:rl|lr) (?=["']) }{${1}horizontal-tb}gixms;
     }
     return $tag;
 }
@@ -214,7 +243,9 @@ sub css_uses_vertical ( $text, $classes, $ids ) {
             my $used = true;
             while ( $selector =~ / (?<type> [.#] ) (?<name> [\w-]+ ) /gxms ) {
                 my $names = $LAST_PAREN_MATCH{type} eq q{.} ? $classes : $ids;
-                if ( !exists $names->{ $LAST_PAREN_MATCH{name} } ) { $used = false; }
+                if ( !exists $names->{ $LAST_PAREN_MATCH{name} } ) {
+                    $used = false;
+                }
             }
             return true if $used;
         }

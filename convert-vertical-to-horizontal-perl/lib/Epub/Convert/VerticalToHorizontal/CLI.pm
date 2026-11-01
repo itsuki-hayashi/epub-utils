@@ -12,8 +12,9 @@ use File::Spec;
 use Getopt::Long qw(GetOptionsFromArray);
 use JSON::PP;
 
-use Epub::Convert::VerticalToHorizontal        qw(process_book write_report);
-use Epub::Convert::VerticalToHorizontal::Files qw(absolute_path epub_files file_exists);
+use Epub::Convert::VerticalToHorizontal qw(process_book write_report);
+use Epub::Convert::VerticalToHorizontal::Files
+    qw(absolute_path epub_files file_exists);
 
 our @EXPORT_OK = qw(run_cli);
 
@@ -55,11 +56,13 @@ sub _options ($arguments) {
 }
 
 sub _paths ( $options, $script_directory ) {
-    my $input = absolute_path( $options->{input} // $script_directory );
-    my $output =
-        absolute_path( $options->{output}
+    my $input  = absolute_path( $options->{input} // $script_directory );
+    my $output = absolute_path( $options->{output}
             // File::Spec->catdir( $script_directory, 'horizontal' ) );
-    my $report = defined $options->{report} ? absolute_path( $options->{report} ) : undef;
+    my $report
+        = defined $options->{report}
+        ? absolute_path( $options->{report} )
+        : undef;
     croak "Refusing to overwrite report: $report"
         if defined $report && file_exists($report) && !$options->{what_if};
     croak 'Report directory must already exist.'
@@ -73,7 +76,8 @@ sub _show_result ( $result, $options ) {
             or croak "Cannot print error: $OS_ERROR";
     }
     if ( !$options->{json} ) {
-        say join "\t", $result->@{qw(Status Reason Book)} or croak "Cannot print result: $OS_ERROR";
+        say join "\t", $result->@{qw(Status Reason Book)}
+            or croak "Cannot print result: $OS_ERROR";
     }
     return;
 }
@@ -83,8 +87,9 @@ sub _run_batch ( $options, $paths ) {
 
     for my $book ( epub_files( $paths->{input} )->@* ) {
         if ( $options->{verbose} ) { say {*STDERR} "Inspecting $book"; }
-        my $destination = File::Spec->catfile( $paths->{output}, basename($book) );
-        my $result      = process_book( $book, $destination, $options );
+        my $destination
+            = File::Spec->catfile( $paths->{output}, basename($book) );
+        my $result = process_book( $book, $destination, $options );
         push @results, $result;
         _show_result( $result, $options );
     }
@@ -93,7 +98,10 @@ sub _run_batch ( $options, $paths ) {
 
 sub run_cli ( $arguments, $script_directory ) {
     my $options = _options($arguments);
-    if ( $options->{help} ) { print _usage() or croak "Cannot print help: $OS_ERROR"; return 0; }
+    if ( $options->{help} ) {
+        print _usage() or croak "Cannot print help: $OS_ERROR";
+        return 0;
+    }
     my $paths   = _paths( $options, $script_directory );
     my $results = _run_batch( $options, $paths );
     my $json    = JSON::PP->new()->canonical()->pretty();
@@ -101,11 +109,13 @@ sub run_cli ( $arguments, $script_directory ) {
         write_report( $paths->{report}, $json->utf8()->encode($results) );
     }
     if ( $options->{json} ) {
-        print $json->utf8(0)->encode($results) or croak "Cannot print JSON: $OS_ERROR";
+        print $json->utf8(0)->encode($results)
+            or croak "Cannot print JSON: $OS_ERROR";
     }
     my $failures = grep { $_->{Status} eq 'Error' } @{$results};
     if ($failures) {
-        say {*STDERR} "$failures EPUB(s) failed; other books were processed independently.";
+        say {*STDERR}
+            "$failures EPUB(s) failed; other books were processed independently.";
     }
     return $failures ? 1 : 0;
 }

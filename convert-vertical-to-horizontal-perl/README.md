@@ -240,6 +240,11 @@ bundle while satisfying Perl::Critic's default version-notation policy.
 
 ## Quality and parity checks
 
+The formatting profile uses full-length options and the
+`--perl-best-practices` preset. The checker disables the
+preset's stdout routing only because its Perl::Tidy API call captures formatted
+output in memory.
+
 The CPAN packaging was verified on native Windows Perl 5.44.0 with nmake and
 WSL Ubuntu Perl 5.40.1 with GNU make. Both release builds pass all 90 tests.
 Windows installation into an isolated `INSTALL_BASE` produces the executable

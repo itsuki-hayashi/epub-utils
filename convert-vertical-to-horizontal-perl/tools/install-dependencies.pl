@@ -36,7 +36,8 @@ local $ENV{PERL_CPANM_HOME} = File::Spec->catdir( $root, '.cpanm' );
 
 sub install (@arguments) {
     system { $install[0] } @install, @arguments;
-    croak "Dependency installation failed (status $CHILD_ERROR)." if $CHILD_ERROR;
+    croak "Dependency installation failed (status $CHILD_ERROR)."
+        if $CHILD_ERROR;
     return;
 }
 
@@ -48,10 +49,12 @@ sub command (@arguments) {
 
 sub checked_archive ( $name, $expected_hash ) {
     my $path = File::Spec->catfile( $root, 'vendor', $name );
-    open my $handle, '<:raw', $path or croak "Cannot read vendored archive: $OS_ERROR";
+    open my $handle, '<:raw', $path
+        or croak "Cannot read vendored archive: $OS_ERROR";
     my $bytes = do { local $INPUT_RECORD_SEPARATOR = undef; <$handle> };
     close $handle or croak "Cannot close vendored archive: $OS_ERROR";
-    croak "Vendored archive checksum mismatch: $name" if sha256_hex($bytes) ne $expected_hash;
+    croak "Vendored archive checksum mismatch: $name"
+        if sha256_hex($bytes) ne $expected_hash;
     return $path;
 }
 
@@ -68,16 +71,23 @@ sub native_xml () {
     my $library = File::Spec->catfile( $prefix, 'lib', 'libxml2s.lib' );
     if ( !-f $library ) {
         my $source = checked_archive( 'libxml2-2.15.4.tar.xz',
-            '98087fd181d9070724f3fbc65c7377db03038eb92bd882374daff44940138821' );
+            '98087fd181d9070724f3fbc65c7377db03038eb92bd882374daff44940138821'
+        );
         make_path($native);
         command( 'tar', '-xf', $source, '-C', $native );
         command(
-            'cmake',                                         '-S',
-            File::Spec->catdir( $native, 'libxml2-2.15.4' ), '-B',
-            $build,                                          '-G',
-            'NMake Makefiles',                               '-DCMAKE_BUILD_TYPE=Release',
-            "-DCMAKE_INSTALL_PREFIX=$prefix",                '-DBUILD_SHARED_LIBS=OFF',
-            '-DLIBXML2_WITH_ICONV=OFF',                      '-DLIBXML2_WITH_PROGRAMS=OFF',
+            'cmake',
+            '-S',
+            File::Spec->catdir( $native, 'libxml2-2.15.4' ),
+            '-B',
+            $build,
+            '-G',
+            'NMake Makefiles',
+            '-DCMAKE_BUILD_TYPE=Release',
+            "-DCMAKE_INSTALL_PREFIX=$prefix",
+            '-DBUILD_SHARED_LIBS=OFF',
+            '-DLIBXML2_WITH_ICONV=OFF',
+            '-DLIBXML2_WITH_PROGRAMS=OFF',
             '-DLIBXML2_WITH_PYTHON=OFF'
         );
         command( 'cmake', '--build',    $build );
@@ -90,7 +100,8 @@ sub native_xml () {
 
     # Alien::Libxml2's Unix shell config cannot execute on native Windows.
     # Use absolute .lib paths because MSVC's linker does not accept -L flags.
-    open my $handle, '>:raw', $config or croak "Cannot create native XML config: $OS_ERROR";
+    open my $handle, '>:raw', $config
+        or croak "Cannot create native XML config: $OS_ERROR";
     print {$handle} join "\r\n", '@echo off',
         'if "%~1"=="--version" echo 2.15.4',
         qq{if "%~1"=="--cflags" echo -I"$prefix/include/libxml2" -DLIBXML_STATIC},
@@ -106,12 +117,16 @@ sub patched_pkg_config () {
     my $build = File::Spec->catdir( $root, '.cpanm', 'bootstrap' );
     make_path($build);
     my $old_directory = getcwd();
-    chdir $build or croak "Cannot enter dependency build directory: $OS_ERROR";
-    Archive::Tar->extract_archive( $source, 1 ) or croak 'Cannot unpack PkgConfig.';
-    chdir $old_directory or croak "Cannot restore working directory: $OS_ERROR";
+    chdir $build
+        or croak "Cannot enter dependency build directory: $OS_ERROR";
+    Archive::Tar->extract_archive( $source, 1 )
+        or croak 'Cannot unpack PkgConfig.';
+    chdir $old_directory
+        or croak "Cannot restore working directory: $OS_ERROR";
     my $package = File::Spec->catdir( $build, 'PkgConfig-0.26026' );
-    my $test    = File::Spec->catfile( $package, 't', '01-script_detailed.t' );
-    open my $input, '<:raw', $test or croak "Cannot read PkgConfig test: $OS_ERROR";
+    my $test = File::Spec->catfile( $package, 't', '01-script_detailed.t' );
+    open my $input, '<:raw', $test
+        or croak "Cannot read PkgConfig test: $OS_ERROR";
     my $text = do { local $INPUT_RECORD_SEPARATOR = undef; <$input> };
     close $input or croak "Cannot close PkgConfig test: $OS_ERROR";
     my $old         = 'if (eval { symlink("",""); 1 }) {';
@@ -129,14 +144,16 @@ if ($can_symlink) {
 PROBE
     croak 'PkgConfig patch context changed.' if index( $text, $old ) < 0;
     $text =~ s{\Q$old\E}{$replacement}xms;
-    open my $output, '>:raw', $test or croak "Cannot patch PkgConfig test: $OS_ERROR";
+    open my $output, '>:raw', $test
+        or croak "Cannot patch PkgConfig test: $OS_ERROR";
     print {$output} $text or croak "Cannot write PkgConfig patch: $OS_ERROR";
     close $output         or croak "Cannot close PkgConfig patch: $OS_ERROR";
     return $package =~ s{\\}{/}grxms;
 }
 
 if ( $OSNAME eq 'MSWin32' && !installed_version('PkgConfig') ) {
-    chdir patched_pkg_config() or croak "Cannot enter PkgConfig source: $OS_ERROR";
+    chdir patched_pkg_config()
+        or croak "Cannot enter PkgConfig source: $OS_ERROR";
     install(q{.});
 }
 chdir $root or croak "Cannot enter workspace: $OS_ERROR";
@@ -145,9 +162,12 @@ if ( installed_version('Module::Pluggable') ne '6.3' ) {
         '58512bb9c654746d0937770b98b559b30872d85ac24073485e5830890dd1b2a0' );
     install(q{./vendor/Module-Pluggable-6.3.tar.gz});
 }
-local $ENV{PATH} =
-    $OSNAME eq 'MSWin32' ? native_xml() . $Config{path_sep} . $ENV{PATH} : $ENV{PATH};
-local $ENV{ALIEN_INSTALL_TYPE} = $OSNAME eq 'MSWin32' ? 'system' : $ENV{ALIEN_INSTALL_TYPE};
+local $ENV{PATH}
+    = $OSNAME eq 'MSWin32'
+    ? native_xml() . $Config{path_sep} . $ENV{PATH}
+    : $ENV{PATH};
+local $ENV{ALIEN_INSTALL_TYPE}
+    = $OSNAME eq 'MSWin32' ? 'system' : $ENV{ALIEN_INSTALL_TYPE};
 install( '--installdeps', q{.}, '--with-develop' );
 
 __END__

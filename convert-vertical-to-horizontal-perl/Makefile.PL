@@ -16,20 +16,21 @@ if ( $OSNAME eq 'MSWin32' ) {
 }
 
 my %modules;
-for my $source ( glob('lib/Epub/Convert/*.pm'), glob('lib/Epub/Convert/VerticalToHorizontal/*.pm') )
+for my $source ( glob('lib/Epub/Convert/*.pm'),
+    glob('lib/Epub/Convert/VerticalToHorizontal/*.pm') )
 {
     my $target = $source;
     $target =~ s{\Alib/}{\$(INST_LIB)/}xms;
     $modules{$source} = $target;
 }
 WriteMakefile(
-    PM                 => \%modules,
-    NAME               => 'Epub::Convert::VerticalToHorizontal',
-    VERSION_FROM       => 'lib/Epub/Convert/VerticalToHorizontal.pm',
-    ABSTRACT           => 'Preserve horizontal EPUBs and convert vertical text',
-    AUTHOR             => 'Itsuki Hayashi',
-    LICENSE            => 'gpl_3',
-    MIN_PERL_VERSION   => '5.040000',
+    PM               => \%modules,
+    NAME             => 'Epub::Convert::VerticalToHorizontal',
+    VERSION_FROM     => 'lib/Epub/Convert/VerticalToHorizontal.pm',
+    ABSTRACT         => 'Preserve horizontal EPUBs and convert vertical text',
+    AUTHOR           => 'Itsuki Hayashi',
+    LICENSE          => 'gpl_3',
+    MIN_PERL_VERSION => '5.040000',
     CONFIGURE_REQUIRES => { 'ExtUtils::MakeMaker' => '7.70' },
     TEST_REQUIRES      => { 'Test::More'          => '1.302199' },
     PREREQ_PM          => \%requires,
@@ -44,7 +45,9 @@ WriteMakefile(
                 url  => 'https://github.com/itsuki-hayashi/epub-utils.git',
                 web  => 'https://github.com/itsuki-hayashi/epub-utils',
             },
-            bugtracker => { web => 'https://github.com/itsuki-hayashi/epub-utils/issues' },
+            bugtracker => {
+                web => 'https://github.com/itsuki-hayashi/epub-utils/issues'
+            },
         },
     },
 );

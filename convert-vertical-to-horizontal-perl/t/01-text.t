@@ -17,20 +17,28 @@ use Epub::Convert::VerticalToHorizontal::Text qw(
     parse_xml resolve_entry css_imports css_uses_vertical
 );
 
-is convert_css('body {writing-mode:vertical-rl}'), 'body {writing-mode:horizontal-tb}',
+is convert_css('body {writing-mode:vertical-rl}'),
+    'body {writing-mode:horizontal-tb}',
     'standard CSS';
 is convert_css('body {-epub-writing-mode: vertical-lr !important}'),
-    'body {-epub-writing-mode: horizontal-tb !important}', 'EPUB prefix and importance';
-is convert_css('body {-ms-writing-mode:tb-rl}'), 'body {-ms-writing-mode:lr-tb}',
+    'body {-epub-writing-mode: horizontal-tb !important}',
+    'EPUB prefix and importance';
+is convert_css('body {-ms-writing-mode:tb-rl}'),
+    'body {-ms-writing-mode:lr-tb}',
     'legacy Microsoft mode';
 sub COMMENT_REPETITIONS () { return 500; }
 my $comments = '/* writing-mode:vertical-rl */ ' x COMMENT_REPETITIONS;
 is convert_css( $comments . 'p {writing-mode:vertical-rl}' ),
-    $comments . 'p {writing-mode:horizontal-tb}', 'large comment sequences stay intact';
-my $quoted = q{body {content:'writing-mode:vertical-rl'; --example: writing-mode:vertical-rl;}};
-is convert_css($quoted), $quoted, 'strings and custom property examples stay intact';
-my $page = q{<p title=" style='writing-mode:vertical-rl'">writing-mode:vertical-rl;</p>};
-is convert_markup($page), $page, 'prose and quoted unrelated attributes stay intact';
+    $comments . 'p {writing-mode:horizontal-tb}',
+    'large comment sequences stay intact';
+my $quoted
+    = q{body {content:'writing-mode:vertical-rl'; --example: writing-mode:vertical-rl;}};
+is convert_css($quoted), $quoted,
+    'strings and custom property examples stay intact';
+my $page
+    = q{<p title=" style='writing-mode:vertical-rl'">writing-mode:vertical-rl;</p>};
+is convert_markup($page), $page,
+    'prose and quoted unrelated attributes stay intact';
 is convert_markup(q{<p style="writing-mode:vertical-rl">日本語</p>}),
     q{<p style="writing-mode:horizontal-tb">日本語</p>}, 'inline style';
 is convert_markup(q{<svg:text writing-mode='vertical-lr'>日本語</svg:text>}),
@@ -46,7 +54,9 @@ is convert_package(
     'package metadata attribute order';
 is resolve_entry( 'OPS/package.opf', '../Styles/main%20style.css#fragment' ),
     'Styles/main style.css', 'relative URI resolution';
-is resolve_entry( 'OPS/package.opf', 'text/%E6%97%A5%E6%9C%AC%E8%AA%9E.xhtml' ),
+is resolve_entry(
+    'OPS/package.opf', 'text/%E6%97%A5%E6%9C%AC%E8%AA%9E.xhtml'
+    ),
     'OPS/text/日本語.xhtml', 'percent-encoded Japanese resource';
 is_deeply [
     css_imports(
@@ -54,27 +64,31 @@ is_deeply [
     )
     ],
     [ 'extra.css', 'more.css' ], 'CSS import tokens';
-ok !css_uses_vertical( '.vrtl {writing-mode:vertical-rl}', { hltr => 1 }, {} ),
+ok !css_uses_vertical( '.vrtl {writing-mode:vertical-rl}',
+    { hltr => 1 }, {} ),
     'unused toolkit does not trigger conversion';
 ok css_uses_vertical( '.vrtl {writing-mode:vertical-rl}', { vrtl => 1 }, {} ),
     'used class triggers conversion';
 
 for my $encoding (qw(UTF-8 UTF-16LE UTF-16BE cp932)) {
-    my $text = qq{\@charset "$encoding";\r\nbody {writing-mode:vertical-rl} /* 日本語 */};
-    my $prefix =
-          $encoding eq 'UTF-16LE' ? pack( 'H*', 'fffe' )
+    my $text
+        = qq{\@charset "$encoding";\r\nbody {writing-mode:vertical-rl} /* 日本語 */};
+    my $prefix
+        = $encoding eq 'UTF-16LE' ? pack( 'H*', 'fffe' )
         : $encoding eq 'UTF-16BE' ? pack( 'H*', 'feff' )
         :                           q{};
     my $bytes   = $prefix . encode( $encoding, $text );
     my $payload = decode_payload($bytes);
-    is encode_payload( $payload, $text ), $bytes, "$encoding unchanged round trip";
+    is encode_payload( $payload, $text ), $bytes,
+        "$encoding unchanged round trip";
     my $expected = $text =~ s/vertical-rl/horizontal-tb/rxms;
     is encode_payload( $payload, convert_css( $payload->{text} ) ),
-        $prefix . encode( $encoding, $expected ), "$encoding edit preserves encoding and CRLF";
+        $prefix . encode( $encoding, $expected ),
+        "$encoding edit preserves encoding and CRLF";
 }
 
 for my $encoding (qw(UTF-8 UTF-16LE UTF-16BE)) {
-    my $text     = qq{<?xml version="1.0" encoding="$encoding"?><root>日本語</root>};
+    my $text = qq{<?xml version="1.0" encoding="$encoding"?><root>日本語</root>};
     my $document = parse_xml($text);
     is $document->documentElement()->textContent(), '日本語',
         "$encoding XML declaration inspected as decoded text";

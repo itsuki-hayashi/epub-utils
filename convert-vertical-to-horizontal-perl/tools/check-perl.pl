@@ -16,14 +16,17 @@ use Perl::Critic;
 use Perl::Tidy;
 
 my $format = false;
-GetOptions( 'format' => \$format ) or croak 'Usage: perl tools/check-perl.pl [--format]';
-my $root  = File::Spec->rel2abs( File::Spec->catdir( $RealBin, q{..} ) );
-my @files = map { File::Spec->catfile( $root, $_ ) } qw(Makefile.PL bin/epub-v2h);
+GetOptions( 'format' => \$format )
+    or croak 'Usage: perl tools/check-perl.pl [--format]';
+my $root = File::Spec->rel2abs( File::Spec->catdir( $RealBin, q{..} ) );
+my @files
+    = map { File::Spec->catfile( $root, $_ ) } qw(Makefile.PL bin/epub-v2h);
 find(
-    {
-        no_chdir => 1,
+    {   no_chdir => 1,
         wanted   => sub {
-            if ( -f $File::Find::name && $File::Find::name =~ /[.](?:pl|pm|t)\z/xms ) {
+            if ( -f $File::Find::name
+                && $File::Find::name =~ /[.](?:pl|pm|t)\z/xms )
+            {
                 push @files, $File::Find::name;
             }
             return;
@@ -31,7 +34,8 @@ find(
     },
     map { File::Spec->catdir( $root, $_ ) } qw(lib t tools),
 );
-my $critic   = Perl::Critic->new( -profile => File::Spec->catfile( $root, '.perlcriticrc' ) );
+my $critic = Perl::Critic->new(
+    -profile => File::Spec->catfile( $root, '.perlcriticrc' ) );
 my $failures = 0;
 
 sub read_source ($path) {
@@ -56,13 +60,17 @@ for my $file ( sort @files ) {
         destination => \$formatted,
         stderr      => \$errors,
         perltidyrc  => File::Spec->catfile( $root, '.perltidyrc' ),
-        argv        => q{},
+
+        # The PBP preset selects stdout; this API writes to a memory buffer.
+        argv => '--nostandard-output',
     );
     croak "Perl::Tidy failed for $file: $errors" if $status;
-    if ( utf8::is_utf8($formatted) ) { $formatted = encode( 'UTF-8', $formatted ); }
+    if ( utf8::is_utf8($formatted) ) {
+        $formatted = encode( 'UTF-8', $formatted );
+    }
     if ( $source ne $formatted ) {
         if ($format) { write_source( $file, $formatted ); }
-        else         { say {*STDERR} "Perl::Tidy mismatch: $file"; $failures++; }
+        else { say {*STDERR} "Perl::Tidy mismatch: $file"; $failures++; }
     }
     my @violations = $critic->critique($file);
     for my $violation (@violations) {
@@ -71,7 +79,8 @@ for my $file ( sort @files ) {
     }
 }
 croak "$failures formatting/critic checks failed." if $failures;
-say scalar(@files) . ' owned Perl files pass Perl::Tidy and Perl::Critic (severity 2).';
+say scalar(@files)
+    . ' owned Perl files pass Perl::Tidy and Perl::Critic (severity 2).';
 
 __END__
 

@@ -18,8 +18,10 @@ if ( $OSNAME eq 'MSWin32' ) {
     Win32::SetConsoleCP(UTF8_CODE_PAGE);
     Win32::SetConsoleOutputCP(UTF8_CODE_PAGE);
 }
-binmode STDOUT, ':encoding(UTF-8)' or die "Cannot configure standard output: $OS_ERROR\n";
-binmode STDERR, ':encoding(UTF-8)' or die "Cannot configure standard error: $OS_ERROR\n";
+binmode STDOUT, ':encoding(UTF-8)'
+    or die "Cannot configure standard output: $OS_ERROR\n";
+binmode STDERR, ':encoding(UTF-8)'
+    or die "Cannot configure standard error: $OS_ERROR\n";
 
 my $status;
 try {
