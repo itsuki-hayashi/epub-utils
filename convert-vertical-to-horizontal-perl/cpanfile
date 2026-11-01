@@ -1,0 +1,21 @@
+requires 'perl', '5.044000';
+requires 'Archive::Zip', '1.68';
+requires 'XML::LibXML', '2.0210';
+requires 'URI', '5.0';
+
+if ( $^O eq 'MSWin32' ) {
+    requires 'Win32::LongPath', '2.3';
+    requires 'Win32::API', '0.84';
+}
+
+on configure => sub {
+    # Native XML build support; the installer keeps its source and cache local.
+    requires 'PkgConfig', '0.26026';
+};
+
+on develop => sub {
+    # 6.4's install hook fails under native Windows nmake. 6.3 is tested here.
+    requires 'Module::Pluggable', '== 6.3';
+    requires 'Perl::Tidy', '20260826';
+    requires 'Perl::Critic', '1.156';
+};

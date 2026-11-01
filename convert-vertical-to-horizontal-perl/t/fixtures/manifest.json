@@ -1,0 +1,133 @@
+[
+  {
+    "Book": "embedded style and literal text.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/text/page.xhtml"
+    ]
+  },
+  {
+    "Book": "EPUB2 fixed layout comic.epub",
+    "Reason": "FixedLayout",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "fixed layout comic.epub",
+    "Reason": "FixedLayout",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "horizontal commented and quoted examples.epub",
+    "Reason": "Horizontal",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "horizontal CSS custom property example.epub",
+    "Reason": "Horizontal",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "horizontal English [literal].epub",
+    "Reason": "Horizontal",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "horizontal quoted HTML attribute example.epub",
+    "Reason": "Horizontal",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "horizontal RTL Arabic.epub",
+    "Reason": "Horizontal",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "horizontal unused vertical toolkit.epub",
+    "Reason": "Horizontal",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "image comic with text credits.epub",
+    "Reason": "ImageDominated",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "image only comic.epub",
+    "Reason": "ImageOnly",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "inline vertical.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/text/page.xhtml"
+    ]
+  },
+  {
+    "Book": "SVG image comic accessible title.epub",
+    "Reason": "ImageOnly",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "SVG image comic.epub",
+    "Reason": "ImageOnly",
+    "ChangedEntries": []
+  },
+  {
+    "Book": "SVG live vertical text attribute.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/text/page.xhtml"
+    ]
+  },
+  {
+    "Book": "vertical CSS variants.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/styles/main.css"
+    ]
+  },
+  {
+    "Book": "vertical imported class toolkit.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/styles/extra.css"
+    ]
+  },
+  {
+    "Book": "vertical many stylesheet comments.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/styles/main.css"
+    ]
+  },
+  {
+    "Book": "vertical primary metadata.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf"
+    ]
+  },
+  {
+    "Book": "vertical UTF16 CSS.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/styles/main.css"
+    ]
+  },
+  {
+    "Book": "vertical UTF8 BOM import.epub",
+    "Reason": "VerticalText",
+    "ChangedEntries": [
+      "OPS/package.opf",
+      "OPS/styles/bom.css"
+    ]
+  }
+]

@@ -1,0 +1,56 @@
+{
+   "LibXML" : "21504",
+   "Modules" : [
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/Archive/Zip.pm",
+         "Module" : "Archive::Zip",
+         "Version" : "1.68"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/MSWin32-x64-multi-thread/XML/LibXML.pm",
+         "Module" : "XML::LibXML",
+         "Version" : "2.0213"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/URI.pm",
+         "Module" : "URI",
+         "Version" : "5.40"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/MSWin32-x64-multi-thread/Win32/LongPath.pm",
+         "Module" : "Win32::LongPath",
+         "Version" : "2.3"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/MSWin32-x64-multi-thread/Win32/API.pm",
+         "Module" : "Win32::API",
+         "Version" : "0.84"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/Perl/Tidy.pm",
+         "Module" : "Perl::Tidy",
+         "Version" : "20260826"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/Perl/Critic.pm",
+         "Module" : "Perl::Critic",
+         "Version" : "1.156"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/Module/Pluggable.pm",
+         "Module" : "Module::Pluggable",
+         "Version" : "6.3"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/PkgConfig.pm",
+         "Module" : "PkgConfig",
+         "Version" : "0.26026"
+      },
+      {
+         "LoadedFrom" : "C:/Users/Itsuki/workspace/epub-converter/local/lib/perl5/MSWin32-x64-multi-thread/Compress/Raw/Zlib.pm",
+         "Module" : "Compress::Raw::Zlib",
+         "Version" : "2.225"
+      }
+   ],
+   "Perl" : "v5.44.0"
+}

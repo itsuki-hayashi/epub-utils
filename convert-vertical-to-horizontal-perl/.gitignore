@@ -1,0 +1,10 @@
+/local/
+/.cpanm/
+/test-results/
+/horizontal*/
+*.epub
+!/t/fixtures/input/*.epub
+!/t/fixtures/expected/*.epub
+*.tdy
+*.bak
+*.ERR

@@ -1,0 +1,195 @@
+package Epub::Horizontal::Files;
+
+use 5.044;
+use utf8;
+
+use Carp    qw(croak);
+use English qw(-no_match_vars);
+use Config;
+use Cwd qw(getcwd);
+use Digest::SHA;
+use Encode         qw(decode FB_CROAK LEAVE_SRC);
+use Exporter       qw(import);
+use Fcntl          qw(O_CREAT O_EXCL O_RDWR);
+use File::Basename qw(dirname);
+use File::Spec;
+
+our @EXPORT_OK = qw(
+    absolute_path command_arguments ensure_directory epub_files file_exists
+    file_size open_read open_exclusive publish_file remove_file sha256_file
+);
+
+if ( $OSNAME eq 'MSWin32' ) {
+    require Win32::LongPath;
+    require Win32::API;
+}
+
+sub _path_text ($path) {
+    return $path if utf8::is_utf8($path);
+    return decode( 'UTF-8', $path, FB_CROAK | LEAVE_SRC );
+}
+
+sub absolute_path ($path) {
+    return Win32::LongPath::abspathL($path) if $OSNAME eq 'MSWin32';
+    return File::Spec->rel2abs( _path_text($path), _path_text( getcwd() ) );
+}
+
+sub file_exists ($path) {
+    return Win32::LongPath::testL( 'e', $path ) if $OSNAME eq 'MSWin32';
+    return -e $path;
+}
+
+sub file_size ($path) {
+    if ( $OSNAME eq 'MSWin32' ) {
+        my $stat = Win32::LongPath::statL($path) or croak "Cannot stat $path: $EXTENDED_OS_ERROR";
+        return $stat->{size};
+    }
+    return -s $path // croak "Cannot stat $path: $OS_ERROR";
+}
+
+sub ensure_directory ($path) {
+    my $is_directory = $OSNAME eq 'MSWin32' ? Win32::LongPath::testL( 'd', $path ) : -d $path;
+    return                                            if $is_directory;
+    croak "Path exists but is not a directory: $path" if file_exists($path);
+    my $parent = dirname($path);
+    croak "Cannot create directory: $path" if $parent eq $path;
+    ensure_directory($parent);
+    my $created = $OSNAME eq 'MSWin32' ? Win32::LongPath::mkdirL($path) : mkdir $path;
+    croak "Cannot create directory $path: $OS_ERROR $EXTENDED_OS_ERROR" if !$created;
+    return;
+}
+
+sub epub_files ($path) {
+    my $is_directory = $OSNAME eq 'MSWin32' ? Win32::LongPath::testL( 'd', $path ) : -d $path;
+    if ( !$is_directory ) {
+        croak 'Input must be an existing EPUB file or directory.'
+            if !file_exists($path) || $path !~ /[.]epub\z/ixms;
+        return [$path];
+    }
+    my @names;
+    if ( $OSNAME eq 'MSWin32' ) {
+        my $directory = Win32::LongPath->new();
+        $directory->opendirL($path) or croak "Cannot read directory $path: $EXTENDED_OS_ERROR";
+        @names = $directory->readdirL();
+        $directory->closedirL();
+    }
+    else {
+        opendir my $directory, $path or croak "Cannot read directory $path: $OS_ERROR";
+        @names = map { _path_text($_) } readdir $directory;
+        closedir $directory or croak "Cannot close directory $path: $OS_ERROR";
+    }
+    my @files;
+    for my $name ( sort @names ) {
+        next if $name !~ /[.]epub\z/ixms;
+        my $candidate = File::Spec->catfile( $path, $name );
+        my $is_file =
+            $OSNAME eq 'MSWin32' ? Win32::LongPath::testL( 'f', $candidate ) : -f $candidate;
+        push @files, $candidate if $is_file;
+    }
+    croak 'No EPUB files found.' if !@files;
+    return \@files;
+}
+
+sub open_read ($path) {
+    if ( $OSNAME eq 'MSWin32' ) {
+        my $handle;
+        Win32::LongPath::openL( \$handle, '<:raw', $path )
+            or croak "Cannot open $path: $EXTENDED_OS_ERROR";
+        return $handle;
+    }
+    open my $handle, '<:raw', $path or croak "Cannot open $path: $OS_ERROR";
+    return $handle;
+}
+
+sub open_exclusive ($path) {
+    my $handle;
+    my $flags = O_CREAT | O_EXCL | O_RDWR;
+    if ( $OSNAME eq 'MSWin32' ) {
+        Win32::LongPath::sysopenL( \$handle, $path, $flags )
+            or croak "Cannot create $path: $EXTENDED_OS_ERROR";
+    }
+    else {
+        sysopen $handle, $path, $flags or croak "Cannot create $path: $OS_ERROR";
+    }
+    binmode $handle, ':raw' or croak "Cannot set binary mode: $OS_ERROR";
+    return $handle;
+}
+
+sub publish_file ( $temporary, $destination ) {
+    croak "Refusing to overwrite: $destination" if file_exists($destination);
+    if ( $OSNAME eq 'MSWin32' ) {
+
+        # MoveFileW, used by renameL, refuses an existing destination atomically.
+        Win32::LongPath::renameL( $temporary, $destination )
+            or croak "Cannot publish $destination: $EXTENDED_OS_ERROR";
+    }
+    else {
+        # A hard link publishes without the overwrite race of POSIX rename().
+        link $temporary, $destination or croak "Cannot publish $destination: $OS_ERROR";
+        remove_file($temporary);
+    }
+    return;
+}
+
+sub remove_file ($path) {
+    return if !file_exists($path);
+    my $removed = $OSNAME eq 'MSWin32' ? Win32::LongPath::unlinkL($path) : unlink $path;
+    croak "Cannot remove temporary file $path: $OS_ERROR $EXTENDED_OS_ERROR" if !$removed;
+    return;
+}
+
+sub sha256_file ($path) {
+    my $handle = open_read($path);
+    my $digest = Digest::SHA->new(256)->addfile($handle)->hexdigest();
+    close $handle or croak "Cannot close $path: $OS_ERROR";
+    return uc $digest;
+}
+
+sub _windows_api ( $library, $name, $input, $output ) {
+    return Win32::API::More->new( $library, $name, $input, $output )
+        // croak "Cannot load Windows API $name: $EXTENDED_OS_ERROR";
+}
+
+sub _wide_string ($pointer) {
+    state $length = _windows_api( 'kernel32', 'lstrlenW', 'N', 'I' );
+    my $bytes = Win32::API::ReadMemory( $pointer, 2 * $length->Call($pointer) );
+    return decode( 'UTF-16LE', $bytes, FB_CROAK | LEAVE_SRC );
+}
+
+sub command_arguments () {
+    if ( $OSNAME ne 'MSWin32' ) {
+        return map { _path_text($_) } @ARGV;
+    }
+    return () if !@ARGV;
+    my $command      = _windows_api( 'kernel32', 'GetCommandLineW', q{}, 'N' )->Call();
+    my $count_buffer = pack 'L', 0;
+    my $argument_vector =
+        _windows_api( 'shell32', 'CommandLineToArgvW', 'NP', 'N' )->Call( $command, $count_buffer );
+    croak "Cannot read Unicode command line: $EXTENDED_OS_ERROR" if !$argument_vector;
+    my $count    = unpack 'L', $count_buffer;
+    my @pointers = unpack 'J*',
+        Win32::API::ReadMemory( $argument_vector, $count * $Config{ptrsize} );
+    my @arguments = map { _wide_string($_) } @pointers;
+    _windows_api( 'kernel32', 'LocalFree', 'N', 'N' )->Call($argument_vector);
+
+    # Skip the interpreter, its switches and the script, without assuming how
+    # Perl was launched. The final arguments correspond to Perl's original ARGV.
+    croak 'Unexpected Windows command-line argument count.' if @arguments < @ARGV;
+    return @arguments[ @arguments - @ARGV .. $#arguments ];
+}
+
+1;
+
+__END__
+
+=head1 NAME
+
+Epub::Horizontal::Files - Literal Unicode paths and verified file operations
+
+=head1 DESCRIPTION
+
+Uses wide Windows APIs for directory names, filenames and command-line
+arguments. ZIP libraries receive binary filehandles rather than ANSI paths.
+Output creation and publication refuse existing files.
+
+=cut
