@@ -3,38 +3,11 @@
 `epub-v2h` preserves horizontal and image-based EPUBs as
 exact copies and converts reflowable vertical text with minimal resource edits.
 It requires **Perl 5.40 or newer** and supports CPAN or workspace-local dependencies.
-The original PowerShell implementation remains as a reference and independent
-collection verifier. Originals and existing outputs are never replaced.
-
-## Verified collection results
-
-The current folder contains **276 source EPUBs**. The completed Perl run:
-
-- Converted 273 vertical books and copied three English books byte-for-byte.
-- Independently compared all 21,122 ZIP entries: 20,576 identical payloads and
-  546 direction-only payload changes, one stylesheet and one package per book.
-- Inspected all 276 outputs again, finding them horizontal with no further
-  changes proposed.
-- Compared all 21,122 payloads and entry metadata directly with the PowerShell
-  outputs, finding zero differences. One reference was regenerated because its
-  saved reading copy had acquired a Calibre bookmarks entry; that copy was
-  left untouched. Results are in `test-results/perl-powershell-parity.json`.
-- Reduced 2,899,514,565 input bytes to 2,895,717,864 output bytes, saving
-  3,796,701 bytes. Images and other payloads remain byte-identical.
-
-Perl outputs are in `horizontal-perl/`. Per-book hashes, sizes, classifications
-and changed paths are in `perl-conversion-report.json`; independent comparison
-totals are in `perl-verification-summary.json`. Second-pass results are in
-`test-results/perl-second-pass.json`. PowerShell reference outputs remain in
-`horizontal-verified/`, and the original ten outputs remain in `horizontal/`.
-
-No fixed-layout or image-only books were detected in this collection. Comic
-preservation is verified with synthetic fixtures; classification protects
-layouts rather than attempting to identify a book's genre.
+Originals and existing outputs are never replaced.
 
 ## CPAN / system installation
 
-From this directory (or an unpacked `Epub-Convert-VerticalToHorizontal-0.001.tar.gz`):
+From this directory or an unpacked release archive:
 
 ```sh
 perl Makefile.PL
@@ -45,7 +18,7 @@ make install
 
 Use the make utility configured for your Perl (`perl -V:make`): native MSVC
 Perl uses `nmake`; Strawberry Perl generally uses `gmake`. A matching build
-utility must be on PATH. MakeMaker installs all six modules and the executable
+utility must be on PATH. MakeMaker installs the application modules and
 `epub-v2h` into Perl's standard site bin directory.
 On Windows, MakeMaker runs `pl2bat` and installs the corresponding `.bat`
 launcher, usable by name from PATH. Add Perl's site bin directory to PATH if
@@ -132,8 +105,6 @@ The script clears inherited local::lib and Perl installation overrides for its
 child processes, then verifies loading and XML parsing with the selected
 installation. It makes no permanent environment changes. It always reinstalls
 Alien to refresh saved native paths; rerun after changing the native prefix.
-To adopt this default after an earlier installation, rerun without
-`--native-prefix`. The old native directory is left in place.
 Use the Perl interpreter you intend to install into, rather than a different
 `cpanm` executable found on PATH. This installer targets MSVC/nmake Perl;
 Strawberry/MinGW and Unix Perl should use their normal dependency workflows.
@@ -156,15 +127,12 @@ Windows additionally uses `Win32::LongPath` and `Win32::API`. Development and
 configure-time dependencies, including Perl::Tidy and Perl::Critic, are also
 declared in `cpanfile`. `English`, `Encode`, JSON, SHA-256, file utilities, the
 test harness, and native Windows Perl's `Win32` module come with Perl.
-`perl-dependency-versions.json` records the versions and local paths actually
-loaded during verification.
 
 A fresh native Windows install needs the matching MSVC developer environment,
 CMake, nmake, and Windows `tar`. The installer builds libxml2 2.15.4 inside
 `.cpanm/native/`, runs its native CTest suite, and installs the static library
-under `local/native/libxml2/`. All eight native tests and the XML::LibXML CPAN
-tests passed. Unix-like systems use XML::LibXML's normal system/Alien build
-path instead of the Windows native-build helper.
+under `local/native/libxml2/`. Unix-like systems use XML::LibXML's normal
+system/Alien build path instead of the Windows native-build helper.
 
 Module::Pluggable is pinned to 6.3 to avoid 6.4's native-Windows install-hook
 failure. The Windows PkgConfig bootstrap corrects an inaccurate symlink test;
@@ -261,8 +229,8 @@ guarantees the smallest archive achievable by every external ZIP optimizer.
 
 The package is discovered through `META-INF/container.xml`. Manifest resources
 are resolved relative to the package, including nested paths and URL escapes.
-Linked CSS and CSS imports are inspected. Both `OEBPS/content.opf` layouts and
-the `item/standard.opf` publisher-toolkit layout in this collection are supported.
+Linked CSS and CSS imports are inspected. Nested package layouts such as
+`OEBPS/content.opf` and `item/standard.opf` are supported.
 
 Vertical evidence comes from package writing-mode metadata, markup styles/SVG
 attributes, or linked CSS rules whose class/id names occur in spine documents.
@@ -314,67 +282,43 @@ bundle while satisfying Perl::Critic's default version-notation policy.
 | `lib/Epub/Convert/VerticalToHorizontal/Archive.pm` | Compression and ZIP/payload verification |
 | `lib/Epub/Convert/VerticalToHorizontal/Files.pm` | Literal Unicode paths, portable file operations and Windows arguments |
 
-## Quality and parity checks
+## Quality checks
 
 The formatting profile uses full-length options and the
-`--perl-best-practices` preset. The checker disables the
-preset's stdout routing only because its Perl::Tidy API call captures formatted
-output in memory.
+`--perl-best-practices` preset. The checker disables the preset's stdout routing
+because its Perl::Tidy API call captures formatted output in memory.
 
-The CPAN packaging was verified on native Windows Perl 5.44.0 with nmake and
-WSL Ubuntu Perl 5.40.1 with GNU make. Both release builds pass all 91 tests.
-Windows installation into an isolated `INSTALL_BASE` produces the executable
-and its pl2bat wrapper; the wrapper runs through PATH outside the source tree
-with local dependencies available through `PERL5LIB`. Linux installation into
-system Perl provides `/usr/local/bin/epub-v2h`,
-usable outside the source tree without `PERL5LIB`. XML::LibXML 2.0207 is the
-minimum supported version, verified by the complete Linux suite. Release
-metadata declares dynamic configuration for platform-specific prerequisites.
-
-```text
-# Read-only formatting/lint check.
+```sh
+# Check formatting and Perl::Critic without modifying source files.
 perl tools/check-perl.pl
 
-# Format using the checked-in profile, then check Perl::Critic.
+# Apply formatting, then check Perl::Critic.
 perl tools/check-perl.pl --format
 
-# Portable tests using Perl's core test harness.
-perl -Ilocal/lib/perl5 -MTest::Harness -e "runtests(@ARGV)" -- t/01-text.t t/02-book-parity.t t/03-cli.t t/04-edge-cases.t
+# Build and run the test suite.
+perl Makefile.PL
+make
+make test
+
+# Test the release file inventory in an isolated build directory.
+make disttest
 ```
 
-All **15 owned Perl files** pass `.perltidyrc` and `.perlcriticrc`. All default
-severity-1-or-higher Perl::Critic policies remain enabled: no disabled policies
-or inline lint waivers. CPAN dependencies and the vendored `tools/cpanm` are
-not part of the owned-source formatting inventory.
+Use `nmake` or `gmake` in place of `make` as configured for your Perl.
+Perl::Critic runs at severity 1 with all configured themes enabled and no
+policy exclusions or inline waivers. The checker covers owned Perl sources;
+CPAN dependencies and the vendored `tools/cpanm` bootstrap are excluded.
+Development tool dependencies are declared in `cpanfile`.
 
-The four test files pass **91 top-level tests/subtests**, including exact
-payload and metadata comparisons against the 21 synthetic PowerShell fixture
-outputs and exact-copy second passes. Additional checks cover Unicode/emoji
-filesystem paths beyond 260 characters, Unicode ZIP member names, UTF-8/UTF-16
-and cp932, malformed XML/ZIP, missing/duplicate resources, encrypted/signed
-books, mixed fixed layouts, external entity rejection, dry runs, report and
-output overwrite protection, and per-book failure isolation. Evidence stays
-under uniquely named `test-results/perl-*` directories.
+The tests cover exact payload and entry metadata comparisons against reference
+fixtures, exact-copy second passes, Unicode and long filesystem paths, Unicode
+ZIP member names, UTF-8/UTF-16 and cp932, malformed XML/ZIP, missing and duplicate
+resources, encrypted and signed books, mixed fixed layouts, external entity
+rejection, dry runs, recursive traversal, report and output overwrite protection,
+and per-book failure isolation.
 
-The final read-only gate and harness logs are saved as
-`test-results/perl-quality-final.txt` and `test-results/perl-tests-final.txt`.
-
-The final publisher regression also converts the two original publisher-toolkit
-books with empty directories, checks that stderr is empty, and independently
-compares all 146 entries. Native Windows Perl 5.44.0 was used for execution;
-WSL Linux Perl 5.40.1 is also used for distribution build, test and installation checks.
-
-The retained PowerShell verifier can independently check a Perl report:
-
-```powershell
-.\Test-EpubCollection.ps1 -ReportPath .\perl-conversion-report.json -SummaryPath .\verification-summary-new.json
-```
-
-It does not load converter functions. It checks source/output hashes, entry
-names/order/timestamps/attributes, every payload, allowed direction-only byte
-changes, report accuracy, changed XML syntax, and the physical `mimetype` ZIP
-header. Its substitution check targets the collection's ASCII-compatible byte
-encodings; the Perl tests verify UTF-16 separately.
+For an independent PowerShell verifier, see the
+[PowerShell implementation's documentation](../convert-vertical-to-horizontal/README.md).
 
 ## Limits
 
@@ -394,5 +338,5 @@ whether a different workflow is needed.
 Horizontal flow naturally changes wrapping and pagination. Preserved physical
 margins, dimensions and orientation classes can produce different spacing.
 Byte/ZIP checks establish preservation and supported direction changes, not
-full EPUBCheck conformance or visual perfection in every reader. Reader
-rendering has not been visually verified.
+full EPUBCheck conformance or visual perfection in every reader. Inspect
+converted books in your target reader.
