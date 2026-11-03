@@ -1,0 +1,15 @@
+project Core is
+   for Languages use ("Ada");
+   for Source_Dirs use ("../src");
+   for Source_Files use
+     ("epub.ads", "epub-classification.ads", "epub-classification.adb",
+      "epub-patches.ads", "epub-patches.adb",
+      "epub-writing_modes.ads", "epub-writing_modes.adb",
+      "epub-publication.ads", "epub-publication.adb");
+   for Object_Dir use "../obj/proof";
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-gnat2022", "-gnatw.e", "-gnatwe", "-gnata",
+         "-Wall", "-Wextra", "-Werror");
+   end Compiler;
+end Core;

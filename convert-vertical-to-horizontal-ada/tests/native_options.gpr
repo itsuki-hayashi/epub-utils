@@ -1,0 +1,16 @@
+abstract project Native_Options is
+   Wrap_Options :=
+     ("-Wl,--wrap=CreateFileW", "-Wl,--wrap=ReadFile", "-Wl,--wrap=WriteFile",
+      "-Wl,--wrap=FlushFileBuffers", "-Wl,--wrap=CloseHandle",
+      "-Wl,--wrap=MoveFileW", "-Wl,--wrap=DeleteFileW",
+      "-Wl,--wrap=GetFileSizeEx", "-Wl,--wrap=GetFileAttributesW",
+      "-Wl,--wrap=CreateDirectoryW", "-Wl,--wrap=FindFirstFileW",
+      "-Wl,--wrap=FindNextFileW", "-Wl,--wrap=FindClose",
+      "-Wl,--wrap=GetCurrentDirectoryW", "-Wl,--wrap=GetFullPathNameW",
+      "-Wl,--wrap=CommandLineToArgvW", "-Wl,--wrap=LocalFree",
+      "-Wl,--wrap=SetConsoleOutputCP");
+   C_Options :=
+     ("-std=c11", "-Wall", "-Wextra", "-Werror", "-Wpedantic", "-Wconversion",
+      "-Wsign-conversion", "-Wshadow", "-Wmissing-prototypes", "-Wstrict-prototypes",
+      "-Wcast-align", "-Wformat=2", "-Wundef", "-Wswitch-enum", "-g");
+end Native_Options;

@@ -1,0 +1,36 @@
+with "xmlada_sax";
+with "zipada";
+with "aunit";
+with "../tests/json_dependency.gpr";
+with "../core_containers.gpr";
+with "../tests/native_options.gpr";
+
+project Coverage is
+   for Languages use ("Ada", "C");
+   for Source_Dirs use ("../src", "../tests/src");
+   for Excluded_Source_Files use ("epub.ads", "epub-lists.ads", "epub-lists.adb");
+   for Object_Dir use "../obj/coverage";
+   for Exec_Dir use "../bin/coverage";
+   for Main use ("test_runner.adb", "epub_v2h_main.adb");
+   package Builder is
+      for Executable ("test_runner.adb") use "test-runner";
+      for Executable ("epub_v2h_main.adb") use "epub-v2h-ada";
+   end Builder;
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-gnat2022", "-gnatw.e", "-gnatwe", "-gnata", "-Wall", "-Wextra", "-Werror", "-g", "-O0");
+      for Default_Switches ("C") use Native_Options.C_Options;
+   end Compiler;
+   package Binder is
+      for Default_Switches ("Ada") use ("-static", "-we");
+   end Binder;
+   package Linker is
+      for Default_Switches ("Ada") use
+        ("-static", "-static-libgcc", "-lshell32", "-Wl,--fatal-warnings") & Native_Options.Wrap_Options;
+   end Linker;
+   package Coverage is
+      for Units use
+        ("epub", "epub.*");
+      for Excluded_Units use ("epub_v2h_main");
+   end Coverage;
+end Coverage;

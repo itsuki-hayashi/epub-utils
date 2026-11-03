@@ -134,10 +134,17 @@ sub repack_archive ( $archive, $patches, $output ) {
         $member->desiredCompressionLevel(
             $name eq 'mimetype' ? 0 : COMPRESSION_LEVEL_BEST_COMPRESSION );
         if ( $name eq 'mimetype' ) {
+            # Archive::Zip has no flag setter. The contents transition retains
+            # input flags, including UTF-8 and obsolete compression flags.
+            # This fixed ASCII, stored member needs none of them.
+            $member->{bitFlag} = 0;
             $member->localExtraField(q{});
             $member->cdExtraField(q{});
         }
     }
+    # Keep the writer from adding UTF-8 flags to the ASCII mimetype member.
+    # Other members retain their own encoding flags.
+    local $Archive::Zip::UNICODE = 0;
     croak 'Cannot write converted EPUB.'
         if $archive->{zip}->writeToFileHandle( $output->{handle}, 1 )
         != AZ_OK;

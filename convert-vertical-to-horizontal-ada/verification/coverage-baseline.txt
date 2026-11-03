@@ -1,0 +1,499 @@
+** COVERAGE REPORT **
+
+===========================
+== 1. ASSESSMENT CONTEXT ==
+===========================
+
+Date and time of execution: 2026-11-03 22:19:19 +09:00
+Tool version: XCOV FSF 26.2
+
+Command line:
+C:\Users\Itsuki\AppData\Local\alire\cache\releases\gnatcov_26.2.1_625863ef\bin\gnatcov.exe coverage -P coverage.gpr --subdirs=standalone --units=epub.* --no-subprojects --level=stmt+mcdc --annotate=report -o ../verification/coverage-baseline.txt @C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\coverage\..\obj\coverage-traces.list
+
+Coverage level: stmt+mcdc
+
+Trace files:
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-1138-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-2720-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-394c-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-3d04-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-4cac-6ae9df19-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:17 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-710c-6ae9df19-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:17 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-749c-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-74e4-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-79f0-6ae9df19-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:17 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-7d84-6ae9df19-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:17 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-7f94-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-8210-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-8930-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-89ec-6ae9df19-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:17 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-9040-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-913c-6ae9df19-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:17 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-923c-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\epub-v2h-ada.exe-6ae9dedf-954c-6ae9df26-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:30 +09:00
+  tag      : 
+
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\tests\test-runner.exe-6ae9dedf-2dd8-6ae9df18-0.srctrace
+  kind     : source
+  program  : Coverage
+  date     : 2026-11-03 22:18:16 +09:00
+  tag      : 
+
+============================
+== 2. COVERAGE VIOLATIONS ==
+============================
+
+2.1. STMT COVERAGE
+------------------
+
+epub-archives.adb:46:10: statement not executed
+epub-archives.adb:65:16: statement not executed
+epub-archives.adb:100:10: statement not executed
+epub-archives.adb:118:10: statement not executed
+epub-archives.adb:138:16: statement not executed
+epub-archives.adb:141:16: statement not executed
+epub-archives.adb:161:16: statement not executed
+epub-archives.adb:164:16: statement not executed
+epub-archives.adb:178:19: statement not executed
+epub-archives.adb:179:19: statement not executed
+epub-archives.adb:183:16: statement not executed
+epub-archives.adb:215:10: statement not executed
+epub-archives.adb:217:10: statement not executed
+epub-archives.adb:230:16: statement not executed
+epub-archives.adb:239:16: statement not executed
+epub-archives.adb:336:10: statement not executed
+epub-archives.adb:350:16: statement not executed
+epub-archives.adb:359:10: statement not executed
+epub-books.adb:37:16: statement not executed
+epub-books.adb:119:10: statement not executed
+epub-books.adb:143:22: statement not executed
+epub-books.adb:147:25: statement not executed
+epub-books.adb:170:22: statement not executed
+epub-books.adb:211:13: statement not executed
+epub-books.adb:248:13: statement not executed
+epub-books.adb:262:13: statement not executed
+epub-cli.adb:15:7: statement not executed
+epub-cli.adb:16:7: statement not executed
+epub-cli.adb:17:7: statement not executed
+epub-cli.adb:18:7: statement not executed
+epub-cli.adb:19:7: statement not executed
+epub-cli.adb:20:7: statement not executed
+epub-cli.adb:21:7: statement not executed
+epub-cli.adb:22:7: statement not executed
+epub-cli.adb:23:7: statement not executed
+epub-cli.adb:24:7: statement not executed
+epub-cli.adb:25:7: statement not executed
+epub-cli.adb:26:7: statement not executed
+epub-cli.adb:27:7: statement not executed
+epub-cli.adb:28:7: statement not executed
+epub-cli.adb:29:7: statement not executed
+epub-cli.adb:43:13: statement not executed
+epub-cli.adb:69:16: statement not executed
+epub-cli.adb:79:16: statement not executed
+epub-cli.adb:81:16: statement not executed
+epub-cli.adb:89:10: statement not executed
+epub-cli.adb:90:10: statement not executed
+epub-cli.adb:105:13: statement not executed
+epub-cli.adb:116:16: statement not executed
+epub-cli.adb:129:19: statement not executed
+epub-css.adb:137:28: statement not executed
+epub-css.adb:163:22: statement not executed
+epub-css.adb:164:22: statement not executed
+epub-encoding.adb:32:10: statement not executed
+epub-encoding.adb:37:10: statement not executed
+epub-encoding.adb:45:13: statement not executed
+epub-encoding.adb:55:10: statement not executed
+epub-encoding.adb:66:16: statement not executed
+epub-encoding.adb:78:19: statement not executed
+epub-encoding.adb:88:22: statement not executed
+epub-encoding.adb:108:10: statement not executed
+epub-encoding.adb:127:16: statement not executed
+epub-encoding.adb:162:28: statement not executed
+epub-encoding.adb:164:28: statement not executed
+epub-encoding.adb:213:10: statement not executed
+epub-files.adb:59:10: statement not executed
+epub-files.adb:92:10: statement not executed
+epub-files.adb:96:10: statement not executed
+epub-files.adb:109:10: statement not executed
+epub-files.adb:113:10: statement not executed
+epub-files.adb:122:10: statement not executed
+epub-files.adb:124:10: statement not executed
+epub-files.adb:133:10: statement not executed
+epub-files.adb:135:10: statement not executed
+epub-files.adb:148:7: statement not executed
+epub-files.adb:155:10: statement not executed
+epub-files.adb:157:10: statement not executed
+epub-files.adb:183:16: statement not executed
+epub-files.adb:202:10: statement not executed
+epub-files.adb:209:13: statement not executed
+epub-files.adb:215:13: statement not executed
+epub-files.adb:229:13: statement not executed
+epub-files.adb:240:10: statement not executed
+epub-files.adb:252:16: statement not executed
+epub-files.adb:276:16: statement not executed
+epub-files.adb:291:10: statement not executed
+epub-files.adb:292:13: statement not executed
+epub-files.adb:294:10: statement not executed
+epub-files.adb:302:13: statement not executed
+epub-files.adb:304:13: statement not executed
+epub-files.adb:305:16: statement not executed
+epub-files.adb:325:10: statement not executed
+epub-files.adb:339:13: statement not executed
+epub-files.adb:345:10: statement not executed
+epub-files.adb:358:19: statement not executed
+epub-files.adb:402:13: statement not executed
+epub-files.adb:416:16: statement not executed
+epub-files.adb:417:19: statement not executed
+epub-files.adb:440:28: statement not executed
+epub-files.adb:453:22: statement not executed
+epub-files.adb:454:25: statement not executed
+epub-files.adb:456:22: statement not executed
+epub-files.adb:463:10: statement not executed
+epub-files.adb:475:10: statement not executed
+epub-files.adb:485:13: statement not executed
+epub-files.adb:486:16: statement not executed
+epub-files.adb:488:13: statement not executed
+epub-files.adb:491:10: statement not executed
+epub-files.adb:500:10: statement not executed
+epub-lists.adb:22:10: statement not executed
+epub-lists.adb:69:10: statement not executed
+epub-lists.adb:78:10: statement not executed
+epub-markup.adb:51:16: statement not executed
+epub-markup.adb:56:19: statement not executed
+epub-markup.adb:72:19: statement not executed
+epub-markup.adb:75:16: statement not executed
+epub-markup.adb:169:19: statement not executed
+epub-markup.adb:170:19: statement not executed
+epub-markup.adb:185:28: statement not executed
+epub-markup.adb:186:28: statement not executed
+epub-markup.adb:198:28: statement not executed
+epub-markup.adb:199:28: statement not executed
+epub-reports.adb:18:25: statement not executed
+epub-reports.adb:20:39: statement not executed
+epub-reports.adb:21:39: statement not executed
+epub-reports.adb:22:40: statement not executed
+epub-reports.adb:23:40: statement not executed
+epub-reports.adb:24:40: statement not executed
+epub-reports.adb:27:19: statement not executed
+epub-reports.adb:99:10: statement not executed
+epub-resources.adb:34:13: statement not executed
+epub-resources.adb:67:10: statement not executed
+epub-resources.adb:71:13: statement not executed
+epub-resources.adb:73:13: statement not executed
+epub-resources.adb:74:16: statement not executed
+epub-resources.adb:76:13: statement not executed
+epub-resources.adb:77:16: statement not executed
+epub-resources.adb:79:13: statement not executed
+epub-resources.adb:82:10: statement not executed
+epub-resources.adb:84:10: statement not executed
+epub-resources.adb:86:10: statement not executed
+epub-resources.adb:88:10: statement not executed
+epub-resources.adb:201:16: statement not executed
+epub-resources.adb:222:19: statement not executed
+epub-xml.adb:72:7: statement not executed
+epub-xml.adb:79:7: statement not executed
+epub-xml.adb:87:7: statement not executed
+epub-xml.adb:88:7: statement not executed
+epub-xml.adb:137:13: statement not executed
+epub-xml.adb:138:13: statement not executed
+
+150 violations.
+
+2.2. DECISION COVERAGE
+----------------------
+
+epub-archives.adb:45:10: decision outcome TRUE never exercised
+epub-archives.adb:64:16: decision outcome TRUE never exercised
+epub-archives.adb:67:16: decision outcome FALSE never exercised
+epub-archives.adb:69:19: decision outcome FALSE never exercised
+epub-archives.adb:73:19: decision outcome FALSE never exercised
+epub-archives.adb:77:19: decision outcome FALSE never exercised
+epub-archives.adb:99:10: decision outcome TRUE never exercised
+epub-archives.adb:115:10: decision outcome TRUE never exercised
+epub-archives.adb:137:16: decision outcome TRUE never exercised
+epub-archives.adb:140:16: decision outcome TRUE never exercised
+epub-archives.adb:156:16: decision outcome TRUE never exercised
+epub-archives.adb:163:16: decision outcome TRUE never exercised
+epub-archives.adb:182:16: decision outcome TRUE never exercised
+epub-archives.adb:214:10: decision outcome TRUE never exercised
+epub-archives.adb:216:13: decision outcome TRUE never exercised
+epub-archives.adb:229:16: decision outcome TRUE never exercised
+epub-archives.adb:238:16: decision outcome TRUE never exercised
+epub-archives.adb:335:10: decision outcome TRUE never exercised
+epub-archives.adb:343:16: decision outcome TRUE never exercised
+epub-archives.adb:354:10: decision outcome TRUE never exercised
+epub-books.adb:34:16: decision outcome TRUE never exercised
+epub-books.adb:118:10: decision outcome TRUE never exercised
+epub-books.adb:142:22: decision outcome TRUE never exercised
+epub-books.adb:146:25: decision outcome TRUE never exercised
+epub-books.adb:169:22: decision outcome TRUE never exercised
+epub-books.adb:176:25: decision outcome FALSE never exercised
+epub-books.adb:200:34: decision outcome FALSE never exercised
+epub-books.adb:210:13: decision outcome TRUE never exercised
+epub-books.adb:224:26: decision outcome FALSE never exercised
+epub-books.adb:245:13: decision outcome TRUE never exercised
+epub-books.adb:253:19: decision outcome FALSE never exercised
+epub-books.adb:261:13: decision outcome TRUE never exercised
+epub-cli.adb:42:13: decision outcome TRUE never exercised
+epub-cli.adb:58:38: decision outcome FALSE never exercised
+epub-cli.adb:60:19: decision outcome FALSE never exercised
+epub-cli.adb:68:19: decision outcome TRUE never exercised
+epub-cli.adb:78:19: decision outcome TRUE never exercised
+epub-cli.adb:80:19: decision outcome TRUE never exercised
+epub-cli.adb:88:10: decision outcome TRUE never exercised
+epub-cli.adb:93:14: decision outcome TRUE never exercised
+epub-cli.adb:104:20: decision outcome TRUE never exercised
+epub-cli.adb:115:16: decision outcome TRUE never exercised
+epub-cli.adb:128:23: decision outcome TRUE never exercised
+epub-cli.adb:142:13: decision outcome FALSE never exercised
+epub-conversion.adb:79:20: decision outcome TRUE never exercised
+epub-css.adb:123:22: decision outcome FALSE never exercised
+epub-css.adb:133:28: decision outcome FALSE never exercised
+epub-encoding.adb:31:10: decision outcome TRUE never exercised
+epub-encoding.adb:36:10: decision outcome TRUE never exercised
+epub-encoding.adb:44:13: decision outcome TRUE never exercised
+epub-encoding.adb:54:10: decision outcome TRUE never exercised
+epub-encoding.adb:65:16: decision outcome TRUE never exercised
+epub-encoding.adb:77:19: decision outcome TRUE never exercised
+epub-encoding.adb:87:22: decision outcome TRUE never exercised
+epub-encoding.adb:105:10: decision outcome TRUE never exercised
+epub-encoding.adb:124:19: decision outcome TRUE never exercised
+epub-encoding.adb:147:19: decision outcome FALSE never exercised
+epub-encoding.adb:161:31: decision outcome TRUE never exercised
+epub-encoding.adb:163:31: decision outcome TRUE never exercised
+epub-encoding.adb:210:13: decision outcome TRUE never exercised
+epub-files.adb:91:10: decision outcome TRUE never exercised
+epub-files.adb:95:10: decision outcome TRUE never exercised
+epub-files.adb:108:10: decision outcome TRUE never exercised
+epub-files.adb:112:10: decision outcome TRUE never exercised
+epub-files.adb:121:10: decision outcome TRUE never exercised
+epub-files.adb:123:13: decision outcome TRUE never exercised
+epub-files.adb:132:10: decision outcome TRUE never exercised
+epub-files.adb:134:13: decision outcome TRUE never exercised
+epub-files.adb:154:10: decision outcome TRUE never exercised
+epub-files.adb:156:13: decision outcome TRUE never exercised
+epub-files.adb:166:24: decision outcome TRUE never exercised
+epub-files.adb:182:16: decision outcome TRUE never exercised
+epub-files.adb:201:13: decision outcome TRUE never exercised
+epub-files.adb:208:13: decision outcome TRUE never exercised
+epub-files.adb:212:13: decision outcome TRUE never exercised
+epub-files.adb:228:13: decision outcome TRUE never exercised
+epub-files.adb:239:10: decision outcome TRUE never exercised
+epub-files.adb:251:16: decision outcome TRUE never exercised
+epub-files.adb:275:16: decision outcome TRUE never exercised
+epub-files.adb:300:10: decision outcome TRUE never exercised
+epub-files.adb:324:10: decision outcome TRUE never exercised
+epub-files.adb:332:24: decision outcome FALSE never exercised
+epub-files.adb:338:13: decision outcome TRUE never exercised
+epub-files.adb:344:14: decision outcome TRUE never exercised
+epub-files.adb:353:13: decision outcome FALSE never exercised
+epub-files.adb:401:17: decision outcome TRUE never exercised
+epub-files.adb:415:16: decision outcome TRUE never exercised
+epub-files.adb:433:34: decision outcome FALSE never exercised
+epub-files.adb:439:28: decision outcome TRUE never exercised
+epub-files.adb:462:10: decision outcome TRUE never exercised
+epub-files.adb:474:10: decision outcome TRUE never exercised
+epub-files.adb:490:10: decision outcome TRUE never exercised
+epub-files.adb:499:10: decision outcome TRUE never exercised
+epub-lists.adb:21:14: decision outcome TRUE never exercised
+epub-lists.adb:68:10: decision outcome TRUE never exercised
+epub-lists.adb:77:14: decision outcome TRUE never exercised
+epub-markup.adb:32:13: decision outcome FALSE never exercised
+epub-markup.adb:50:19: decision outcome TRUE never exercised
+epub-markup.adb:53:16: decision outcome FALSE never exercised
+epub-markup.adb:55:22: decision outcome TRUE never exercised
+epub-markup.adb:58:19: decision outcome FALSE never exercised
+epub-markup.adb:135:22: decision outcome TRUE never exercised
+epub-markup.adb:156:22: decision outcome FALSE never exercised
+epub-markup.adb:168:19: decision outcome TRUE never exercised
+epub-markup.adb:184:28: decision outcome TRUE never exercised
+epub-markup.adb:197:28: decision outcome TRUE never exercised
+epub-reports.adb:26:19: decision outcome TRUE never exercised
+epub-reports.adb:98:14: decision outcome TRUE never exercised
+epub-resources.adb:33:13: decision outcome TRUE never exercised
+epub-resources.adb:66:10: decision outcome TRUE never exercised
+epub-resources.adb:69:10: decision outcome TRUE never exercised
+epub-resources.adb:81:13: decision outcome TRUE never exercised
+epub-resources.adb:83:13: decision outcome TRUE never exercised
+epub-resources.adb:85:13: decision outcome TRUE never exercised
+epub-resources.adb:87:13: decision outcome TRUE never exercised
+epub-resources.adb:116:32: decision outcome FALSE never exercised
+epub-resources.adb:119:28: decision outcome FALSE never exercised
+epub-resources.adb:164:26: decision outcome TRUE never exercised
+epub-resources.adb:196:16: decision outcome FALSE never exercised
+epub-resources.adb:200:16: decision outcome TRUE never exercised
+epub-resources.adb:221:19: decision outcome TRUE never exercised
+epub-resources.adb:233:19: decision outcome FALSE never exercised
+epub-resources.adb:258:23: decision outcome TRUE never exercised
+epub-resources.adb:269:31: decision outcome FALSE never exercised
+epub-resources.adb:283:37: decision outcome FALSE never exercised
+epub-xml.adb:57:14: decision outcome FALSE never exercised
+epub-xml.adb:103:16: decision outcome FALSE never exercised
+epub-xml.adb:109:19: decision outcome FALSE never exercised
+
+128 violations.
+
+2.3. MCDC COVERAGE
+------------------
+
+epub-archives.adb:253:55: condition has no independent influence pair, MC/DC not achieved
+epub-archives.adb:255:28: condition has no independent influence pair, MC/DC not achieved
+epub-archives.adb:300:30: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:28:26: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:29:69: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:55:28: decision outcome FALSE never exercised
+epub-books.adb:65:33: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:65:55: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:131:56: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:135:59: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:136:24: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:157:64: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:158:24: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:191:74: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:196:44: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:203:47: condition has no independent influence pair, MC/DC not achieved
+epub-books.adb:233:44: condition has no independent influence pair, MC/DC not achieved
+epub-css.adb:16:10: condition has no independent influence pair, MC/DC not achieved
+epub-css.adb:30:22: condition has no independent influence pair, MC/DC not achieved
+epub-css.adb:86:22: condition has no independent influence pair, MC/DC not achieved
+epub-css.adb:141:33: condition has no independent influence pair, MC/DC not achieved
+epub-css.adb:142:34: condition has no independent influence pair, MC/DC not achieved
+epub-css.adb:143:34: condition has no independent influence pair, MC/DC not achieved
+epub-css.adb:143:68: condition has no independent influence pair, MC/DC not achieved
+epub-encoding.adb:142:22: condition has no independent influence pair, MC/DC not achieved
+epub-encoding.adb:153:28: condition has no independent influence pair, MC/DC not achieved
+epub-encoding.adb:159:51: condition has no independent influence pair, MC/DC not achieved
+epub-files.adb:47:55: condition has no independent influence pair, MC/DC not achieved
+epub-files.adb:397:10: decision outcome FALSE never exercised
+epub-files.adb:428:34: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:17:27: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:27:13: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:44:19: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:44:53: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:62:25: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:82:15: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:97:49: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:98:27: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:102:27: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:140:47: condition has no independent influence pair, MC/DC not achieved
+epub-markup.adb:150:22: condition has no independent influence pair, MC/DC not achieved
+epub-reports.adb:47:39: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:9:27: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:39:58: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:139:46: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:140:24: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:140:63: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:182:16: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:191:13: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:199:18: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:209:52: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:230:16: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:249:18: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:249:45: condition has no independent influence pair, MC/DC not achieved
+epub-resources.adb:280:40: condition has no independent influence pair, MC/DC not achieved
+epub-xml.adb:94:10: condition has no independent influence pair, MC/DC not achieved
+epub-xml.adb:95:18: condition has no independent influence pair, MC/DC not achieved
+epub-xml.adb:104:22: condition has no independent influence pair, MC/DC not achieved
+epub-xml.adb:105:59: condition has no independent influence pair, MC/DC not achieved
+epub-xml.adb:113:25: condition has no independent influence pair, MC/DC not achieved
+
+60 violations.
+
+=========================
+== 3. ANALYSIS SUMMARY ==
+=========================
+
+150 STMT violations.
+128 DECISION violations.
+60 MCDC violations.
+
+** END OF REPORT **

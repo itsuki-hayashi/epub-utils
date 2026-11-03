@@ -1,0 +1,17 @@
+{
+  "FixtureBooks": 21,
+  "Converted": 9,
+  "Preserved": 12,
+  "Scenarios": [
+    "Help describes supported options and compression policy",
+    "21 fixture classifications, patches, statuses, hashes and source preservation",
+    "Dry run creates no books, directories or reports",
+    "Aliases, analysis and book/report overwrite protection",
+    "Default paths, verbose stderr, inline values and invalid report parent",
+    "Malformed archive isolation and continued batch processing",
+    "Recursive Unicode paths, duplicate basenames, output exclusion and junction skipping",
+    "Execution with only Windows system directories on PATH",
+    "Unknown options, missing values and positional arguments rejected",
+    "Independent Perl verification of 159 output entries"
+  ]
+}

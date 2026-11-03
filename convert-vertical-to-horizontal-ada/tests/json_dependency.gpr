@@ -1,0 +1,12 @@
+--  The upstream No_Implementation_Extensions profile contradicts its own
+--  SPARK_Mode aspects on GNAT 16. Keep the remaining restriction explicitly.
+project JSON_Dependency is
+   for Languages use ("Ada");
+   for Source_Dirs use (external ("JSON_ALIRE_PREFIX") & "/src", "dependencies");
+   for Object_Dir use "../obj/json-tests";
+   package Compiler is
+      for Default_Switches ("Ada") use
+        ("-gnat2022", "-gnata", "-g", "-O2");
+      for Local_Configuration_Pragmas use "json.adc";
+   end Compiler;
+end JSON_Dependency;

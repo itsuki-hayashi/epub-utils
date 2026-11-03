@@ -1,0 +1,52 @@
+=========================
+Summary of SPARK analysis
+=========================
+
+-----------------------------------------------------------------------------------------------------------
+SPARK Analysis results        Total        Flow                              Provers   Justified   Unproved
+-----------------------------------------------------------------------------------------------------------
+Data Dependencies                 9           9                                    .           .          .
+Flow Dependencies                 .           .                                    .           .          .
+Initialization                    .           .                                    .           .          .
+Non-Aliasing                      .           .                                    .           .          .
+Run-time Checks                  37           .                            37 (CVC5)           .          .
+Assertions                        1           .                             1 (CVC5)           .          .
+Functional Contracts             14           .    14 (CVC5 70%, Trivial 26%, Z3 4%)           .          .
+LSP Verification                  .           .                                    .           .          .
+Termination                       6           6                                    .           .          .
+Concurrency                       .           .                                    .           .          .
+-----------------------------------------------------------------------------------------------------------
+Total                            67    15 (22%)                             52 (78%)           .          .
+
+
+max steps used for successful proof: 191
+
+============================
+Most difficult proved checks
+============================
+
+No check found with max time greater than 1 second
+
+========================
+Detailed analysis report
+========================
+
+Analyzed 5 units
+in unit epub, 0 subprograms and packages out of 0 analyzed
+in unit epub-classification, 2 subprograms and packages out of 2 analyzed
+  Epub.Classification at epub-classification.ads:1 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (0 checks)
+  Epub.Classification.Classify at epub-classification.ads:5 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (5 checks)
+in unit epub-patches, 2 subprograms and packages out of 2 analyzed
+  Epub.Patches at epub-patches.ads:1 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (0 checks)
+  Epub.Patches.Replace at epub-patches.ads:2 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (38 checks)
+in unit epub-publication, 4 subprograms and packages out of 4 analyzed
+  Epub.Publication at epub-publication.ads:1 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (0 checks)
+  Epub.Publication.Eligible at epub-publication.ads:3 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (1 checks)
+  Epub.Publication.Mark_Published at epub-publication.ads:8 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (1 checks)
+  Epub.Publication.Mark_Verified at epub-publication.ads:6 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (1 checks)
+in unit epub-writing_modes, 5 subprograms and packages out of 5 analyzed
+  Epub.Writing_Modes at epub-writing_modes.ads:1 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (0 checks)
+  Epub.Writing_Modes.Idempotence at epub-writing_modes.ads:16 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (2 checks)
+  Epub.Writing_Modes.Map at epub-writing_modes.ads:9 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (4 checks)
+  Epub.Writing_Modes.Parse_Lower at epub-writing_modes.ads:5 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (0 checks)
+  Epub.Writing_Modes.Token at epub-writing_modes.ads:7 flow analyzed (0 errors, 0 checks, 0 warnings and 0 pragma Assume statements) and proved (0 checks)

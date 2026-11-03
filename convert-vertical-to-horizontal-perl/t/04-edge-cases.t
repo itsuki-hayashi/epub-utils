@@ -207,4 +207,18 @@ is_deeply $unicode_result->{ChangedEntries},
     [ 'OPS/package.opf', $unicode_name ],
     'Unicode patch names preserved';
 
+for my $flags ( 0x0800, 0x0816 ) {
+    my $input = variant(
+        "mimetype flags $flags",
+        sub ($zip) {
+            $zip->memberNamed('mimetype')->{bitFlag} = $flags;
+            return;
+        }
+    );
+    my $result = process_book( $input,
+        File::Spec->catfile( $root, "mimetype-flags-$flags-output.epub" ) );
+    is $result->{Status}, 'Converted',
+        "mimetype flags $flags are normalized during reconstruction";
+}
+
 done_testing();

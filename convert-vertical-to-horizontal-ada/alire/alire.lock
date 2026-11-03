@@ -1,0 +1,271 @@
+# THIS FILE IS GENERATED. DO NOT EDIT.
+
+[solution]
+[solution.context]
+solved = true
+[[solution.state]]
+crate = "gnat"
+fulfilment = "solved"
+pinned = false
+transitivity = "indirect"
+versions = ">=11"
+[solution.state.release]
+auto-gpr-with = false
+description = "The GNAT Ada compiler - Native"
+licenses = "GPL-3.0-or-later AND GPL-3.0-or-later WITH GCC-exception-3.1"
+maintainers = [
+"Fabien Chouteau <chouteau@adacore.com>",
+"CÃ©sar Sagaert <sagaert@adacore.com>",
+]
+maintainers-logins = [
+"Fabien-Chouteau",
+"AldanTanneo",
+]
+name = "gnat_native"
+provides = [
+"gnat=16.1.0",
+]
+version = "16.1.0"
+website = "https://github.com/alire-project/GNAT-FSF-builds"
+[solution.state.release.configuration]
+auto_gpr_with = true
+disabled = true
+generate_ada = true
+generate_c = true
+generate_gpr = true
+output_dir = "config"
+[solution.state.release.environment]
+[solution.state.release.environment.LD_LIBRARY_PATH]
+prepend = "${CRATE_ROOT}/lib"
+[solution.state.release.environment.LD_RUN_PATH]
+prepend = "${CRATE_ROOT}/lib"
+[solution.state.release.environment.LIBRARY_PATH]
+prepend = "${CRATE_ROOT}/lib"
+[solution.state.release.environment.PATH]
+prepend = "${CRATE_ROOT}/bin"
+[solution.state.release.origin]
+binary = true
+hashes = [
+"sha256:bbd696339184ec0301fad1ec6170e8eedb03b83665e2bb3a52571d5fbf064cf9",
+]
+url = "https://github.com/alire-project/GNAT-FSF-builds/releases/download/gnat-16.1.0-1/gnat-x86_64-windows64-16.1.0-1.tar.gz"
+[[solution.state]]
+crate = "gnat_native"
+fulfilment = "solved"
+pinned = false
+transitivity = "direct"
+versions = "=16.1.0"
+[solution.state.release]
+auto-gpr-with = false
+description = "The GNAT Ada compiler - Native"
+licenses = "GPL-3.0-or-later AND GPL-3.0-or-later WITH GCC-exception-3.1"
+maintainers = [
+"Fabien Chouteau <chouteau@adacore.com>",
+"CÃ©sar Sagaert <sagaert@adacore.com>",
+]
+maintainers-logins = [
+"Fabien-Chouteau",
+"AldanTanneo",
+]
+name = "gnat_native"
+provides = [
+"gnat=16.1.0",
+]
+version = "16.1.0"
+website = "https://github.com/alire-project/GNAT-FSF-builds"
+[solution.state.release.configuration]
+auto_gpr_with = true
+disabled = true
+generate_ada = true
+generate_c = true
+generate_gpr = true
+output_dir = "config"
+[solution.state.release.environment]
+[solution.state.release.environment.LD_LIBRARY_PATH]
+prepend = "${CRATE_ROOT}/lib"
+[solution.state.release.environment.LD_RUN_PATH]
+prepend = "${CRATE_ROOT}/lib"
+[solution.state.release.environment.LIBRARY_PATH]
+prepend = "${CRATE_ROOT}/lib"
+[solution.state.release.environment.PATH]
+prepend = "${CRATE_ROOT}/bin"
+[solution.state.release.origin]
+binary = true
+hashes = [
+"sha256:bbd696339184ec0301fad1ec6170e8eedb03b83665e2bb3a52571d5fbf064cf9",
+]
+url = "https://github.com/alire-project/GNAT-FSF-builds/releases/download/gnat-16.1.0-1/gnat-x86_64-windows64-16.1.0-1.tar.gz"
+[[solution.state]]
+crate = "gprbuild"
+fulfilment = "solved"
+pinned = false
+transitivity = "direct"
+versions = "=26.0.1"
+[solution.state.release]
+auto-gpr-with = false
+description = "The GPRBuild Ada/multilanguage build tool"
+licenses = "GPL-3.0-only WITH GCC-exception-3.1"
+long-description = "GPRbuild is a generic build tool designed for the construction of large multi-language systems organized into subsystems and libraries.\nIt is well-suited for compiled languages supporting separate compilation, such as Ada, C, C++ and Fortran.\n"
+maintainers = [
+"Fabien Chouteau <chouteau@adacore.com>",
+"CÃ©sar Sagaert <sagaert@adacore.com>",
+]
+maintainers-logins = [
+"Fabien-Chouteau",
+"AldanTanneo",
+]
+name = "gprbuild"
+tags = [
+"gpr",
+"gprbuild",
+"tool",
+"tools",
+"project",
+]
+version = "26.0.1"
+website = "https://docs.adacore.com/gprbuild-docs/html/gprbuild_ug.html"
+[solution.state.release.configuration]
+auto_gpr_with = true
+disabled = true
+generate_ada = true
+generate_c = true
+generate_gpr = true
+output_dir = "config"
+[solution.state.release.environment]
+[solution.state.release.environment.PATH]
+prepend = "${CRATE_ROOT}/bin"
+[solution.state.release.origin]
+binary = true
+hashes = [
+"sha256:68a6817f712810ff154653b0bf95d8cef5d23117f90fb8d89b3d22d0de560826",
+]
+url = "https://github.com/alire-project/GNAT-FSF-builds/releases/download/gprbuild-26.0.0-1/gprbuild-x86_64-windows64-26.0.0-1.tar.gz"
+[[solution.state]]
+crate = "xmlada"
+fulfilment = "solved"
+pinned = false
+transitivity = "direct"
+versions = "=26.0.0"
+[solution.state.release]
+authors = [
+"AdaCore",
+]
+description = "The XML/Ada toolkit"
+licenses = "GPL-3.0-or-later WITH GCC-exception-3.1"
+maintainers = [
+"chouteau@adacore.com",
+"sagaert@adacore.com",
+]
+maintainers-logins = [
+"Fabien-Chouteau",
+"AldanTanneo",
+]
+name = "xmlada"
+project-files = [
+"distrib/xmlada.gpr",
+"dom/xmlada_dom.gpr",
+"sax/xmlada_sax.gpr",
+"input_sources/xmlada_input.gpr",
+"schema/xmlada_schema.gpr",
+"unicode/xmlada_unicode.gpr",
+]
+version = "26.0.0"
+website = "https://github.com/AdaCore/xmlada"
+[solution.state.release.configuration]
+auto_gpr_with = true
+disabled = true
+generate_ada = true
+generate_c = true
+generate_gpr = true
+output_dir = "config"
+[solution.state.release.gpr-externals]
+LIBRARY_TYPE = [
+"static",
+"relocatable",
+"static-pic",
+]
+XMLADA_BUILD_MODE = [
+"distrib",
+"Debug",
+"Production",
+"profile",
+"coverage",
+"nochecks",
+]
+[solution.state.release.origin]
+hashes = [
+"sha512:b140ed4a41210d9defccf07fde0eafe8ee3d883aa31bfc2996fab01409a657d11ea7af7f6caca2a5ffa492e5bd18ffb6958355c23aa78180f41a19af21efdd0f",
+]
+url = "https://github.com/AdaCore/xmlada/archive/refs/tags/v26.0.0.zip"
+[[solution.state.release.actions]]
+command = [
+"sh",
+"configure",
+]
+directory = "."
+type = "post-fetch"
+[[solution.state.release.depends-on]]
+gnat = ">=11"
+[[solution.state]]
+crate = "zipada"
+fulfilment = "solved"
+pinned = false
+transitivity = "direct"
+versions = "=62.0.0"
+[solution.state.release]
+authors = [
+"Gautier de Montmollin",
+]
+description = "Manage Zip Archives and raw BZip2 and LZMA streams"
+executables = [
+"comp_zip",
+"find_zip",
+"bzip2_dec",
+"bzip2_enc",
+"lzma_dec",
+"lzma_enc",
+"rezip",
+"unzipada",
+"zipada",
+"zip_dir_list",
+]
+licenses = "MIT"
+long-description = "![Zip-Ada logo](https://unzip-ada.sourceforge.io/za_logo.png)\n\n**Zip-Ada** is a free, open-source programming library for dealing with the Zip compressed archive file format.\nThe full sources of Zip-Ada are in Ada, compilable on every compiler and for every system (*).\n\nKey features of Zip-Ada:\n\n* Files and streams supported, for archives and entries, for compression and decompression\n* Task safe\n* Endian-neutral\n* Standalone\n* Zip methods supported for compression: Reduce, Shrink, Deflate, BZip2, LZMA.\n* Zip methods supported for decompression: the above methods, plus: Implode, Deflate64\n* Library is in pure Ada 2012 (nothing compiler/system specific), can be used in projects in Ada 2012 and later versions of the language\n* Unconditionally **portable**: OS-, CPU-, compiler- independent code (*)\n* Tests and demos included\n* **Free**, open-source\n\nThe library includes **LZMA** & **BZip2** independant encoder & decoder pairs\n(can be used outside of the Zip archive context).\n\nNote that the **BZip2** encoder is the best of its kind in terms of compression ratio!\n\n___\n\n(*) within limits of compiler's provided integer types and target architecture capacity.\n"
+maintainers = [
+"gdemont@hotmail.com",
+]
+maintainers-logins = [
+"mosteo",
+"zertovitch",
+]
+name = "zipada"
+project-files = [
+"zipada.gpr",
+]
+tags = [
+"zip",
+"zip64",
+"archive",
+"lossless",
+"compression",
+"decompression",
+"encoding",
+"decoding",
+"lz77",
+"deflate",
+"lzma",
+"bwt",
+"bzip2",
+"lzw",
+"shrink",
+]
+version = "62.0.0"
+website = "https://github.com/zertovitch/zip-ada"
+[solution.state.release.gpr-set-externals]
+Zip_OS = "Win64"
+[solution.state.release.origin]
+hashes = [
+"sha512:90a9e5a5c10ebe63b449f62d04c7f055d2c0dfa0b3edac556c7d0c24c4c46c79b8971b02f8f010e1709f8099d3c1bff4d77786c0009bffc80f5ba9ae26a6469d",
+]
+url = "https://sourceforge.net/projects/unzip-ada/files/zipada62.zip"
+

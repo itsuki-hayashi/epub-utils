@@ -1,0 +1,10 @@
+name = "epub_v2h_proof"
+description = "Proof tools for the EPUB converter core"
+version = "0.1.0-dev"
+licenses = "GPL-3.0-only"
+project-files = ["core.gpr"]
+
+[[depends-on]]
+gnat_native = "=16.1.0"
+gprbuild = "=26.0.1"
+gnatprove = "=16.1.0"
