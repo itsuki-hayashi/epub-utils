@@ -12,7 +12,7 @@ package body Epub.CLI is
    use type Epub.Conversion.Processing_Status;
    procedure Help is
    begin
-      Ada.Text_IO.Put_Line ("Usage: epub-v2h-ada [options]");
+      Ada.Text_IO.Put_Line ("Usage: epub-v2h [options]");
       Ada.Text_IO.Put_Line ("  --input-path PATH        EPUB file or directory (default: current directory)");
       Ada.Text_IO.Put_Line ("  --output-directory DIR   Output directory (default: current-directory/horizontal)");
       Ada.Text_IO.Put_Line ("  --recursive, -r          Descend; write beside each source directory");

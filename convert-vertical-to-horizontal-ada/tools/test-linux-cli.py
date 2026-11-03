@@ -24,7 +24,7 @@ def digest(path):
 def main():
     project = Path(__file__).resolve().parent.parent
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--executable", type=Path, default=project / "bin/linux/epub-v2h-ada")
+    parser.add_argument("--executable", type=Path, default=project / "bin/linux/epub-v2h")
     parser.add_argument("--work-root", type=Path)
     args = parser.parse_args()
     executable = args.executable.resolve()

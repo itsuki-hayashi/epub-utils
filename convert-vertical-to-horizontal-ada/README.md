@@ -18,8 +18,8 @@ in progress; see [implementation status](IMPLEMENTATION.md).
 
 ```powershell
 ./tools/build.ps1
-./bin/epub-v2h-ada.exe --input-path book.epub --output-directory horizontal
-./bin/epub-v2h-ada.exe --analyze-only --json
+./bin/epub-v2h.exe --input-path book.epub --output-directory horizontal
+./bin/epub-v2h.exe --analyze-only --json
 ./tools/test.ps1
 ./tools/test-cli.ps1
 ./tools/prove.ps1

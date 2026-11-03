@@ -1,7 +1,7 @@
 param([string]$ExecutablePath)
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path $PSScriptRoot -Parent
-$executable = if ($ExecutablePath) { [IO.Path]::GetFullPath($ExecutablePath) } else { Join-Path $projectDirectory 'bin/epub-v2h-ada.exe' }
+$executable = if ($ExecutablePath) { [IO.Path]::GetFullPath($ExecutablePath) } else { Join-Path $projectDirectory 'bin/epub-v2h.exe' }
 $fixtureDirectory = [IO.Path]::GetFullPath((Join-Path $projectDirectory '../convert-vertical-to-horizontal-perl/t/fixtures/input'))
 $manifestPath = Join-Path $fixtureDirectory '../manifest.json'
 $runDirectory = Join-Path $projectDirectory ('test-results/cli-' + [guid]::NewGuid().ToString('N'))

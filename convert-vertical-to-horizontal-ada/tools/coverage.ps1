@@ -30,7 +30,7 @@ try {
         & (Join-Path $projectDirectory 'bin/coverage/standalone/test-runner.exe') *> (Join-Path $runDirectory 'unit-tests.log')
         if ($LASTEXITCODE -ne 0) { throw 'Instrumented AUnit tests failed' }
     } finally { Pop-Location }
-    & (Join-Path $PSScriptRoot 'test-cli.ps1') -ExecutablePath (Join-Path $projectDirectory 'bin/coverage/standalone/epub-v2h-ada.exe') *> (Join-Path $runDirectory 'cli-tests.log')
+    & (Join-Path $PSScriptRoot 'test-cli.ps1') -ExecutablePath (Join-Path $projectDirectory 'bin/coverage/standalone/epub-v2h.exe') *> (Join-Path $runDirectory 'cli-tests.log')
     $traces = @(Get-ChildItem -LiteralPath $traceDirectory -Filter '*.srctrace' | Select-Object -ExpandProperty FullName)
     if ($traces.Count -lt 2) { throw 'Coverage traces are missing' }
     $traceList = Join-Path $runDirectory 'traces.list'

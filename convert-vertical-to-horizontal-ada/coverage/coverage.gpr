@@ -14,7 +14,7 @@ project Coverage is
    for Main use ("test_runner.adb", "epub_v2h_main.adb");
    package Builder is
       for Executable ("test_runner.adb") use "test-runner";
-      for Executable ("epub_v2h_main.adb") use "epub-v2h-ada";
+      for Executable ("epub_v2h_main.adb") use "epub-v2h";
    end Builder;
    package Compiler is
       for Default_Switches ("Ada") use

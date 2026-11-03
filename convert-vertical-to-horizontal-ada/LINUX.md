@@ -12,7 +12,7 @@ Install Alire, `libc6-dev`, and `binutils` on Ubuntu. Then:
 alr -n toolchain --select gnat_native=16.1.0 gprbuild=26.0.1
 cd convert-vertical-to-horizontal-ada
 sh tools/build.sh
-bin/linux/epub-v2h-ada --input-path /path/to/books --output-directory /path/to/output --json
+bin/linux/epub-v2h --input-path /path/to/books --output-directory /path/to/output --json
 ```
 
 The build prepares dependencies and builds only the application's dependency

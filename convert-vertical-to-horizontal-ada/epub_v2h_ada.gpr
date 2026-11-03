@@ -14,7 +14,7 @@ project Epub_V2h_Ada is
    for Exec_Dir use "bin" & Platform.Build_Suffix;
    for Main use ("epub_v2h_main.adb");
    package Builder is
-      for Executable ("epub_v2h_main.adb") use "epub-v2h-ada";
+      for Executable ("epub_v2h_main.adb") use "epub-v2h";
    end Builder;
    package Compiler is
       for Default_Switches ("Ada") use
@@ -29,6 +29,6 @@ project Epub_V2h_Ada is
    package Linker is
       for Default_Switches ("Ada") use
         ("-static", "-static-libgcc", "-Wl,--fatal-warnings",
-         "-Wl,-Map=epub-v2h-ada.map") & Platform.Native_Libraries;
+         "-Wl,-Map=epub-v2h.map") & Platform.Native_Libraries;
    end Linker;
 end Epub_V2h_Ada;

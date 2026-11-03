@@ -10,8 +10,8 @@
     "zipada": "62.0.0"
   },
   "binary": {
-    "path": "bin/linux/epub-v2h-ada",
-    "sha256": "78220B9AE147BBD0A70F22A3AF53C0E0F64DCD132629721503F84A7657D27A0C",
+    "path": "bin/linux/epub-v2h",
+    "sha256": "D4EAD17A5AB5E74622759FF02B6997239F1F9F30F74B4FF5C96ED1C7AA3FCF4C",
     "format": "ELF 64-bit x86-64",
     "static": true,
     "interpreter": false,
