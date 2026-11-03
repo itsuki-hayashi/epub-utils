@@ -3,6 +3,14 @@
 The converter is functional but has not passed all release acceptance gates.
 This file records current evidence and does not replace the agreed plan.
 
+Linux x86-64 is implemented using separate filesystem and CP932 adapters. It
+builds with the same pinned toolchain and strict owned-source diagnostics.
+The executable is a static ELF with no interpreter or dynamic dependencies.
+The 47 shared unit cases and the 21-fixture CLI suite pass on Ubuntu 26.04;
+filesystem acceptance checks pass on both native Linux storage and WSL's
+Windows mount. Windows retains its API fault-injection suite and passes all
+73 cases. See [LINUX.md](LINUX.md) for commands and platform details.
+
 ## Implemented and exercised
 
 The Windows CLI uses GNAT 16.1.0, GPRbuild 26.0.1, Ada 2022, XML/Ada 26.0.0
@@ -19,7 +27,7 @@ editing, JSON reports, recursive enumeration and atomic no-replacement output
 publication. Relative URI edge cases are checked against the Perl resolver,
 including ports, user information, duplicate slashes and dot segments.
 
-There are 71 passing AUnit cases, many containing generated or exhaustive
+There are 73 passing Windows AUnit cases, many containing generated or exhaustive
 assertion matrices. Suites cover text, archives, book planning, Windows paths,
 publication, reports and native failure injection. Test-only JSON 6.0.0 reads
 the shared fixture manifest and production reports. Ownership tests exercise
@@ -53,10 +61,11 @@ The executable also runs with only Windows system directories on PATH.
 ```
 
 `coverage.ps1` enforces the agreed gates. `-MeasureOnly` records an explicitly
-incomplete measurement. Current coverage, including the shared owned container
-project, entry point and owned decompression adapter, is **95.02% statements and
-79.26% decisions**. The statement threshold is satisfied; the decision threshold
-is not. Classification and
+incomplete measurement. The last recorded Windows coverage before the platform
+split, including the shared owned container project, entry point and owned
+decompression adapter, was **95.02% statements and
+79.26% decisions**. That measurement met the statement threshold and missed the
+decision threshold; it does not measure the new Linux adapter. Classification and
 publication have 100% statement, decision and MC/DC coverage; the replacement
 primitive has 100% statement and decision coverage. The global coverage gate is
 false. See `verification/coverage-latest.json` and the corresponding text report.

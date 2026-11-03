@@ -2,6 +2,9 @@
 
 Research date: 2026-11-03. Implementation has started; the converter is not yet complete.
 
+Linux x86-64 support is now available alongside Windows. See [LINUX.md](LINUX.md)
+for the static build, platform behavior, WSL guidance, and validation commands.
+
 An Ada implementation is feasible as one executable containing the application, XML parser, ZIP/compression libraries, and Ada runtime. For Windows x86-64, budget **30–50 engineer-days**, or **6–10 full-time weeks for one engineer experienced in Ada/SPARK**, including behavior parity, broader tests, strict owned-code warnings, static packaging, and selected SPARK proofs. The revised policy excludes third-party warning cleanup. These are engineering estimates, not measured implementation times.
 
 The **2–4 day feasibility milestone** is included in that estimate. Archive metadata tests, CP932 round trips, static packaging checks and selected SPARK proofs now run. Full release acceptance gates remain unfinished; current evidence is recorded below and in IMPLEMENTATION.md.

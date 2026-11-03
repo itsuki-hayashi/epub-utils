@@ -16,3 +16,4 @@
 !/coverage/alire/alire.lock
 /coverage/config/
 *.srctrace
+__pycache__/

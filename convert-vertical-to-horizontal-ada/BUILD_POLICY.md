@@ -2,7 +2,7 @@
 
 The user's revised scope applies strict diagnostics to code owned by this
 project. Application code, reusable owned containers, tests, proof units and
-native test helpers retain all optional GNAT warnings as errors, Ada 2022,
+native helpers retain all optional GNAT warnings as errors, Ada 2022,
 applicable backend warnings as errors, runtime checks and validation assertions.
 
 XML/Ada, Zip-Ada, AUnit and other third-party code use their upstream project

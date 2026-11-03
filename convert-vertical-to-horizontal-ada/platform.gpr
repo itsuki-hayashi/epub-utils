@@ -1,0 +1,22 @@
+abstract project Platform is
+   Default_Target := "linux";
+   Host_OS := external ("OS", "");
+   case Host_OS is
+      when "Windows_NT" => Default_Target := "windows";
+      when others => null;
+   end case;
+   Target := external ("EPUB_PLATFORM", Default_Target);
+   Native_Libraries := ();
+   Build_Suffix := "";
+   case Target is
+      when "windows" =>
+         Native_Libraries := ("-lshell32");
+         Build_Suffix := "";
+      when "linux" =>
+         Native_Libraries := ();
+         Build_Suffix := "/linux";
+      when others =>
+         Native_Libraries := ();
+         Build_Suffix := "/unsupported";
+   end case;
+end Platform;

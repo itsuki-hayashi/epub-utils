@@ -1,52 +1,12 @@
 with Ada.Characters.Handling;
 with Ada.Strings.Fixed;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
-with Interfaces.C;
-with System;
+with Epub.Code_Pages;
 
 package body Epub.Encoding is
    use Ada.Strings.Unbounded;
-   use type Interfaces.C.int;
    package UTF renames Ada.Strings.UTF_Encoding;
    package Scalars renames Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
-
-   function MultiByteToWideChar
-     (Code_Page, Flags : Interfaces.C.unsigned;
-      Input : System.Address; Input_Length : Interfaces.C.int;
-      Output : System.Address; Capacity : Interfaces.C.int)
-      return Interfaces.C.int
-   with Import, Convention => Stdcall, External_Name => "MultiByteToWideChar";
-
-   function WideCharToMultiByte
-     (Code_Page, Flags : Interfaces.C.unsigned;
-      Input : System.Address; Input_Length : Interfaces.C.int;
-      Output : System.Address; Capacity : Interfaces.C.int;
-      Default_Character, Used_Default : System.Address)
-      return Interfaces.C.int
-   with Import, Convention => Stdcall, External_Name => "WideCharToMultiByte";
-
-   function CP_To_UTF8 (Bytes : String) return String is
-      Required : Interfaces.C.int;
-   begin
-      if Bytes'Length = 0 then
-         return "";
-      end if;
-      Required := MultiByteToWideChar
-        (932, 8, Bytes'Address, Bytes'Length, System.Null_Address, 0);
-      if Required <= 0 then
-         raise Invalid_Encoding with "Invalid CP932 resource";
-      end if;
-      declare
-         Buffer : String (1 .. Natural (Required) * 2);
-         Written : constant Interfaces.C.int := MultiByteToWideChar
-           (932, 8, Bytes'Address, Bytes'Length, Buffer'Address, Required);
-      begin
-         if Written /= Required then
-            raise Invalid_Encoding with "CP932 decoding failed";
-         end if;
-         return Scalars.Encode (Scalars.Decode (Buffer, UTF.UTF_16LE));
-      end;
-   end CP_To_UTF8;
 
    function From_UTF8 (Value : String; Kind : Encoding_Kind) return String is
    begin
@@ -64,34 +24,7 @@ package body Epub.Encoding is
             when UTF16_BE =>
                return Scalars.Encode (Characters, UTF.UTF_16BE);
             when CP932 =>
-               if Value'Length = 0 then
-                  return "";
-               end if;
-               declare
-                  Wide_Bytes : constant String :=
-                    Scalars.Encode (Characters, UTF.UTF_16LE);
-                  Substituted : aliased Interfaces.C.int := 0;
-                  Required : constant Interfaces.C.int := WideCharToMultiByte
-                    (932, 16#400#, Wide_Bytes'Address, Wide_Bytes'Length / 2,
-                     System.Null_Address, 0, System.Null_Address,
-                     Substituted'Address);
-               begin
-                  if Required <= 0 or else Substituted /= 0 then
-                     raise Invalid_Encoding with "Text cannot be encoded in CP932";
-                  end if;
-                  declare
-                     Buffer : String (1 .. Natural (Required));
-                     Written : constant Interfaces.C.int := WideCharToMultiByte
-                       (932, 16#400#, Wide_Bytes'Address, Wide_Bytes'Length / 2,
-                        Buffer'Address, Required, System.Null_Address,
-                        Substituted'Address);
-                  begin
-                     if Written /= Required or else Substituted /= 0 then
-                        raise Invalid_Encoding with "CP932 encoding failed";
-                     end if;
-                     return Buffer;
-                  end;
-               end;
+               return Epub.Code_Pages.Encode (Value);
          end case;
       end;
    exception
@@ -184,7 +117,7 @@ package body Epub.Encoding is
          Body_Bytes : constant String := Bytes (First .. Bytes'Last);
          Decoded : constant String :=
            (case Result.Kind is
-              when CP932 => CP_To_UTF8 (Body_Bytes),
+              when CP932 => Epub.Code_Pages.Decode (Body_Bytes),
               when UTF8 => Scalars.Encode (Scalars.Decode (Body_Bytes)),
               when UTF16_LE => Scalars.Encode (Scalars.Decode (Body_Bytes, UTF.UTF_16LE)),
               when UTF16_BE => Scalars.Encode (Scalars.Decode (Body_Bytes, UTF.UTF_16BE)));

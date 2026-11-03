@@ -5,7 +5,7 @@ package Text_Cases is
    type Case_Kind is
      (CSS_Matrix, Markup_Preservation, Package_Metadata, Resource_References,
       CSS_Imports, Active_Selectors, Encoding_Roundtrips, Encoding_Errors,
-      Reference_Matrix, Rejected_References, Scanner_Boundaries);
+      Reference_Matrix, Rejected_References, Scanner_Boundaries, CP932_Compatibility);
    function Create (Kind : Case_Kind)
       return AUnit.Simple_Test_Cases.Test_Case_Access;
 private

@@ -1,0 +1,34 @@
+{
+  "platform": "Linux x86-64",
+  "environment": "Ubuntu 26.04.1 LTS under WSL2",
+  "language": "Ada 2022",
+  "tools": {
+    "gnat_native": "16.1.0",
+    "gprbuild_alire_release": "26.0.1",
+    "gprbuild_version_output": "26.0.0 (2026-04-15)",
+    "xmlada": "26.0.0",
+    "zipada": "62.0.0"
+  },
+  "binary": {
+    "path": "bin/linux/epub-v2h-ada",
+    "sha256": "78220B9AE147BBD0A70F22A3AF53C0E0F64DCD132629721503F84A7657D27A0C",
+    "format": "ELF 64-bit x86-64",
+    "static": true,
+    "interpreter": false,
+    "dynamic_section": false
+  },
+  "owned_source_warnings_as_errors": true,
+  "linux_aunit": { "tests": 47, "failures": 0, "errors": 0 },
+  "reference_fixture_cli": {
+    "fixtures": 21,
+    "entries": 159,
+    "native_linux_filesystem": "PASS",
+    "windows_mounted_filesystem": "PASS",
+    "runtime_search_paths_removed": "PASS",
+    "second_pass_exact_copies": "PASS",
+    "publication_race": "PASS",
+    "directory_symlink_skipping": "PASS"
+  },
+  "windows_regression": { "aunit_tests": 73, "failures": 0, "errors": 0, "cli": "PASS" },
+  "coverage": "Not remeasured for the platform split"
+}

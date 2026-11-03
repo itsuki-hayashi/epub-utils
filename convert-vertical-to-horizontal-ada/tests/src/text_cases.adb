@@ -3,6 +3,10 @@ with Epub.CSS;
 with Epub.Encoding;
 with Epub.Markup;
 with Epub.Resources;
+with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+with Interfaces;
+with Epub.Code_Pages;
+with Epub.CP932_Tables;
 
 package body Text_Cases is
    use AUnit.Assertions;
@@ -117,6 +121,57 @@ package body Text_Cases is
       Assert (Rejected, "Invalid encoding must be rejected");
    end Check_Invalid_Encoding;
 
+   procedure Check_CP932 is
+      use type Interfaces.Unsigned_16;
+      package Scalars renames Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
+      function Bytes (Value : Natural) return String is
+        (if Value <= 255 then "" & Character'Val (Value)
+         else Character'Val (Value / 256) & Character'Val (Value mod 256));
+   begin
+      for Value in 0 .. 65535 loop
+         if Value <= 255 or else Value / 256 in 16#81# .. 16#9F# | 16#E0# .. 16#FC# then
+            declare
+               Expected : constant Interfaces.Unsigned_16 := Epub.CP932_Tables.Decoding (Value);
+               Rejected : Boolean := False;
+            begin
+               begin
+                  declare
+                     Actual : constant String := Epub.Code_Pages.Decode (Bytes (Value));
+                  begin
+                     Assert (Expected /= Epub.CP932_Tables.Invalid, "CP932 invalid bytes accepted");
+                     Assert (Actual = Scalars.Encode
+                       (Wide_Wide_String'(1 => Wide_Wide_Character'Val (Expected))),
+                       "CP932 decoding agrees with Windows mapping");
+                  end;
+               exception
+                  when Epub.Encoding.Invalid_Encoding => Rejected := True;
+               end;
+               Assert (Rejected = (Expected = Epub.CP932_Tables.Invalid), "CP932 decoding rejection");
+            end;
+         end if;
+         if Value not in 16#D800# .. 16#DFFF# | 16#FFFE# .. 16#FFFF# then
+            declare
+               Expected : constant Interfaces.Unsigned_16 := Epub.CP932_Tables.Encoding (Value);
+               Rejected : Boolean := False;
+               Text : constant String := Scalars.Encode
+                 (Wide_Wide_String'(1 => Wide_Wide_Character'Val (Value)));
+            begin
+               begin
+                  declare
+                     Actual : constant String := Epub.Encoding.From_UTF8 (Text, Epub.Encoding.CP932);
+                  begin
+                     Assert (Expected /= Epub.CP932_Tables.Invalid, "CP932 best-fit substitution accepted");
+                     Assert (Actual = Bytes (Natural (Expected)), "CP932 canonical encoding for" & Value'Image);
+                  end;
+               exception
+                  when Epub.Encoding.Invalid_Encoding => Rejected := True;
+               end;
+               Assert (Rejected = (Expected = Epub.CP932_Tables.Invalid), "CP932 encoding rejection");
+            end;
+         end if;
+      end loop;
+   end Check_CP932;
+
    overriding procedure Run_Test (Item : in out Unit_Case) is
       procedure Check_Reference (Reference, Expected : String) is
       begin
@@ -141,6 +196,7 @@ package body Text_Cases is
       end Reject_Reference;
    begin
       case Item.Kind is
+         when CP932_Compatibility => Check_CP932;
          when Reference_Matrix =>
             Check_Reference ("https://name:secret@epub.invalid:443/a//b", "a//b");
             Check_Reference ("https://epub.invalid:9000/a", "a");
