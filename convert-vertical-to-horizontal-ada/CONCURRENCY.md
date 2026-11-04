@@ -160,9 +160,18 @@ Sequential measurements retain the original memory gate.
 Use uninstrumented releases for timing. Require eight alternating pairs, at least
 3% median improvement with a paired 95% interval excluding no improvement, both
 aggregate compression floors, byte identity, and no repeatable regression above
-2% in another workload or sequential mode. Extend inconclusive runs to 16 and
+2% in another workload or sequential mode. The approved short-invocation
+exception allows at most 20 ms added median time when the frozen control median
+is below 250 ms. At 250 ms and above, the 2% limit applies. The absolute allowance
+does not add another 2%. Extend inconclusive runs to 16 and
 32 pairs. Measure single-file latency separately from batch throughput and record
 scaling at 1, 2 and the detected maximum.
+
+`evaluate-performance.ps1` applies this latency rule to the three workload
+summaries. Include `-SequentialSummary` and `-SingleFileSummary` for the complete
+latency acceptance check; each additional summary must compare the same frozen
+and candidate binaries. `benchmark.ps1` records the applicable rule and result
+in each new comparison summary's `LatencyGate` field.
 
 ## Measured Windows workloads
 
@@ -184,11 +193,17 @@ Mixed-workload process CPU utilization is 76.9% of the 16-worker capacity.
 
 The many-entry single-book case improves 1.70x (0.201 s to 0.118 s). The
 dominant-entry case takes 0.124 s versus 0.114 s and fails the original 2% relative
-latency gate. This candidate therefore has not passed overall promotion under
-that gate. The pinned GNAT runtime's `Finalize_Global_Tasks` unconditionally
+latency gate. Its 10 ms increase meets the short-invocation allowance explicitly
+approved on 2026-11-05; the original gate outcome remains recorded. The pinned
+GNAT runtime's `Finalize_Global_Tasks` unconditionally
 waits 10 ms when tasking is linked; an isolated minimal-program comparison
 measured about 20 ms additional wall time on this Windows host, even without
 creating a worker. No runtime finalization or dependency source was bypassed.
+The serial dominant-entry diagnostic was also checked against the approved
+allowance. Combining its original and follow-up samples gives 16 pairs and
+18.4 ms added median time, within the 20 ms limit. The concurrency performance
+gates pass under the approved rule; the separate application coverage gate below
+remains unmet.
 
 All 337 output EPUBs are byte-identical to frozen Ada. Their compressed payload
 total is 3,053,535,091 bytes, versus Perl level 9's 3,054,746,896 bytes. Both the

@@ -293,6 +293,7 @@ try {
             InputBytes=($selection|Measure-Object InputBytes -Sum).Sum;
             ControlMedianSeconds=$controlMedian;CandidateMedianSeconds=$candidateMedian;
             RelativeSpeedup=($controlMedian/$candidateMedian);
+            LatencyGate=(Get-PerformanceLatencyGate $controlMedian $candidateMedian);
             PairedConfidence=$interval;DualCompressionGate=($CompressionGate -ne 'Report');
             MemoryWithinBudget=($controlPeak -gt 0 -and $candidateMaxPeak -gt 0 -and
                 $candidateMaxPeak -le $memoryLimit -and ($MemoryPolicy -eq 'WorkerScaled' -or $candidateMaxPeak -lt $expected.PeakBytes));

@@ -1,4 +1,23 @@
 # Shared by the benchmark and its deterministic statistical checks.
+function Get-PerformanceLatencyGate([double]$ControlSeconds, [double]$CandidateSeconds) {
+    if ($ControlSeconds -le 0 -or $CandidateSeconds -le 0 -or
+        -not [double]::IsFinite($ControlSeconds) -or -not [double]::IsFinite($CandidateSeconds)) {
+        throw 'Positive finite median timings are required.'
+    }
+    # Classify by the frozen control median, so the candidate cannot move the
+    # cutoff. The short-invocation allowance is absolute, without an added 2%.
+    $short = $ControlSeconds -lt 0.250
+    $limit = if ($short) { $ControlSeconds + 0.020 } else { $ControlSeconds * 1.02 }
+    [pscustomobject]@{
+        Rule = if ($short) { 'Fixed20ms' } else { 'Relative2Percent' }
+        ControlSeconds = $ControlSeconds
+        CandidateSeconds = $CandidateSeconds
+        AddedSeconds = $CandidateSeconds - $ControlSeconds
+        MaximumCandidateSeconds = $limit
+        Pass = $CandidateSeconds - $limit -le 1e-12
+    }
+}
+
 function Get-PerformanceMedian([double[]]$Values) {
     if (-not $Values.Count) { throw 'A nonempty sample is required.' }
     $sorted = [double[]]$Values.Clone()

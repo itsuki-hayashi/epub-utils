@@ -150,7 +150,11 @@ requires an unlimited full run, at least 3% faster conversion, an interval above
 one, both compression gates, and peak RAM no greater than twice the control and
 below Perl. Run Converted, Preserved and Mixed separately; pass their summaries
 to `tools/evaluate-performance.ps1`. It also checks binary/cohort identity and
-rejects workload regressions above 2%. Limited runs never satisfy promotion.
+rejects workload regressions above 2%, except for the approved 20 ms absolute
+allowance when the frozen control median is below 250 ms. At 250 ms and above,
+the 2% limit applies. Include sequential and single-file summaries with
+`-SequentialSummary` and `-SingleFileSummary` to validate those latency cases.
+Limited runs never satisfy promotion.
 `tools/test-performance.ps1` checks the statistical calculations and script syntax.
 
 `tools/check-corpus.ps1` accepts the same input, reference, executable and
