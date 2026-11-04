@@ -7,20 +7,37 @@ cpu_tuning=${EPUB_TUNING:-portable}
 lto=${EPUB_LTO:-false}
 gprof=${EPUB_GPROF:-false}
 sections=${EPUB_SECTIONS:-false}
+pgo=${EPUB_PGO:-off}
+profile_directory=${EPUB_PGO_DIRECTORY:-}
+case "$pgo" in off|generate|use) ;; *) echo 'EPUB_PGO must be off, generate or use.' >&2; exit 1 ;; esac
+if [ "$pgo" != off ]; then
+    if [ "$build_kind" != release ] || [ "$gprof" = true ] || [ "$lto" = true ] || [ -z "$profile_directory" ]; then
+        echo 'PGO requires a release build, external EPUB_PGO_DIRECTORY, and no gprof/LTO.' >&2
+        exit 1
+    fi
+    python3 tools/pgo-identity.py "check-$pgo" --project "$PWD" --profile "$profile_directory" --tuning "$cpu_tuning" --sections "$sections"
+    profile_directory=$(cd "$profile_directory" && pwd)
+elif [ -n "$profile_directory" ]; then
+    echo 'EPUB_PGO_DIRECTORY requires EPUB_PGO=generate or use.' >&2
+    exit 1
+fi
 case "$sections" in true|false) ;; *) echo 'EPUB_SECTIONS must be true or false.' >&2; exit 1 ;; esac
 if [ "$gprof" = true ] && [ "$build_kind" != profile ]; then
     echo 'Use EPUB_BUILD=profile with EPUB_GPROF=true.' >&2
     exit 1
 fi
 set -- -p -P epub_v2h_ada.gpr -XEPUB_PLATFORM=linux \
-    "-XEPUB_BUILD=$build_kind" "-XEPUB_TUNING=$cpu_tuning" "-XEPUB_SECTIONS=$sections" "-XEPUB_GPROF=$gprof" "$@"
+    "-XEPUB_BUILD=$build_kind" "-XEPUB_TUNING=$cpu_tuning" "-XEPUB_SECTIONS=$sections" "-XEPUB_GPROF=$gprof" \
+    "-XEPUB_PGO=$pgo" "-XEPUB_PGO_DIRECTORY=$profile_directory" "$@"
 suffix=$build_kind-$cpu_tuning
 linked_output=false
 if [ "$build_kind" != development ] || [ "$cpu_tuning" != portable ] || [ "$lto" = true ] || [ "$gprof" = true ] || [ "$sections" = true ]; then linked_output=true; fi
 set -- "$@" "-XEPUB_LINKED_OUTPUT=$linked_output"
+if [ "$pgo" != off ]; then set -- "$@" -f; fi
 if [ "$lto" = true ]; then suffix=$suffix-lto; fi
 if [ "$gprof" = true ]; then suffix=$suffix-gprof; fi
 if [ "$sections" = true ]; then suffix=$suffix-sections; fi
+if [ "$pgo" != off ]; then suffix=$suffix-pgo-$pgo; fi
 build_subdirectory=$suffix
 if [ "$linked_output" = true ]; then
     case "$build_kind" in development) build_code=d ;; release) build_code=r ;; profile) build_code=p ;; *) exit 1 ;; esac
@@ -30,6 +47,7 @@ if [ "$linked_output" = true ]; then
     if [ "$gprof" = true ]; then build_subdirectory=${build_subdirectory}g; fi
     if [ "$sections" = true ]; then build_subdirectory=${build_subdirectory}s; fi
 fi
+if [ "$pgo" != off ]; then build_subdirectory=${build_subdirectory}q; fi
 if [ "$linked_output" = true ]; then
     set -- "$@" "--subdirs=$build_subdirectory"
 fi
@@ -55,6 +73,9 @@ if [ -n "$ada_flags" ]; then set -- "$@" -cargs:Ada $ada_flags; fi
 if [ -n "$c_flags" ]; then set -- "$@" -cargs:C $c_flags; fi
 if [ "$lto" = true ]; then set -- "$@" -largs -flto=auto; fi
 alr -n exec -- gprbuild "$@"
+if [ "$pgo" = generate ]; then
+    python3 tools/pgo-identity.py record --project "$PWD" --profile "$profile_directory" --tuning "$cpu_tuning" --sections "$sections"
+fi
 if [ "$build_kind" = release ]; then
     binary=bin/linux/$suffix/epub-v2h
     linked=obj/linux/linked/$build_subdirectory/epub-v2h

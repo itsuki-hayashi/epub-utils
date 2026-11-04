@@ -14,6 +14,67 @@ package body Epub.Archives is
    use type Zip_Streams.Time;
    use type Zip.Headers.Data_Descriptor;
 
+   function Element (Container : Catalogue; Position : Natural) return Member is
+     (Container.Members.Element (Position));
+   function First (Container : Catalogue) return Natural is (Container.Members.First);
+   function Next (Container : Catalogue; Position : Natural) return Natural is
+     (Container.Members.Next (Position));
+   function Has_Element (Container : Catalogue; Position : Natural) return Boolean is
+     (Container.Members.Has_Element (Position));
+   function Is_Empty (Container : Catalogue) return Boolean is (Container.Members.Is_Empty);
+   function Last_Index (Container : Catalogue) return Natural is (Container.Members.Last_Index);
+   function Last_Element (Container : Catalogue) return Member is (Container.Members.Last_Element);
+
+   procedure Append (Container : in out Catalogue; Item : Member) is
+      Name : constant String := To_String (Item.Name);
+      Inserted : constant Boolean := Container.Names.Find (Name) = 0;
+   begin
+      if Inserted then
+         Container.Names.Insert_First (Name, Container.Last_Index + 1);
+      end if;
+      begin
+         Container.Members.Append (Item);
+      exception
+         when others =>
+            if Inserted then
+               Container.Names.Delete (Name);
+            end if;
+            raise;
+      end;
+   end Append;
+
+   procedure Replace_Element
+     (Container : in out Catalogue; Position : Positive; Item : Member) is
+   begin
+      if Container (Position).Name = Item.Name then
+         Container.Members.Replace_Element (Position, Item);
+      else
+         declare
+            Names : Epub.Name_Indexes.Index;
+         begin
+            for Index in 1 .. Container.Last_Index loop
+               declare
+                  Name : constant String :=
+                    (if Index = Position then To_String (Item.Name) else To_String (Container (Index).Name));
+               begin
+                  Names.Insert_First (Name, Index);
+               end;
+            end loop;
+            Container.Members.Replace_Element (Position, Item);
+            Container.Names.Swap (Names);
+         end;
+      end if;
+   end Replace_Element;
+
+   procedure Delete_Last (Container : in out Catalogue) is
+      Name : constant String := To_String (Container.Last_Element.Name);
+   begin
+      if Container.Names.Find (Name) = Container.Last_Index then
+         Container.Names.Delete (Name);
+      end if;
+      Container.Members.Delete_Last;
+   end Delete_Last;
+
    function Get_Bytes
      (Stream : in out Zip_Streams.Root_Zipstream_Type'Class; Count : Natural)
       return String is
@@ -110,12 +171,7 @@ package body Epub.Archives is
 
    function Find (Items : Catalogue; Name : String) return Natural is
    begin
-      for Position in 1 .. Items.Last_Index loop
-         if To_String (Items (Position).Name) = Name then
-            return Position;
-         end if;
-      end loop;
-      return 0;
+      return Items.Names.Find (Name);
    end Find;
 
    function Contents (Items : Catalogue; Name : String) return String is
@@ -130,6 +186,7 @@ package body Epub.Archives is
          if Item.Payload_Loaded then
             return To_String (Item.Payload);
          end if;
+         Epub.Performance.Resource_Decode (Position);
          return Epub.Archive_Sources.Decode
            (Item.Source, Item.Payload_Offset, Item.Header.short_info);
       end;
@@ -372,9 +429,13 @@ package body Epub.Archives is
    end Read_File;
 
    function Source_Size (Items : Catalogue) return Interfaces.Unsigned_64 is
-     (Epub.Archive_Sources.Size (Items (1).Source));
+   begin
+      return Epub.Archive_Sources.Size (Items (1).Source);
+   end Source_Size;
    function Source_Digest (Items : Catalogue) return String is
-     (Epub.Archive_Sources.Digest (Items (1).Source));
+   begin
+      return Epub.Archive_Sources.Digest (Items (1).Source);
+   end Source_Digest;
    procedure Copy_Source (Items : Catalogue; Output : in out Zip_Streams.Root_Zipstream_Type'Class) is
    begin
       Epub.Archive_Sources.Copy (Items (1).Source, Output);
@@ -538,13 +599,14 @@ package body Epub.Archives is
    end Rebuild;
 
    function Rebuild (Items : Catalogue) return String is
-      Output : Zip_Streams.Memory_Zipstream;
    begin
-      Output.Set (Null_Unbounded_String);
-      Rebuild (Items, Output);
+      --  Construct controlled streams after subprogram entry checks.
       declare
+         Output : Zip_Streams.Memory_Zipstream;
          Bytes : Unbounded_String;
       begin
+         Output.Set (Null_Unbounded_String);
+         Rebuild (Items, Output);
          Output.Get (Bytes);
          --  The conversion layer verifies the persisted temporary archive
          --  against Items before publication. Do not decompress it twice.
@@ -555,17 +617,11 @@ package body Epub.Archives is
    procedure Verify
      (Stream : in out Zip_Streams.Root_Zipstream_Type'Class; Expected : Catalogue) is
       procedure Check_Member (Ordinal : Positive; Left : Member) is
-      begin
-         if Ordinal > Expected.Last_Index then
-            raise Invalid_Archive with "Verification failed: extra entry";
-         end if;
-         declare
-               Right : constant Member := Expected (Ordinal);
+         procedure Check_Expected (Right : Member) is
                Expected_Hash : constant String :=
                  (if Right.Payload_Loaded then Epub.Digests.Digest (To_String (Right.Payload))
                   else To_String (Right.Payload_SHA256));
             begin
-               Epub.Performance.Start (Epub.Performance.Hashing);
                if Left.Name /= Right.Name or else Left.Raw_Name /= Right.Raw_Name
                  or else Left.Header.short_info.file_timedate /= Right.Header.short_info.file_timedate
                  or else Left.Header.external_attributes /= Right.Header.external_attributes
@@ -577,8 +633,15 @@ package body Epub.Archives is
                then
                   raise Invalid_Archive with "Verification failed: " & To_String (Right.Name);
                end if;
-               Epub.Performance.Stop (Epub.Performance.Hashing);
-         end;
+         end Check_Expected;
+         procedure Query is new Member_Lists.Query_Element (Check_Expected);
+      begin
+         if Ordinal > Expected.Last_Index then
+            raise Invalid_Archive with "Verification failed: extra entry";
+         end if;
+         Epub.Performance.Start (Epub.Performance.Hashing);
+         Query (Expected.Members, Ordinal);
+         Epub.Performance.Stop (Epub.Performance.Hashing);
       end Check_Member;
       function Check_Stream is new Read_Stream (Check_Member);
       Source : Epub.Archive_Sources.Reference;
@@ -602,11 +665,14 @@ package body Epub.Archives is
    end Verify;
 
    procedure Verify (Bytes : String; Expected : Catalogue) is
-      Stream : Zip_Streams.Memory_Zipstream;
    begin
-      Stream.Set (To_Unbounded_String (Bytes));
-      Verify (Stream, Expected);
-      --  Zip-Ada's memory stream may pad a seek to one past its end.
-      pragma Assert (Stream.Size >= Bytes'Length);
+      declare
+         Stream : Zip_Streams.Memory_Zipstream;
+      begin
+         Stream.Set (To_Unbounded_String (Bytes));
+         Verify (Stream, Expected);
+         --  Zip-Ada's memory stream may pad a seek to one past its end.
+         pragma Assert (Stream.Size >= Bytes'Length);
+      end;
    end Verify;
 end Epub.Archives;

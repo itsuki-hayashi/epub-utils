@@ -1,4 +1,5 @@
 with Ada.Unchecked_Deallocation;
+with Epub.Allocation_Stats;
 
 package body Epub.Lists is
    procedure Free is new Ada.Unchecked_Deallocation (Element_Array, Array_Access);
@@ -10,8 +11,12 @@ package body Epub.Lists is
       Container.Data := null;
       if Original /= null then
          Container.Data := new Element_Array (Original.all'Range);
+         Epub.Allocation_Stats.Record_Allocation
+           (Epub.Allocation_Stats.Count (Container.Data.all'Size / 8));
          for Position in 1 .. Container.Used loop
             Container.Data.all (Position) := new Element_Type'(Original.all (Position).all);
+            Epub.Allocation_Stats.Record_Allocation
+              (Epub.Allocation_Stats.Count (Container.Data.all (Position).all'Size / 8));
          end loop;
       end if;
    exception
@@ -38,6 +43,14 @@ package body Epub.Lists is
       end if;
       return Container.Data.all (Position).all;
    end Element;
+
+   procedure Query_Element (Container : Vector; Position : Natural) is
+   begin
+      if not Has_Element (Container, Position) then
+         raise Constraint_Error with "Invalid list index";
+      end if;
+      Process (Container.Data.all (Position).all);
+   end Query_Element;
 
    function First (Container : Vector) return Natural is
       pragma Unreferenced (Container);
@@ -66,6 +79,7 @@ package body Epub.Lists is
               (if Container.Data = null then 8 else Container.Data.all'Length * 2);
             New_Data : constant Array_Access := new Element_Array (1 .. Capacity);
          begin
+            Epub.Allocation_Stats.Record_Allocation (Epub.Allocation_Stats.Count (New_Data.all'Size / 8));
             if Container.Data /= null then
                New_Data.all (1 .. Container.Used) :=
                  Container.Data.all (1 .. Container.Used);
@@ -75,6 +89,7 @@ package body Epub.Lists is
          end;
       end if;
       Container.Data.all (Container.Used + 1) := new Element_Type'(Item);
+      Epub.Allocation_Stats.Record_Allocation (Epub.Allocation_Stats.Count (Item'Size / 8));
       Container.Used := Container.Used + 1;
    end Append;
 
@@ -96,6 +111,7 @@ package body Epub.Lists is
       declare
          Replacement : constant Element_Access := new Element_Type'(Item);
       begin
+         Epub.Allocation_Stats.Record_Allocation (Epub.Allocation_Stats.Count (Item'Size / 8));
          Free_Element (Container.Data.all (Position));
          Container.Data.all (Position) := Replacement;
       end;

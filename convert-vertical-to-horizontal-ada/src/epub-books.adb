@@ -6,6 +6,7 @@ with Epub.Markup;
 with Epub.Resources;
 with Epub.CSS;
 with Epub.XML;
+with Epub.Name_Indexes;
 
 package body Epub.Books is
    use Ada.Strings.Unbounded;
@@ -84,6 +85,7 @@ package body Epub.Books is
       Package_Path : Unbounded_String;
       Root_Count : Natural := 0;
       Manifest : Manifest_Lists.Vector;
+      Manifest_Ids : Epub.Name_Indexes.Index;
       Classes, Ids, Styles, Visited_Documents, Visited_Styles : Epub.Resources.String_Lists.Vector;
       Images, Texts : Epub.Classification.Page_Count := 0;
       Inline_Vertical, Primary_Vertical, Active_Vertical : Boolean := False;
@@ -145,14 +147,13 @@ package body Epub.Books is
                   if Epub.Archives.Find (Items, Path) = 0 then
                      raise Invalid_Book with "Missing manifest resource: " & Path;
                   end if;
-                  for Existing of Manifest loop
-                     if To_String (Existing.Id) = Id then
-                        raise Invalid_Book with "Duplicate manifest id: " & Id;
-                     end if;
-                  end loop;
+                  if Manifest_Ids.Find (Id) /= 0 then
+                     raise Invalid_Book with "Duplicate manifest id: " & Id;
+                  end if;
                   Manifest.Append (Manifest_Item'
                     (Id => To_Unbounded_String (Id), Path => To_Unbounded_String (Path),
                      Media => To_Unbounded_String (Get (Item, "media-type"))));
+                  Manifest_Ids.Insert_First (Id, Manifest.Last_Index);
                end;
             end if;
          end loop;
@@ -162,13 +163,8 @@ package body Epub.Books is
             then
                Spine_Count := Spine_Count + 1;
                declare
-                  Found : Natural := 0;
+                  Found : constant Natural := Manifest_Ids.Find (Get (Reference, "idref"));
                begin
-                  for Position in 1 .. Manifest.Last_Index loop
-                     if To_String (Manifest (Position).Id) = Get (Reference, "idref") then
-                        Found := Position;
-                     end if;
-                  end loop;
                   if Found = 0 then
                      raise Invalid_Book with "Unknown spine idref: " & Get (Reference, "idref");
                   end if;

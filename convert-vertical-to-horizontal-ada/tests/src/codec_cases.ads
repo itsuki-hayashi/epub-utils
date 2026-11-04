@@ -3,7 +3,7 @@ with AUnit.Simple_Test_Cases;
 
 package Codec_Cases is
    type Case_Kind is (Huffman_Differential, Word_Matches, CRC_Compatibility, Match_Tokens,
-                     Huffman_Exhaustive, SHA_Differential);
+                     Huffman_Exhaustive, SHA_Differential, Bulk_Read_Bounds);
    function Create (Kind : Case_Kind) return AUnit.Simple_Test_Cases.Test_Case_Access;
 private
    type Unit_Case is new AUnit.Simple_Test_Cases.Test_Case with record

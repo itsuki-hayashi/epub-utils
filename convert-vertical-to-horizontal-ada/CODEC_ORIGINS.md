@@ -19,7 +19,7 @@ checkout reviewed for matching and checksum techniques was commit
 | `Epub.Word_Operations` | Application implementation using checked spans, unaligned word loads and GNAT's trailing-zero intrinsic. No out-of-span loads or zero-input intrinsic calls. |
 | `Epub.Checksums` | Application implementation of slicing-by-eight IEEE CRC-32. It does not substitute the different CRC-32C polynomial implemented by SSE4.2's CRC instruction. |
 | `Epub.Digests` | Application SHA-256 buffering and padding, with GNAT bindings to the SHA round/message intrinsics. Only feature detection uses inline CPUID assembly. FIPS 180-4 defines the standard constants and hash behavior; no third-party SHA implementation is copied. CPUs without SHA support and forced-software tests use `GNAT.SHA256`. |
-| `Epub.Inflate` | Application RFC 1951 stored/DEFLATE decoder, written in Ada. Uses a nine-bit primary Huffman table with canonical long-code fallback, bounded refills, exact output allocation, geometric dictionary copying and IEEE CRC checks. Reviewed zlib-ng's table/state organization; no C decoder source is copied or linked. |
+| `Epub.Inflate` | Application RFC 1951 stored/DEFLATE decoder, written in Ada. Uses a nine-bit primary Huffman table with canonical long-code fallback, bounded word refills, an opportunistic second-literal path, exact output allocation, geometric dictionary copying and IEEE CRC checks. Reviewed zlib-ng's table/state organization; no C decoder source is copied or linked. |
 
 The production `Info_Zip_9_Knuth` matcher uses checked four-byte keys and the
 multiplicative hash technique reviewed in zlib-ng's `insert_string_p.h`. It

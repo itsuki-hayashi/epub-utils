@@ -3,6 +3,8 @@ with Epub.Classification;
 with Epub.CSS;
 with Epub.Markup;
 with Epub.Lists;
+with Epub.Name_Indexes;
+with Epub.Allocation_Stats;
 with Epub.Patches;
 with Epub.Publication;
 with Epub.Writing_Modes;
@@ -12,6 +14,7 @@ package body Core_Cases is
    use type Epub.Classification.Layout;
    use type Epub.Publication.State;
    use type Epub.Writing_Modes.Mode;
+   use type Epub.Allocation_Stats.Count;
    type Unit_Case_Access is access all Unit_Case;
    function Create (Kind : Case_Kind) return AUnit.Simple_Test_Cases.Test_Case_Access is
       Result : constant Unit_Case_Access := new Unit_Case;
@@ -145,6 +148,11 @@ package body Core_Cases is
       package Strings is new Epub.Lists (String);
       Original, Copy : Strings.Vector;
       Rejected : Boolean;
+      procedure Inspect (Value : String) is
+      begin
+         Assert (Value = " 1", "Scoped query observes the original element");
+      end Inspect;
+      procedure Query is new Strings.Query_Element (Inspect);
    begin
       Copy := Original;
       Assert (Copy.Is_Empty, "Copying empty list");
@@ -152,6 +160,7 @@ package body Core_Cases is
          Original.Append (Position'Image);
       end loop;
       Copy := Original;
+      Query (Original, 1);
       Copy.Replace_Element (1, "a much longer replacement");
       Copy.Delete_Last;
       Assert (Original.Element (1) = " 1", "Replacement does not alias original");
@@ -189,7 +198,49 @@ package body Core_Cases is
          when Constraint_Error => Rejected := True;
       end;
       Assert (Rejected, "Reading an absent element must fail");
+      Rejected := False;
+      begin
+         Query (Copy, 0);
+      exception
+         when Constraint_Error => Rejected := True;
+      end;
+      Assert (Rejected, "Scoped queries reject invalid indices before calling the reader");
    end List_Tests;
+
+   procedure Index_Tests is
+      Original, Copy : Epub.Name_Indexes.Index;
+   begin
+      Assert (Original.Find ("") = 0, "Empty index lookup");
+      Original.Insert_First ("", 1);
+      Original.Insert_First ("A.css", 2);
+      Original.Insert_First ("a.css", 3);
+      Original.Insert_First ("A.css", 4);
+      Assert (Original.Find ("") = 1 and then Original.Find ("A.css") = 2
+        and then Original.Find ("a.css") = 3, "Empty names, case sensitivity and first occurrence");
+      for Position in 1 .. 5000 loop
+         Original.Insert_First ("resource" & Position'Image, Position);
+      end loop;
+      Copy := Original;
+      for Position in 1 .. 5000 loop
+         Copy.Delete ("resource" & Position'Image);
+         Assert (Original.Find ("resource" & Position'Image) = Position, "Copied index owns its slots");
+      end loop;
+      for Position in 1 .. 5000 loop
+         Copy.Insert_First ("replacement" & Position'Image, Position);
+      end loop;
+      Copy.Delete ("missing");
+      for Position in 1 .. 5000 loop
+         Assert (Copy.Find ("replacement" & Position'Image) = Position, "Rehashing deleted slots preserves lookup");
+      end loop;
+      Original.Clear;
+      Original.Delete ("absent");
+      Assert (Copy.Find ("A.css") = 2 and then Original.Find ("A.css") = 0, "Clear does not invalidate a copy");
+      Original.Swap (Copy);
+      Assert (Original.Find ("A.css") = 2 and then Copy.Find ("A.css") = 0, "Swap transfers ownership");
+      Epub.Allocation_Stats.Record_Allocation (16);
+      Assert (Epub.Allocation_Stats.Allocations = 0 and then Epub.Allocation_Stats.Requested_Bytes = 0,
+        "Release allocation telemetry is disabled");
+   end Index_Tests;
 
    overriding procedure Run_Test (Item : in out Unit_Case) is
    begin
@@ -200,6 +251,7 @@ package body Core_Cases is
          when Publication_Decisions => Publication_Tests;
          when Generated_Scanners => Generated_Tests;
          when List_Ownership => List_Tests;
+         when Name_Index_Ownership => Index_Tests;
       end case;
    end Run_Test;
 end Core_Cases;

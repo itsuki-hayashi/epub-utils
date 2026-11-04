@@ -22,14 +22,21 @@ lifetime-bound bulk string view; short match prefixes come directly from the
 match finder rather than a reconstructed second dictionary.
 See [CODEC_ORIGINS.md](CODEC_ORIGINS.md) for provenance and licensing. Compressor
 strategy is flexible, but acceptance requires compression at least as good as
-the Perl reference's zlib level 9; a speed improvement cannot waive that gate.
+both frozen Ada and the Perl reference's zlib level 9 in aggregate; a speed
+improvement cannot waive either gate.
 
 The current shared codec and file-stream tests pass on Windows and Linux:
-107 Windows cases and 72 Linux cases. Retained optimizations include a
-four-byte multiplicative-hash matcher, adaptive search for unchanged resources,
-an inline Huffman decoder fast path, and bulk SHA instruction processing.
+109 Windows cases and 74 Linux cases. Retained optimizations include a
+17-bit multiplicative-hash matcher with bounded bulk input and hoisted probes,
+adaptive search for unchanged resources, batched bit output, word-buffered
+decoding with an additional short-literal path, indexed resource lookup,
+scoped read-only container queries, and bulk SHA instruction processing.
 Unused RAM-cache and buffering experiments have been removed; the compression
 workspace experiment did not improve wall time enough to retain.
+The bounded analysis-cache and larger-token-block experiments were also rejected
+by paired timing checks. Optional source-bound PGO generation/use builds preserve
+checks, assertions, static linking and unmodified dependencies. See PERFORMANCE.md
+for training, holdout validation, dual compression gates and promotion criteria.
 Conversion now uses file-backed catalogues with shared handle ownership,
 on-demand payload loading, sequential output hashing, and entry-at-a-time
 persisted verification. Source CRC validation still covers every entry before
@@ -40,7 +47,11 @@ verified by whole-file digest.
 The full eight-pair native Windows benchmark establishes faster conversion and
 lower peak memory than Windows Perl. Every measured output passed independent
 verification and the aggregate compression-quality floor, allowing individual
-books to vary while reporting their count. The earlier fourfold speed target
+books to vary while listing every growing book and its byte delta privately.
+The optimized native PGO candidate also passed full eight-pair comparisons
+against frozen Ada for Converted, Preserved and Mixed workloads, including the
+paired confidence interval, memory and workload-regression gates.
+The earlier fourfold speed target
 was not reached. Private corpus timings and outputs remain outside the
 repository. Diagnostics are not acceptance evidence.
 
@@ -55,10 +66,11 @@ must remain outside the repository.
 Linux x86-64 is implemented using separate filesystem and CP932 adapters. It
 builds with the same pinned toolchain and strict owned-source diagnostics.
 The executable is a static ELF with no interpreter or dynamic dependencies.
-The 47 shared unit cases and the 21-fixture CLI suite pass on Ubuntu 26.04;
+The 74 shared unit cases and the 21-fixture CLI suite pass on Ubuntu 26.04;
 filesystem acceptance checks pass on both native Linux storage and WSL's
 Windows mount. Windows retains its API fault-injection suite and passes all
-73 cases. See [LINUX.md](LINUX.md) for commands and platform details.
+109 cases. Normal and optional PGO builds pass CLI and static-link checks on
+both platforms. See [LINUX.md](LINUX.md) for commands and platform details.
 
 ## Implemented and exercised
 
@@ -77,7 +89,7 @@ editing, JSON reports, recursive enumeration and atomic no-replacement output
 publication. Relative URI edge cases are checked against the Perl resolver,
 including ports, user information, duplicate slashes and dot segments.
 
-There are 73 passing Windows AUnit cases, many containing generated or exhaustive
+There are 109 passing Windows AUnit cases, many containing generated or exhaustive
 assertion matrices. Suites cover text, archives, book planning, Windows paths,
 publication, reports and native failure injection. Test-only JSON 6.0.0 reads
 the shared fixture manifest and production reports. Ownership tests exercise
@@ -111,11 +123,10 @@ The executable also runs with only Windows system directories on PATH.
 ```
 
 `coverage.ps1` enforces the agreed gates. `-MeasureOnly` records an explicitly
-incomplete measurement. The last recorded Windows coverage before the platform
-split, including the shared owned container project, entry point and owned
-decompression adapter, was **95.02% statements and
-79.26% decisions**. That measurement met the statement threshold and missed the
-decision threshold; it does not measure the new Linux adapter. Classification and
+incomplete measurement. The latest Windows measurement, including the shared
+owned container project, entry point and owned decompression adapter, is
+**95.09% statements and 80.91% decisions**. It meets the statement threshold and
+misses the decision threshold; it does not measure the Linux adapter. Classification and
 publication have 100% statement, decision and MC/DC coverage; the replacement
 primitive has 100% statement and decision coverage. The global coverage gate is
 false. See `verification/coverage-latest.json` and the corresponding text report.
@@ -134,8 +145,9 @@ copies, generators and experimental strict-dependency projects are removed.
 The test-only JSON project has a GNAT 16 build-configuration adjustment, with no
 source changes. See `BUILD_POLICY.md` for the exact ownership boundary.
 
-The last PE import audit found only ADVAPI32.dll, KERNEL32.dll, msvcrt.dll and
-SHELL32.dll. A final reproducible import audit remains a release gate.
+The optimized Windows artifact's PE import audit found only ADVAPI32.dll,
+KERNEL32.dll, msvcrt.dll and SHELL32.dll. Linux normal and PGO artifacts are
+static ELF executables. Repeat these audits for each packaged artifact.
 GNATcoverage-generated support follows tool defaults; normal builds validate
 owned source diagnostics before instrumentation.
 The obsolete embedded foundation-test CLI mode has been removed; those checks
@@ -144,9 +156,10 @@ are covered by the modular test suites rather than shipped in the executable.
 ## Remaining release gates
 
 Close coverage and behavioral matrix gaps; complete the remaining core proofs;
-measure the Perl Devel::Cover baseline; add Windows CI and final binary audits.
+measure the Perl Devel::Cover baseline; add Windows CI and keep binary audits current.
 
-Archive processing currently holds complete books and payloads in memory. The
-Windows reader rejects files larger than Natural'Last bytes. True large streamed
-ZIP64 handling remains a limitation to resolve and verify. Archive-name decoding
-and corruption validation also require further adversarial tests before release.
+File-backed conversion uses bounded streams, while active decoded resources and
+text transformations still need memory proportional to their size. Application
+and report byte counts remain limited to Natural'Last. Larger ZIP64 files,
+archive-name decoding and corruption validation require further adversarial
+tests before release.

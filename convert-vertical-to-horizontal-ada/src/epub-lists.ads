@@ -9,6 +9,10 @@ package Epub.Lists is
        Iterable => (First => First, Next => Next,
                     Has_Element => Has_Element, Element => Element);
    function Element (Container : Vector; Position : Natural) return Element_Type;
+   generic
+      --  Process must not mutate Container; its argument is valid for this call.
+      with procedure Process (Item : Element_Type);
+   procedure Query_Element (Container : Vector; Position : Natural);
    function First (Container : Vector) return Natural;
    function Next (Container : Vector; Position : Natural) return Natural;
    function Has_Element (Container : Vector; Position : Natural) return Boolean;

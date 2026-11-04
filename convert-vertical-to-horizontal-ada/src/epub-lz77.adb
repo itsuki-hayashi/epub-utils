@@ -27,6 +27,7 @@
 --  http://www.opensource.org/licenses/mit-license.php
 
 with Epub.Word_Operations;
+with Epub.Performance;
 package body Epub.LZ77 is
    use Interfaces;
    type Integer_M32 is range -2**31 .. 2**31 - 1;
@@ -370,11 +371,12 @@ package body Epub.LZ77 is
          Maximum_Distance : constant := Window_Size - Minimum_Lookahead;
          Maximum_Match : constant := 258;
          Hash_Mask : constant := 32_767;
-         type Byte_Array is array (Natural range <>) of Byte;
+         Hash_Bits : constant := 17;
          type Unaligned_Word is mod 2 ** 32 with Size => 32, Alignment => 1;
          Window : Byte_Array (0 .. Window_Capacity - 1);
          type Link_Array is array (Natural range 0 .. Window_Size - 1) of Unsigned_16;
-         Head, Previous : Link_Array := [others => 0];
+         Head : array (Natural range 0 .. 2 ** Hash_Bits - 1) of Unsigned_16 := [others => 0];
+         Previous : Link_Array := [others => 0];
          Position, Finish, Match_Start : Natural := 0;
          Hash : Unsigned_32 := 0;
          EOF : Boolean := False;
@@ -402,7 +404,7 @@ package body Epub.LZ77 is
                declare
                   Key : Unaligned_Word with Import, Address => Window (Position)'Address;
                begin
-                  Hash := Shift_Right (Unsigned_32 (Key) * 16#9E37_79B1#, 17);
+                  Hash := Shift_Right (Unsigned_32 (Key) * 16#9E37_79B1#, 32 - Hash_Bits);
                end;
             else
                Update_Hash (Window (Position + 2));
@@ -422,13 +424,28 @@ package body Epub.LZ77 is
                Match_Start := (if Match_Start >= Window_Size then Match_Start - Window_Size else 0);
                for Index in Head'Range loop
                   Head (Index) := (if Head (Index) >= Window_Size then Head (Index) - Window_Size else 0);
+               end loop;
+               for Index in Previous'Range loop
                   Previous (Index) := (if Previous (Index) >= Window_Size then Previous (Index) - Window_Size else 0);
                end loop;
             end if;
             while Finish < Window_Capacity and then not EOF loop
-               if More_Bytes then
+               if Bulk_Input then
+                  declare
+                     Count : Natural := 0;
+                  begin
+                     Read_Span (Window (Finish .. Window'Last), Count);
+                     if Count > Window_Capacity - Finish then
+                        raise Constraint_Error with "Matcher bulk read exceeds window";
+                     end if;
+                     Finish := Finish + Count;
+                     EOF := Count = 0;
+                     Epub.Performance.Add (Epub.Performance.Matcher_Input_Bytes, Count);
+                  end;
+               elsif More_Bytes then
                   Window (Finish) := Read_Byte;
                   Finish := Finish + 1;
+                  Epub.Performance.Add (Epub.Performance.Matcher_Input_Bytes);
                else
                   EOF := True;
                end if;
@@ -436,21 +453,30 @@ package body Epub.LZ77 is
          end Fill;
 
          function Find_Match (Prior, Prior_Length : Natural) return Natural is
+            type Unaligned_Halfword is mod 2 ** 16 with Size => 16, Alignment => 1;
+            function Halfword (Offset : Natural) return Unsigned_16 with Inline_Always is
+               Value : Unaligned_Halfword with Import, Address => Window (Offset)'Address;
+            begin
+               return Unsigned_16 (Value);
+            end Halfword;
             Candidate : Natural := Prior;
             Best : Natural := Prior_Length;
             Limit : constant Natural := (if Position > Maximum_Distance then Position - Maximum_Distance else 0);
             Count : Positive :=
               (if Prior_Length >= 32 then Positive'Max (1, Maximum_Chain / 4) else Maximum_Chain);
             Maximum : constant Natural := Natural'Min (Maximum_Match, Finish - Position);
+            Probe_Head, Probe_Tail : Unsigned_16;
          begin
+            Epub.Performance.Add (Epub.Performance.Match_Searches);
             if Best >= Maximum then
                return Best;
             end if;
+            Probe_Head := Halfword (Position);
+            Probe_Tail := Halfword (Position + Best - 1);
             while Candidate > Limit and then Candidate < Position loop
-               if Window (Candidate + Best) = Window (Position + Best)
-                 and then Window (Candidate + Best - 1) = Window (Position + Best - 1)
-                 and then Window (Candidate) = Window (Position)
-                 and then Window (Candidate + 1) = Window (Position + 1)
+               Epub.Performance.Add (Epub.Performance.Match_Candidates);
+               if Halfword (Candidate + Best - 1) = Probe_Tail
+                 and then Halfword (Candidate) = Probe_Head
                then
                   declare
                      Length : constant Natural := Matching_Prefix (Window, Position, Candidate, Maximum);
@@ -459,6 +485,7 @@ package body Epub.LZ77 is
                         Best := Length;
                         Match_Start := Candidate;
                         exit when Best = Maximum;
+                        Probe_Tail := Halfword (Position + Best - 1);
                      end if;
                   end;
                end if;

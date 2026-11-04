@@ -4,7 +4,7 @@ with AUnit.Simple_Test_Cases;
 package Core_Cases is
    type Case_Kind is (Classification_Boundaries, Patch_Preservation,
                       Mode_Mapping, Publication_Decisions, Generated_Scanners,
-                      List_Ownership);
+                      List_Ownership, Name_Index_Ownership);
    function Create (Kind : Case_Kind) return AUnit.Simple_Test_Cases.Test_Case_Access;
 private
    type Unit_Case is new AUnit.Simple_Test_Cases.Test_Case with record

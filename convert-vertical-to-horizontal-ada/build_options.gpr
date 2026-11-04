@@ -23,6 +23,17 @@ abstract project Build_Options is
          C_Optimization := C_Optimization & ("-march=native", "-mtune=native");
       when others => null;
    end case;
+   type Pgo_Kind is ("off", "generate", "use");
+   Pgo : Pgo_Kind := external ("EPUB_PGO", "off");
+   Profile_Directory := external ("EPUB_PGO_DIRECTORY", "");
+   Pgo_Flags := ();
+   case Pgo is
+      when "generate" => Pgo_Flags := ("-fprofile-generate=" & Profile_Directory);
+      when "use" => Pgo_Flags := ("-fprofile-use=" & Profile_Directory);
+      when "off" => null;
+   end case;
+   Optimization := Optimization & Pgo_Flags;
+   C_Optimization := C_Optimization & Pgo_Flags;
    type Boolean_Kind is ("false", "true");
    Linked_Output : Boolean_Kind := external ("EPUB_LINKED_OUTPUT", "false");
    Sections : Boolean_Kind := external ("EPUB_SECTIONS", "false");

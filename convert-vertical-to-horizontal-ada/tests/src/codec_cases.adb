@@ -59,6 +59,42 @@ package body Codec_Cases is
          end if;
       end Compare;
    begin
+      if Item.Kind = Bulk_Read_Bounds then
+         declare
+            Oversized, Rejected : Boolean := True;
+            function Read_Byte return Epub.LZ77.Byte is (0);
+            function More return Boolean is (False);
+            procedure Literal (Value : Epub.LZ77.Byte) is
+               pragma Unreferenced (Value);
+            begin
+               Assert (False, "An invalid or empty read must not emit a literal");
+            end Literal;
+            procedure Match
+              (Distance : Epub.LZ77.Distance_Type; Length : Integer; Prefix : Epub.LZ77.Match_Prefix) is
+               pragma Unreferenced (Distance, Length, Prefix);
+            begin
+               Assert (False, "An invalid or empty read must not emit a match");
+            end Match;
+            procedure Read_Span (Buffer : out Epub.LZ77.Byte_Array; Count : out Natural) is
+            begin
+               Buffer := [others => 0];
+               Count := (if Oversized then Buffer'Length + 1 else 0);
+            end Read_Span;
+            procedure Encode is new Epub.LZ77.Encode
+              (Read_Byte, More, Literal, Match, Epub.LZ77.Info_Zip_9_Knuth, True, Read_Span);
+         begin
+            Rejected := False;
+            begin
+               Encode;
+            exception
+               when Constraint_Error => Rejected := True;
+            end;
+            Assert (Rejected, "Bulk readers cannot report bytes beyond their checked destination");
+            Oversized := False;
+            Encode;
+         end;
+         return;
+      end if;
       if Item.Kind = SHA_Differential then
          declare
             Data : String (1 .. 65_600);
@@ -157,6 +193,7 @@ package body Codec_Cases is
             Data : String (1 .. 200_000);
             Length : Natural := 0;
             Read_Position, Written : Positive := 1;
+            Token_Hash : Epub.Digests.Context := Epub.Digests.Initial_Context;
             function More return Boolean is (Read_Position <= Length);
             function Read_Byte return Interfaces.Unsigned_8 is
                Value : constant Interfaces.Unsigned_8 := Character'Pos (Data (Read_Position));
@@ -166,6 +203,7 @@ package body Codec_Cases is
             end Read_Byte;
             procedure Literal (Value : Interfaces.Unsigned_8) is
             begin
+               Epub.Digests.Update (Token_Hash, "L" & Character'Val (Value));
                Assert (Written <= Length and then Character'Pos (Data (Written)) = Natural (Value),
                        "Literal reproduces the source byte");
                Written := Written + 1;
@@ -173,6 +211,7 @@ package body Codec_Cases is
             procedure Match
               (Distance : Epub.LZ77.Distance_Type; Count : Integer; Prefix : Epub.LZ77.Match_Prefix) is
             begin
+               Epub.Digests.Update (Token_Hash, "M" & Distance'Image & Count'Image);
                Assert (Distance <= 32_768 and then Distance < Written and then Count in 3 .. 258,
                        "Bounded dictionary token");
                Assert (Count <= Length - Written + 1, "Match does not extend past input");
@@ -187,6 +226,17 @@ package body Codec_Cases is
             procedure Rich is new Epub.LZ77.Encode (Read_Byte, More, Literal, Match, Epub.LZ77.Rich);
             procedure IZ9 is new Epub.LZ77.Encode (Read_Byte, More, Literal, Match, Epub.LZ77.Info_Zip_9);
             procedure Knuth9 is new Epub.LZ77.Encode (Read_Byte, More, Literal, Match, Epub.LZ77.Info_Zip_9_Knuth);
+            Chunk_Size : Positive := 1;
+            procedure Read_Span (Buffer : out Epub.LZ77.Byte_Array; Count : out Natural) is
+            begin
+               Count := Natural'Min (Buffer'Length, Natural'Min (Chunk_Size, Length - Read_Position + 1));
+               for Index in 0 .. Integer (Count) - 1 loop
+                  Buffer (Buffer'First + Index) := Character'Pos (Data (Read_Position + Index));
+               end loop;
+               Read_Position := Read_Position + Count;
+            end Read_Span;
+            procedure Bulk_Knuth9 is new Epub.LZ77.Encode
+              (Read_Byte, More, Literal, Match, Epub.LZ77.Info_Zip_9_Knuth, True, Read_Span);
             type Size_List is array (Positive range <>) of Natural;
             type Chain_List is array (Positive range <>) of Epub.LZ77.Chain_Limit;
          begin
@@ -215,9 +265,25 @@ package body Codec_Cases is
                   for Budget of Chain_List'[1, 64, 4096] loop
                      Read_Position := 1;
                      Written := 1;
+                     Token_Hash := Epub.Digests.Initial_Context;
                      Knuth9 (Budget);
                      Assert (Read_Position = Length + 1 and then Written = Length + 1,
                              "Complete multiplicative-hash token stream at every search budget");
+                     declare
+                        Expected_Tokens : constant String := Epub.Digests.Digest (Token_Hash);
+                     begin
+                        for Chunk of Size_List'[1, 7, 32_768, 65_536] loop
+                           Chunk_Size := Chunk;
+                           Read_Position := 1;
+                           Written := 1;
+                           Token_Hash := Epub.Digests.Initial_Context;
+                           Bulk_Knuth9 (Budget);
+                           Assert (Read_Position = Length + 1 and then Written = Length + 1,
+                                   "Complete bulk token stream across short reads and window slides");
+                           Assert (Epub.Digests.Digest (Token_Hash) = Expected_Tokens,
+                                   "Bulk and byte input produce identical tokens");
+                        end loop;
+                     end;
                   end loop;
                end loop;
             end loop;

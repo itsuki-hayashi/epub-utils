@@ -1,13 +1,13 @@
 {
-  "StatementPercent": 95.02,
-  "DecisionPercent": 79.26,
+  "StatementPercent": 95.09,
+  "DecisionPercent": 80.91,
   "StatementCounts": [
-    1375,
-    1447
+    3077,
+    3236
   ],
   "DecisionCounts": [
-    298,
-    376
+    534,
+    660
   ],
   "RequiredCorePass": true,
   "ApplicationCoveragePass": false,
@@ -28,22 +28,37 @@
       ]
     },
     {
-      "Unit": "epub-archives.adb",
+      "Unit": "epub-allocation_stats.adb",
       "Statements": [
-        225,
-        241
+        3,
+        3
       ],
       "Decisions": [
-        36,
-        51
+        0,
+        0
       ],
       "MCDC": [
-        45,
-        85
+        0,
+        0
       ]
     },
     {
-      "Unit": "epub-archives.ads",
+      "Unit": "epub-archive_sources.adb",
+      "Statements": [
+        34,
+        45
+      ],
+      "Decisions": [
+        5,
+        9
+      ],
+      "MCDC": [
+        5,
+        12
+      ]
+    },
+    {
+      "Unit": "epub-archive_sources.ads",
       "Statements": [
         4,
         4
@@ -58,18 +73,48 @@
       ]
     },
     {
-      "Unit": "epub-books.adb",
+      "Unit": "epub-archives.adb",
       "Statements": [
-        139,
-        140
+        294,
+        315
       ],
       "Decisions": [
-        35,
-        41
+        48,
+        66
       ],
       "MCDC": [
-        45,
-        65
+        60,
+        107
+      ]
+    },
+    {
+      "Unit": "epub-archives.ads",
+      "Statements": [
+        5,
+        5
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-books.adb",
+      "Statements": [
+        145,
+        146
+      ],
+      "Decisions": [
+        34,
+        40
+      ],
+      "MCDC": [
+        44,
+        64
       ]
     },
     {
@@ -85,6 +130,21 @@
       "MCDC": [
         0,
         0
+      ]
+    },
+    {
+      "Unit": "epub-checksums.adb",
+      "Statements": [
+        34,
+        34
+      ],
+      "Decisions": [
+        4,
+        4
+      ],
+      "MCDC": [
+        4,
+        4
       ]
     },
     {
@@ -105,8 +165,8 @@
     {
       "Unit": "epub-cli.adb",
       "Statements": [
-        87,
-        89
+        88,
+        90
       ],
       "Decisions": [
         26,
@@ -118,18 +178,78 @@
       ]
     },
     {
+      "Unit": "epub-code_pages.adb",
+      "Statements": [
+        22,
+        26
+      ],
+      "Decisions": [
+        2,
+        6
+      ],
+      "MCDC": [
+        2,
+        8
+      ]
+    },
+    {
+      "Unit": "epub-compression-deflate.adb",
+      "Statements": [
+        453,
+        477
+      ],
+      "Decisions": [
+        46,
+        54
+      ],
+      "MCDC": [
+        59,
+        73
+      ]
+    },
+    {
+      "Unit": "epub-compression.adb",
+      "Statements": [
+        40,
+        40
+      ],
+      "Decisions": [
+        6,
+        6
+      ],
+      "MCDC": [
+        7,
+        7
+      ]
+    },
+    {
+      "Unit": "epub-compression.ads",
+      "Statements": [
+        5,
+        5
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
       "Unit": "epub-conversion.adb",
       "Statements": [
-        42,
-        42
+        49,
+        50
       ],
       "Decisions": [
         4,
-        5
+        6
       ],
       "MCDC": [
         4,
-        5
+        6
       ]
     },
     {
@@ -163,18 +283,48 @@
       ]
     },
     {
+      "Unit": "epub-digests.adb",
+      "Statements": [
+        87,
+        89
+      ],
+      "Decisions": [
+        10,
+        12
+      ],
+      "MCDC": [
+        10,
+        13
+      ]
+    },
+    {
+      "Unit": "epub-digests.ads",
+      "Statements": [
+        3,
+        3
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
       "Unit": "epub-encoding.adb",
       "Statements": [
-        84,
-        95
+        71,
+        76
       ],
       "Decisions": [
         15,
-        27
+        21
       ],
       "MCDC": [
         20,
-        39
+        31
       ]
     },
     {
@@ -193,18 +343,63 @@
       ]
     },
     {
-      "Unit": "epub-files.adb",
+      "Unit": "epub-file_streams.adb",
       "Statements": [
-        200,
-        223
+        69,
+        71
       ],
       "Decisions": [
-        35,
-        58
+        11,
+        15
       ],
       "MCDC": [
-        39,
-        72
+        11,
+        18
+      ]
+    },
+    {
+      "Unit": "epub-file_streams.ads",
+      "Statements": [
+        4,
+        4
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-files-write_stream_checked.adb",
+      "Statements": [
+        43,
+        45
+      ],
+      "Decisions": [
+        5,
+        6
+      ],
+      "MCDC": [
+        5,
+        6
+      ]
+    },
+    {
+      "Unit": "epub-files.adb",
+      "Statements": [
+        216,
+        240
+      ],
+      "Decisions": [
+        38,
+        61
+      ],
+      "MCDC": [
+        42,
+        75
       ]
     },
     {
@@ -223,18 +418,153 @@
       ]
     },
     {
-      "Unit": "epub-lists.adb",
+      "Unit": "epub-hash_streams.adb",
       "Statements": [
-        38,
-        40
+        11,
+        11
       ],
       "Decisions": [
-        8,
-        8
+        2,
+        2
       ],
       "MCDC": [
+        2,
+        2
+      ]
+    },
+    {
+      "Unit": "epub-hash_streams.ads",
+      "Statements": [
+        2,
+        2
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-huffman-encoding.adb",
+      "Statements": [
+        24,
+        24
+      ],
+      "Decisions": [
+        1,
+        2
+      ],
+      "MCDC": [
+        1,
+        2
+      ]
+    },
+    {
+      "Unit": "epub-huffman-encoding.ads",
+      "Statements": [
+        4,
+        4
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-huffman-length_limited_coding.adb",
+      "Statements": [
+        127,
+        140
+      ],
+      "Decisions": [
+        17,
+        24
+      ],
+      "MCDC": [
+        20,
+        27
+      ]
+    },
+    {
+      "Unit": "epub-inflate.adb",
+      "Statements": [
+        225,
+        232
+      ],
+      "Decisions": [
+        38,
+        43
+      ],
+      "MCDC": [
+        45,
+        55
+      ]
+    },
+    {
+      "Unit": "epub-inflate.ads",
+      "Statements": [
+        1,
+        1
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-lists.adb",
+      "Statements": [
+        46,
+        48
+      ],
+      "Decisions": [
         9,
         9
+      ],
+      "MCDC": [
+        10,
+        10
+      ]
+    },
+    {
+      "Unit": "epub-lz77.adb",
+      "Statements": [
+        236,
+        250
+      ],
+      "Decisions": [
+        47,
+        52
+      ],
+      "MCDC": [
+        56,
+        62
+      ]
+    },
+    {
+      "Unit": "epub-lz77.ads",
+      "Statements": [
+        6,
+        6
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
       ]
     },
     {
@@ -253,7 +583,97 @@
       ]
     },
     {
+      "Unit": "epub-name_indexes.adb",
+      "Statements": [
+        66,
+        66
+      ],
+      "Decisions": [
+        12,
+        14
+      ],
+      "MCDC": [
+        14,
+        16
+      ]
+    },
+    {
+      "Unit": "epub-name_indexes.ads",
+      "Statements": [
+        6,
+        6
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-native_files.adb",
+      "Statements": [
+        32,
+        37
+      ],
+      "Decisions": [
+        5,
+        10
+      ],
+      "MCDC": [
+        5,
+        12
+      ]
+    },
+    {
+      "Unit": "epub-native_files.ads",
+      "Statements": [
+        1,
+        1
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
       "Unit": "epub-patches.adb",
+      "Statements": [
+        2,
+        2
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-performance.adb",
+      "Statements": [
+        6,
+        6
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
+      "Unit": "epub-performance.ads",
       "Statements": [
         2,
         2
@@ -328,6 +748,51 @@
       ]
     },
     {
+      "Unit": "epub-stream_io.adb",
+      "Statements": [
+        16,
+        16
+      ],
+      "Decisions": [
+        4,
+        4
+      ],
+      "MCDC": [
+        4,
+        4
+      ]
+    },
+    {
+      "Unit": "epub-string_streams.adb",
+      "Statements": [
+        17,
+        17
+      ],
+      "Decisions": [
+        3,
+        3
+      ],
+      "MCDC": [
+        3,
+        3
+      ]
+    },
+    {
+      "Unit": "epub-string_streams.ads",
+      "Statements": [
+        2,
+        2
+      ],
+      "Decisions": [
+        0,
+        0
+      ],
+      "MCDC": [
+        0,
+        0
+      ]
+    },
+    {
       "Unit": "epub-windows.ads",
       "Statements": [
         4,
@@ -340,6 +805,21 @@
       "MCDC": [
         0,
         0
+      ]
+    },
+    {
+      "Unit": "epub-word_operations.adb",
+      "Statements": [
+        12,
+        12
+      ],
+      "Decisions": [
+        3,
+        3
+      ],
+      "MCDC": [
+        4,
+        4
       ]
     },
     {
@@ -360,16 +840,16 @@
     {
       "Unit": "epub-xml.adb",
       "Statements": [
-        48,
-        50
+        56,
+        58
       ],
       "Decisions": [
-        5,
-        8
+        6,
+        9
       ],
       "MCDC": [
-        6,
-        13
+        7,
+        14
       ]
     },
     {
@@ -390,16 +870,16 @@
     {
       "Unit": "unzip-epub_decompression.adb",
       "Statements": [
-        23,
-        24
+        25,
+        28
       ],
       "Decisions": [
-        2,
-        2
+        1,
+        3
       ],
       "MCDC": [
-        2,
-        2
+        1,
+        3
       ]
     },
     {

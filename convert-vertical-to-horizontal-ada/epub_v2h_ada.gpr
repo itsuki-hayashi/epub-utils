@@ -11,7 +11,8 @@ project Epub_V2h_Ada is
    end case;
    for Source_Dirs use ("src", "src/platform/" & Platform.Target,
                         "src/profiling/" & Build_Options.Profiling_Directory);
-   for Excluded_Source_Files use ("epub.ads", "epub-lists.ads", "epub-lists.adb");
+   for Excluded_Source_Files use ("epub.ads", "epub-lists.ads", "epub-lists.adb",
+                                 "epub-allocation_stats.ads", "epub-allocation_stats.adb");
    for Object_Dir use "obj" & Platform.Build_Suffix;
    case Build_Options.Linked_Output is
       when "true" => for Exec_Dir use "obj" & Platform.Build_Suffix & "/linked";
@@ -51,6 +52,6 @@ project Epub_V2h_Ada is
       for Default_Switches ("Ada") use
         ("-static", "-static-libgcc", "-Wl,--fatal-warnings",
          "-Wl,-Map=" & external ("EPUB_LINK_MAP", "epub-v2h.map")) & Platform.Native_Libraries &
-         Build_Options.Instrumentation & Profiling_Linker & Section_Linker;
+         Build_Options.Instrumentation & Build_Options.Pgo_Flags & Profiling_Linker & Section_Linker;
    end Linker;
 end Epub_V2h_Ada;

@@ -1,6 +1,7 @@
 with Ada.Exceptions;
 with Ada.Text_IO;
 with Interfaces;
+with Epub.Performance;
 
 package body Epub.File_Streams is
    use Ada.Streams;
@@ -75,9 +76,13 @@ package body Epub.File_Streams is
             Count : constant Natural := Natural (Zip_Streams.ZS_Size_Type'Min
               (1_048_576, Zip_Streams.ZS_Size_Type'Min
                 (Zip_Streams.ZS_Size_Type (Buffer'Last - Cursor + 1), Item.Length - Item.Position + 1)));
-            Actual : constant Natural := Epub.Native_Files.Read
-              (Item.Owner.Handle, Buffer (Cursor)'Address, Count);
+            Actual : Natural;
          begin
+            Epub.Performance.Start (Epub.Performance.Native_IO);
+            Actual := Epub.Native_Files.Read (Item.Owner.Handle, Buffer (Cursor)'Address, Count);
+            Epub.Performance.Stop (Epub.Performance.Native_IO);
+            Epub.Performance.Add (Epub.Performance.Native_Reads);
+            Epub.Performance.Add (Epub.Performance.Bytes_Read, Actual);
             if Actual = 0 or else Actual > Count then
                raise File_Error with "Cannot read the complete binary stream";
             end if;
@@ -104,7 +109,11 @@ package body Epub.File_Streams is
             if Item.Position > Zip_Streams.ZS_Size_Type'Last - Zip_Streams.ZS_Size_Type (Count) then
                raise File_Error with "Binary stream index overflow";
             end if;
+            Epub.Performance.Start (Epub.Performance.Native_IO);
             Actual := Epub.Native_Files.Write (Item.Owner.Handle, Buffer (Cursor)'Address, Count);
+            Epub.Performance.Stop (Epub.Performance.Native_IO);
+            Epub.Performance.Add (Epub.Performance.Native_Writes);
+            Epub.Performance.Add (Epub.Performance.Bytes_Written, Actual);
             if Actual = 0 or else Actual > Count then
                raise File_Error with "Cannot write the complete binary stream";
             end if;
@@ -118,7 +127,10 @@ package body Epub.File_Streams is
    overriding procedure Set_Index (Item : in out Stream; To : Zip_Streams.ZS_Index_Type) is
    begin
       Check_Open (Item);
+      Epub.Performance.Start (Epub.Performance.Native_IO);
       Epub.Native_Files.Seek (Item.Owner.Handle, Interfaces.Unsigned_64 (To - 1));
+      Epub.Performance.Stop (Epub.Performance.Native_IO);
+      Epub.Performance.Add (Epub.Performance.Native_Seeks);
       Item.Position := To;
    end Set_Index;
    overriding function Index (Item : Stream) return Zip_Streams.ZS_Index_Type is (Item.Position);

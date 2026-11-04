@@ -24,8 +24,13 @@ def digest(path):
 def validate(expected, actual, inputs):
     assert len(actual) == len(expected), "Incomplete report"
     reference = {row["Book"]: row for row in expected}
+    assert len(reference) == len(expected), "Duplicate reference book"
+    seen = set()
     before_total = after_total = larger = 0
+    growth = []
     for row in actual:
+        assert row["Book"] not in seen, "Duplicate actual book"
+        seen.add(row["Book"])
         old = reference[row["Book"]]
         assert row["Status"] != "Error", "Conversion failed"
         for key in ("Status", "Reason", "InputBytes", "InputSHA256",
@@ -49,9 +54,12 @@ def validate(expected, actual, inputs):
             before_total += before
             after_total += after
             larger += after > before
+            if after > before:
+                growth.append({"book": row["Book"], "compressed_expected": before,
+                               "compressed_actual": after, "delta": after - before})
     assert after_total <= before_total, "Aggregate compression quality"
     return {"compressed_expected": before_total, "compressed_actual": after_total,
-            "larger_books": larger}
+            "larger_books": larger, "growth": growth}
 
 
 def main():
@@ -62,18 +70,30 @@ def main():
     parser.add_argument("--input", type=Path, required=True)
     parser.add_argument("--reference-report", type=Path, required=True,
                         help="Windows Perl report with paths adapted to Linux")
+    parser.add_argument("--quality-baseline-report", type=Path,
+                        help="Frozen Ada report with paths adapted to Linux")
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--runs", type=int, default=8)
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be positive")
-    checkout = Path(__file__).resolve().parents[1]
+    checkout = Path(__file__).resolve().parents[2]
     root = args.work_root.resolve()
     if root.is_relative_to(checkout):
         parser.error("Keep private measurement artifacts outside the checkout")
     executable = args.executable.resolve()
     identity = digest(executable)
     expected = json.loads(args.reference_report.read_text(encoding="utf-8-sig"))
+    baseline_identity = digest(args.quality_baseline_report) if args.quality_baseline_report else None
+    baseline = (json.loads(args.quality_baseline_report.read_text(encoding="utf-8-sig"))
+                if args.quality_baseline_report else None)
+    if baseline is not None:
+        by_book = {row["Book"]: row for row in baseline}
+        if len(by_book) != len(baseline):
+            raise ValueError("Duplicate quality baseline book")
+        baseline = [by_book[row["Book"]] for row in expected]
+    if args.runs >= 8 and baseline is None:
+        parser.error("Full measurements require --quality-baseline-report")
     if not expected or any(row["Status"] == "Error" for row in expected):
         raise ValueError("A nonempty successful Windows Perl reference is required")
     directory = root / ("linux-measurement-" + uuid.uuid4().hex)
@@ -96,16 +116,22 @@ def main():
         if result.returncode:
             raise RuntimeError("Conversion failed; private diagnostics retained")
         quality = validate(expected, json.loads(report.read_text()), args.input.resolve())
+        baseline_quality = (validate(baseline, json.loads(report.read_text()), args.input.resolve())
+                            if baseline is not None else None)
         user, system, peak = (run / "resources.txt").read_text().split()
         row = {"Seconds": elapsed, "CPUSeconds": float(user) + float(system),
-               "PeakRSSBytes": int(peak) * 1024, "Quality": quality}
+               "PeakRSSBytes": int(peak) * 1024, "Quality": quality,
+               "BaselineQuality": baseline_quality}
         if index >= 0:
             rows.append(row)
             (directory / "runs.json").write_text(json.dumps(rows, indent=2))
         print(f"Validated Linux {'warmup' if index < 0 else index + 1}: {elapsed:.3f}s", flush=True)
     assert digest(executable) == identity, "Executable changed during measurement"
-    summary = {"Platform": "Linux", "PerlSpeedupClaim": False, "Books": len(expected),
+    if baseline_identity is not None:
+        assert digest(args.quality_baseline_report) == baseline_identity, "Quality baseline changed"
+    summary = {"ArtifactDirectory": str(directory), "Platform": "Linux", "PerlSpeedupClaim": False, "Books": len(expected),
                "Runs": args.runs, "CPU": cpu, "BinarySHA256": identity,
+               "DualCompressionGate": baseline is not None,
                "BinaryBytes": executable.stat().st_size,
                "MedianSeconds": statistics.median(row["Seconds"] for row in rows),
                "MedianCPUSeconds": statistics.median(row["CPUSeconds"] for row in rows),

@@ -1,4 +1,5 @@
 with Ada.Strings.Unbounded;
+with Epub.Name_Indexes;
 with Interfaces;
 with Zip.Headers;
 with Zip_Streams;
@@ -24,7 +25,20 @@ package Epub.Archives is
       Payload_SHA256 : Ada.Strings.Unbounded.Unbounded_String;
    end record;
    package Member_Lists is new Epub.Lists (Member);
-   subtype Catalogue is Member_Lists.Vector;
+   type Catalogue is tagged private
+     with Constant_Indexing => Element,
+       Iterable => (First => First, Next => Next, Has_Element => Has_Element, Element => Element);
+   function Element (Container : Catalogue; Position : Natural) return Member;
+   function First (Container : Catalogue) return Natural;
+   function Next (Container : Catalogue; Position : Natural) return Natural;
+   function Has_Element (Container : Catalogue; Position : Natural) return Boolean;
+   function Is_Empty (Container : Catalogue) return Boolean;
+   function Last_Index (Container : Catalogue) return Natural;
+   function Last_Element (Container : Catalogue) return Member;
+   procedure Append (Container : in out Catalogue; Item : Member);
+   procedure Replace_Element
+     (Container : in out Catalogue; Position : Positive; Item : Member);
+   procedure Delete_Last (Container : in out Catalogue);
    function Read (Bytes : String) return Catalogue;
    function Read_File (Path : String) return Catalogue;
    function Source_Size (Items : Catalogue) return Interfaces.Unsigned_64;
@@ -41,4 +55,9 @@ package Epub.Archives is
      (Name, Payload : String; Attributes : Interfaces.Unsigned_32 := 0)
       return Member;
    Invalid_Archive : exception;
+private
+   type Catalogue is tagged record
+      Members : Member_Lists.Vector;
+      Names : Epub.Name_Indexes.Index;
+   end record;
 end Epub.Archives;

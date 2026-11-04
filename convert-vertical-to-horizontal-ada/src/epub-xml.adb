@@ -4,6 +4,7 @@ with Sax.Attributes;
 with Sax.Readers;
 with Unicode.CES.UTF8;
 
+with Epub.Performance;
 package body Epub.XML is
    use Ada.Strings.Unbounded;
    package Indices is new Epub.Lists (Natural);
@@ -126,6 +127,7 @@ package body Epub.XML is
       Parser : Collector;
       Input : Input_Sources.Strings.String_Input;
    begin
+      Epub.Performance.Start (Epub.Performance.XML_Parsing);
       Parser.Set_Feature (Sax.Readers.External_General_Entities_Feature, False);
       Parser.Set_Feature (Sax.Readers.External_Parameter_Entities_Feature, False);
       Input_Sources.Strings.Open
@@ -138,16 +140,26 @@ package body Epub.XML is
             raise;
       end;
       Input.Close;
+      Epub.Performance.Stop (Epub.Performance.XML_Parsing);
       return Parser.Nodes;
    end Parse;
 
    function Get_Attribute (Item : Node; Name : String) return String is
-   begin
-      for Attr of Item.Attributes loop
-         if To_String (Attr.Name) = Name then
-            return To_String (Attr.Value);
+      Found : Boolean := False;
+      Value : Unbounded_String;
+      procedure Inspect (Attr : Attribute) is
+      begin
+         if Attr.Name = Name then
+            Found := True;
+            Value := Attr.Value;
          end if;
+      end Inspect;
+      procedure Query is new Attribute_Lists.Query_Element (Inspect);
+   begin
+      for Position in 1 .. Item.Attributes.Last_Index loop
+         Query (Item.Attributes, Position);
+         exit when Found;
       end loop;
-      return "";
+      return To_String (Value);
    end Get_Attribute;
 end Epub.XML;

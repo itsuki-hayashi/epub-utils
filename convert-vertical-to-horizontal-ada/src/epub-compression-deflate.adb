@@ -30,6 +30,7 @@
 --  Source attribution and licensing details are recorded in CODEC_ORIGINS.md.
 with Epub.Huffman.Encoding;
 with Epub.Huffman.Length_Limited_Coding;
+with Epub.Performance;
 with Epub.LZ77;
 
 with Ada.Unchecked_Deallocation;
@@ -75,9 +76,28 @@ is
   --  Output buffer. Bits are inserted starting at the right (least
   --  significant bits). The width of bit_buffer must be at least 16 bits.
   subtype U32 is Unsigned_32;
-  bit_buffer : U32 := 0;
+  bit_buffer : Unsigned_64 := 0;
   --  Number of valid bits in bit_buffer.  All bits above the last valid bit are always zero.
   valid_bits : Integer := 0;
+
+  procedure Put_Word (Value : Unsigned_32) with Inline is
+    type Unaligned_Word is mod 2 ** 32 with Size => 32, Alignment => 1;
+  begin
+    if IO_buffers.OutBuf'Length - IO_buffers.OutBufIdx + 1 < 4 then
+      Flush_byte_buffer;
+    end if;
+    declare
+      Target : Unaligned_Word with Import,
+        Address => IO_buffers.OutBuf.all (IO_buffers.OutBufIdx)'Address;
+    begin
+      --  Supported Windows/Linux x86-64 targets are little endian.
+      Target := Unaligned_Word (Value);
+    end;
+    IO_buffers.OutBufIdx := IO_buffers.OutBufIdx + 4;
+    if IO_buffers.OutBufIdx > IO_buffers.OutBuf'Last then
+      Flush_byte_buffer;
+    end if;
+  end Put_Word;
 
   procedure Flush_bit_buffer is
   begin
@@ -96,19 +116,13 @@ is
   --  Send a value on a given number of bits.
   procedure Put_Bits (code : U32; code_size : Code_Size_Type) with Inline is
   begin
-    --  Put bits from code at the left of existing ones. They might be shifted away
-    --  partially on the left side (or even entirely if valid_bits is already = 32).
-    bit_buffer := bit_buffer or Shift_Left (code, valid_bits);
+    --  At most 31 buffered bits plus a 15-bit code fit without splitting.
+    bit_buffer := bit_buffer or Shift_Left (Unsigned_64 (code), valid_bits);
     valid_bits := valid_bits + code_size;
-    if valid_bits > 32 then
-      --  Flush 32 bits to output as 4 bytes
-      Put_byte (Byte (bit_buffer and 16#FF#));
-      Put_byte (Byte (Shift_Right (bit_buffer,  8) and 16#FF#));
-      Put_byte (Byte (Shift_Right (bit_buffer, 16) and 16#FF#));
-      Put_byte (Byte (Shift_Right (bit_buffer, 24) and 16#FF#));
+    if valid_bits >= 32 then
+      Put_Word (Unsigned_32 (bit_buffer and 16#FFFF_FFFF#));
       valid_bits := valid_bits - 32;
-      --  Empty buffer and put on it the rest of the code
-      bit_buffer := Shift_Right (code, code_size - valid_bits);
+      bit_buffer := Shift_Right (bit_buffer, 32);
     end if;
   end Put_Bits;
 
@@ -794,7 +808,8 @@ is
   procedure Get_statistics (
     lzb           :  in LZ_buffer_type;
     stats_lit_len : out Stats_lit_len_type;
-    stats_dis     : out Stats_dis_type
+    stats_dis     : out Stats_dis_type;
+    match_bytes   : out Count_type
   )
   is
     lit_len : Alphabet_lit_len;
@@ -802,12 +817,14 @@ is
   begin
     stats_lit_len := empty_lit_len_stat;
     stats_dis     := empty_dis_stat;
+    match_bytes := 0;
     for i in lzb'Range loop
       case lzb (i).kind is
         when plain_byte =>
           lit_len := Alphabet_lit_len (lzb (i).plain);
           stats_lit_len (lit_len) := stats_lit_len (lit_len) + 1;     --  +1 for this literal
         when distance_length =>
+          match_bytes := match_bytes + Count_type (lzb (i).lz_length);
           lit_len := deflate_code_for_lz_length (lzb (i).lz_length);
           stats_lit_len (lit_len) := stats_lit_len (lit_len) + 1;     --  +1 for this length code
           dis := Deflate_code_for_LZ_distance (lzb (i).lz_distance);
@@ -955,6 +972,7 @@ is
     --
     stats_lit_len, stats_lit_len_2 : Stats_lit_len_type;
     stats_dis, stats_dis_2 : Stats_dis_type;
+    match_bytes : Count_type;
     --
     procedure Send_dynamic_block (dyn : Deflate_Huff_Descriptors) is
       dummy : Count_type := 0;
@@ -992,15 +1010,7 @@ is
       end loop;
       --  We count bits taken by DL codes.
       if stored_format_possible then
-        for i in lzb'Range loop
-          case lzb (i).kind is
-            when plain_byte =>
-              null;  --  Already counted
-            when distance_length =>
-               --  In the stored format, DL codes are expanded
-              stored_format_bits := stored_format_bits + 8 * Count_type (lzb (i).lz_length);
-          end case;
-        end loop;
+        stored_format_bits := stored_format_bits + 8 * match_bytes;
       end if;
       --  For compressed formats, count Huffman bits and extra bits.
       --  Lengths codes:
@@ -1043,7 +1053,8 @@ is
     --
     optimal_format_bits : Count_type;
   begin
-    Get_statistics (lzb, stats_lit_len, stats_dis);
+    Epub.Performance.Start (Epub.Performance.Huffman_Building);
+    Get_statistics (lzb, stats_lit_len, stats_dis, match_bytes);
     new_descr := Build_descriptors (stats_lit_len, stats_dis);
     stats_lit_len_2 := stats_lit_len;
     stats_dis_2 := stats_dis;
@@ -1073,22 +1084,26 @@ is
     --
     --  Selection of the block format with smallest size.
     --
-    if fixed_format_bits = optimal_format_bits then
-      
-      Send_fixed_block;
-    elsif dynamic_format_bits = optimal_format_bits then
-      
-      Send_dynamic_block (new_descr);
-    elsif dynamic_format_bits_2 = optimal_format_bits then
-      
-      Send_dynamic_block (new_descr_2);
-    elsif recycled_format_bits = optimal_format_bits then
-      
-      Put_LZ_buffer (lzb);
-    else  --  We have stored_format_bits = optimal_format_bits
-      
-      Expand_LZ_buffer (lzb, last_block);
-    end if;
+    Epub.Performance.Stop (Epub.Performance.Huffman_Building);
+    Epub.Performance.Start (Epub.Performance.Entropy_Encoding);
+    begin
+      if fixed_format_bits = optimal_format_bits then
+        Send_fixed_block;
+      elsif dynamic_format_bits = optimal_format_bits then
+        Send_dynamic_block (new_descr);
+      elsif dynamic_format_bits_2 = optimal_format_bits then
+        Send_dynamic_block (new_descr_2);
+      elsif recycled_format_bits = optimal_format_bits then
+        Put_LZ_buffer (lzb);
+      else  --  We have stored_format_bits = optimal_format_bits
+        Expand_LZ_buffer (lzb, last_block);
+      end if;
+    exception
+      when others =>
+        Epub.Performance.Stop (Epub.Performance.Entropy_Encoding);
+        raise;
+    end;
+    Epub.Performance.Stop (Epub.Performance.Entropy_Encoding);
   end Send_as_block;
 
   subtype Full_range_LZ_buffer_type is LZ_buffer_type (LZ_buffer_index_type);
@@ -1112,8 +1127,7 @@ is
     end if;
   end Flush_half_buffer;
 
-  procedure Push (a : LZ_atom) is
-  pragma Inline_Always (Push);
+  procedure Push (a : LZ_atom) with Inline_Always is
   begin
     lz_buffer.all (lz_buffer_index) := a;
     lz_buffer_index := lz_buffer_index + 1;  --  becomes 0 when reaching LZ_buffer_size (modular)
@@ -1157,6 +1171,28 @@ is
       return not IO_buffers.InputEoF;
     end More_bytes;
 
+    procedure Read_Span (Buffer : out Epub.LZ77.Byte_Array; Count : out Natural) is
+      Cursor : Natural := Buffer'First;
+    begin
+      Count := 0;
+      while Count < Buffer'Length loop
+        if not More_bytes then
+          exit;
+        end if;
+        declare
+          Amount : constant Positive := Positive'Min
+            (Buffer'Length - Count, IO_buffers.MaxInBufIdx - IO_buffers.InBufIdx + 1);
+          View : Epub.LZ77.Byte_Array (1 .. Amount)
+            with Import, Address => IO_buffers.InBuf.all (IO_buffers.InBufIdx)'Address;
+        begin
+          Buffer (Cursor .. Cursor + Amount - 1) := View;
+          Cursor := Cursor + Amount;
+          Count := Count + Amount;
+          IO_buffers.InBufIdx := IO_buffers.InBufIdx + Amount;
+        end;
+      end loop;
+    end Read_Span;
+
     --  Match prefixes come directly from the match finder's bounded source
     --  window; the entropy encoder does not reconstruct a second dictionary.
     procedure LZ77_emits_DL_code
@@ -1173,14 +1209,23 @@ is
     procedure My_LZ77 is new Epub.LZ77.Encode
       (Read_Byte => Read_byte, More_Bytes => More_bytes,
        Write_Literal => LZ77_emits_literal_byte, Write_DL_Code => LZ77_emits_DL_code,
-       Strategy => Epub.LZ77.Info_Zip_9_Knuth);
+       Strategy => Epub.LZ77.Info_Zip_9_Knuth,
+       Bulk_Input => True, Read_Span => Read_Span);
   begin  --  Encode
     Read_Block (IO_buffers, input, CRC);
 
     ----------------------------------------------------------------
     --  The whole compression is happening in the following line: --
     ----------------------------------------------------------------
-    My_LZ77 (Maximum_Chain => (if Fast_Trial then 64 else 4096));
+    Epub.Performance.Start (Epub.Performance.Match_Finding);
+    begin
+      My_LZ77 (Maximum_Chain => (if Fast_Trial then 64 else 4096));
+    exception
+      when others =>
+        Epub.Performance.Stop (Epub.Performance.Match_Finding);
+        raise;
+    end;
+    Epub.Performance.Stop (Epub.Performance.Match_Finding);
 
     --  Done. Send the code signaling the end of compressed data block:
     if lz_buffer_index * 2 = 0 then  --  Already flushed at latest Push, or empty data
@@ -1213,6 +1258,7 @@ begin
   Allocate_Buffers (IO_buffers, input_size);
   output_size := 0;
   lz_buffer := new Full_range_LZ_buffer_type;
+  Epub.Performance.Add (Epub.Performance.Compression_Allocations, 3);
   begin
     Encode;
     compression_ok := True;

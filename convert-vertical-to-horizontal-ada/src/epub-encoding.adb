@@ -3,6 +3,7 @@ with Ada.Strings.Fixed;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Epub.Code_Pages;
 
+with Epub.Performance;
 package body Epub.Encoding is
    use Ada.Strings.Unbounded;
    package UTF renames Ada.Strings.UTF_Encoding;
@@ -40,6 +41,8 @@ package body Epub.Encoding is
          and then Bytes (Bytes'First .. Bytes'First + Prefix'Length - 1) = Prefix);
       function Byte (Value : Natural) return Character is (Character'Val (Value));
    begin
+      Epub.Performance.Start (Epub.Performance.Text_Decoding);
+      Epub.Performance.Add (Epub.Performance.Text_Decodes);
       Result.Original := To_Unbounded_String (Bytes);
       if Starts (Byte (255) & Byte (254) & Byte (0) & Byte (0))
         or else Starts (Byte (0) & Byte (0) & Byte (254) & Byte (255))
@@ -134,6 +137,7 @@ package body Epub.Encoding is
          end loop;
          Result.Decoded := To_Unbounded_String (Decoded);
       end;
+      Epub.Performance.Stop (Epub.Performance.Text_Decoding);
       return Result;
    exception
       when UTF.Encoding_Error =>

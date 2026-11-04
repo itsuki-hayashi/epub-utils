@@ -147,8 +147,19 @@ package body Stream_Cases is
                   when Ada.IO_Exceptions.Mode_Error => null;
                end;
                Assert (Hashed.Index = 4 and then Hashed.Size = 3, "Rejected operations leave the output intact");
+               Assert (Hashed.End_Of_Stream, "Hash stream forwards the underlying EOF state");
                Epub.Stream_IO.Copy (Empty, Hashed);
                Assert (Hashed.Size = 3, "Copying an empty stream writes no padding");
+               Target.Set_Index (1);
+               begin
+                  Hashed.Write ([1 => 100]);
+                  Assert (False, "A separately repositioned target cannot bypass append-only hashing");
+               exception
+                  when Ada.IO_Exceptions.Mode_Error => null;
+               end;
+               Assert (Hashed.Size = 3 and then Hashed.Digest =
+                 Ada.Characters.Handling.To_Upper (GNAT.SHA256.Digest ("abc")),
+                 "Rejected non-append writes leave both content and digest unchanged");
             end;
          when Bulk_Roundtrip =>
             declare
@@ -203,6 +214,22 @@ package body Stream_Cases is
             begin
                Owner.Open (Path, Exclusive => True);
                Owner.Write ([1 => 42]);
+               begin
+                  Owner.Open (Path);
+                  Assert (False, "Reopening a live stream must not replace its owned handle");
+               exception
+                  when Epub.File_Streams.File_Error => null;
+               end;
+               declare
+                  Bytes : Stream_Element_Array (1 .. 1);
+                  Last : Stream_Element_Offset;
+               begin
+                  Owner.Read (Bytes, Last);
+                  Assert (False, "A write-only stream must reject reads");
+               exception
+                  when Epub.File_Streams.File_Error => null;
+               end;
+               Assert (Owner.Is_Open and then Owner.Size = 1, "Rejected mode operations preserve the live writer");
                begin
                   Collision.Open (Path, Exclusive => True);
                   Assert (False, "Exclusive create must refuse replacement");

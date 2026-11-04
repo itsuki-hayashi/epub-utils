@@ -2,8 +2,11 @@
 
 A full eight-pair native Windows comparison established faster end-to-end
 conversion and lower peak memory than Windows Perl, with independent output
-verification and the aggregate compression-quality gate enforced. The earlier
-fourfold speed target was not reached. Private corpus measurements and outputs
+verification and the aggregate compression-quality gate enforced. The optimized
+native PGO candidate also passed eight full alternating pairs against frozen Ada
+for Converted, Preserved and Mixed workloads, including both compression floors,
+the memory budget and the workload-regression gate. The earlier fourfold speed
+target was not reached. Private corpus measurements and outputs
 remain outside the repository; do not treat profiling timings or limited
 diagnostic runs as acceptance results.
 
@@ -47,6 +50,34 @@ EPUB_BUILD=profile EPUB_TUNING=native EPUB_GPROF=true ./tools/build.sh
 
 The native Linux release is `bin/linux/release-native/epub-v2h`.
 
+### Optional profile-guided optimization
+
+PGO remains optional; ordinary release builds do not consume
+training data. The generation and use builds share a separate `rnq` object
+configuration so GCC can locate the same object profile paths. Their packaged
+executables remain separate. PGO builds force recompilation so native C helper
+objects cannot retain generation instrumentation during the use build:
+
+```powershell
+./tools/build.ps1 -BuildKind release -CpuTuning native -PgoMode generate -ProfileDirectory C:\bench\pgo-data
+bin/release-native-pgo-generate/epub-v2h.exe --input-path C:\bench\tuning-input --output-directory C:\bench\training-books --json > C:\bench\training.json
+./tools/build.ps1 -BuildKind release -CpuTuning native -PgoMode use -ProfileDirectory C:\bench\pgo-data
+```
+
+Use a fresh external profile directory. A source/dependency/configuration
+fingerprint rejects missing or stale training data; compiler profile warnings
+remain errors for owned code. Only owned units and generated binding code receive
+PGO flags. Dependencies retain their existing build configuration and sources.
+Checks, assertions and static linkage remain enabled. Train on the tuning set,
+then verify output identity and performance on the holdout set before promotion.
+Gprof and LTO cannot be combined with these scripted PGO builds.
+Generation flags apply during compilation and linking, following the
+[GCC instrumentation requirements](https://gcc.gnu.org/onlinedocs/gcc/Instrumentation-Options.html).
+
+Linux selects the equivalent build with `EPUB_BUILD=release`,
+`EPUB_TUNING=native`, `EPUB_PGO=generate` or `use`, and an external
+`EPUB_PGO_DIRECTORY`. Its training identities are platform-specific.
+
 ## Reproduce Windows comparisons
 
 Keep inputs, reference reports, profiles, and all output books outside the
@@ -60,7 +91,9 @@ perl -Ilib -Ilocal/lib/perl5 bin/epub-v2h --input-path C:\books `
 
 # From convert-vertical-to-horizontal-ada.
 ./tools/build.ps1 -BuildKind release -CpuTuning native
+$frozenAdaPeakBytes = (Get-Content C:\bench\baseline-summary.json -Raw | ConvertFrom-Json).AdaMedianPeakBytes
 ./tools/benchmark.ps1 -InputPath C:\books -ReferenceReport C:\bench\reference.json `
+  -QualityBaselineReport C:\bench\frozen-ada-report.json -MemoryBaselinePeakBytes $frozenAdaPeakBytes `
   -AdaExecutable bin/release-native/epub-v2h.exe -OutputRoot C:\bench\measurements `
   -Workload Converted -Pairs 8 -CompressionGate Aggregate -Label release-native
 ```
@@ -71,7 +104,8 @@ files and reports: the validator compares statuses, reasons, changed entries,
 source immutability, hashes, lengths, ZIP order, timestamps, attributes, and every
 decompressed payload. The default `Aggregate` gate rejects runs whose total
 compressed payload size exceeds Perl's zlib level-9 result; individual books
-may vary, and the validator reports their count. `PerBook` remains available
+may vary, and the private validation metrics list every growing book and its
+compressed-byte delta. `PerBook` remains available
 as an optional stricter diagnostic. Failed validation excludes a
 measurement from any speedup claim.
 
@@ -89,15 +123,49 @@ a Perl warm-up still supplies the independently verified expected output.
 These results are explicitly diagnostic comparisons, never Perl speed
 acceptance results. Use `-Pairs 8 -Limit 12` for a small paired comparison.
 
+Before editing source, freeze the current executable and its verified outputs.
+`tools/prepare-performance.ps1` takes the executable, input path, Perl reference
+report and external output root. It snapshots the binary and records deterministic
+tuning/holdout partitions stratified by status, size, entry count, approximate
+compressibility and observed text encoding. It does not convert books or replace
+the frozen Ada quality report. Preserve the source revision and build flags too;
+a rebuilt control must use the same dependency optimization flags as the release.
+
+`-QualityBaselineReport` selects the frozen Ada output report, restricted to the
+measured books. Every candidate is independently checked against both references.
+`-RequireIdenticalBaseline` additionally requires exact output archive bytes for
+structural changes. Full measurements require an Ada quality reference or control
+executable. `-MemoryBaselinePeakBytes` is the measured frozen Ada peak for that
+workload, read from its saved benchmark summary.
+
+Ada/control comparisons report a deterministic paired bootstrap 95% confidence
+interval. `-ExtendInconclusive -MaximumPairs 32` extends eight initial pairs to
+sixteen and then thirty-two when the interval includes no improvement. Promotion
+requires an unlimited full run, at least 3% faster conversion, an interval above
+one, both compression gates, and peak RAM no greater than twice the control and
+below Perl. Run Converted, Preserved and Mixed separately; pass their summaries
+to `tools/evaluate-performance.ps1`. It also checks binary/cohort identity and
+rejects workload regressions above 2%. Limited runs never satisfy promotion.
+`tools/test-performance.ps1` checks the statistical calculations and script syntax.
+
 `tools/check-corpus.ps1` accepts the same input, reference, executable and
 external output-root paths for one full correctness/quality check. It records
 no timings or memory measurements and makes no speed claim; it is useful before
 starting a long acceptance run. Its default compression gate is `Aggregate`.
+It also accepts `-QualityBaselineReport` and `-RequireIdenticalBaseline` for
+untimed validation against the frozen Ada outputs.
 
 ## Profiling
 
 The profile build writes inclusive phase timers when `EPUB_PROFILE_PATH` names
-an external CSV file. Phases nest; do not sum their times. Production JSON is
+an external CSV file. It additionally records exclusive time using a nested timer
+stack and writes a companion `.counters.csv`. Phases nest; do not sum inclusive
+times. Counters cover demand/repeated member decoding, match searches/candidates,
+bulk input, native reads/writes/seeks, byte transfers and owned allocation requests.
+Owned container counts exclude allocations internal to the runtime and strings,
+and include profiler bookkeeping; they are not live or peak heap measurements.
+Incomplete timer stacks after a failed book are discarded and reported.
+Production JSON is
 unchanged, and release timer bodies are empty and inlined. The benchmark harness
 sets a separate phase-log path for each run. Gprof builds also write `gmon.out`
 in each run directory; Windows gprof builds disable ASLR for sampling accuracy.
@@ -112,6 +180,9 @@ inlined stacks through DWARF. It reports profiler overhead separately; its
 samples cover the executable image, not time spent in external system DLLs.
 Use uninstrumented release builds for acceptance timing. Windows filesystem
 tracing with WPR was unavailable under the current host profiling policy.
+`tools/summarize-performance.ps1 -PhasePath C:\bench\phases.csv` ranks exclusive
+costs and computes ideal speedup ceilings. Supply `-ElapsedSeconds` to use total
+elapsed time rather than the sum of accounted timers as the denominator.
 
 ## Retained implementation changes
 
@@ -121,13 +192,17 @@ tracing with WPR was unavailable under the current host profiling policy.
   whole-file digests are computed independently, and archive verification checks
   one entry at a time before atomic no-replacement publication.
 - The owned lazy matcher uses checked four-byte multiplicative hash keys and
-  word comparisons. Changed resources use the full 4096-link search budget;
+  a 17-bit head table, hoisted two-byte match probes and word comparisons.
+  Input refills copy bounded spans rather than invoking callbacks for each byte.
+  Changed resources use the full 4096-link search budget;
   unchanged source-backed resources use a 64-link trial before comparing the
   result with their validated original compressed stream. A linear
   two-queue Huffman path falls back to bounded package merge when necessary;
   exhaustive tests require the reference's exact lengths and tie decisions.
 - The entropy encoder selects the lowest computed stored/fixed/dynamic/recycled
-  representation for bounded token blocks. After attempting compression, an
+  representation for bounded token blocks. A 64-bit accumulator emits bounded
+  four-byte batches; stored-block costs share the token statistics pass.
+  After attempting compression, an
   unchanged source-backed entry can retain its smaller original DEFLATE stream.
   Changed entries cannot use this fallback. Both paths receive the same complete
   persisted verification.
@@ -138,7 +213,11 @@ tracing with WPR was unavailable under the current host profiling policy.
   come directly from the match finder, eliminating a duplicate reconstructed
   text window in the entropy encoder.
 - The Huffman decoder inlines its short-code lookup while keeping the canonical
-  long-code fallback and all truncation checks.
+  long-code fallback and all truncation checks. Bounded word refills populate the
+  bit accumulator; an opportunistic second literal avoids another decode loop.
+- Case-sensitive first-occurrence indexes accelerate archive and manifest lookup.
+  Ordered vectors and deep-copy ownership remain intact. Scoped read-only queries
+  avoid controlled-element copies in attribute lookup and persisted verification.
 - Owned CRC uses slicing-by-eight IEEE CRC-32. SHA-256 processes multiple blocks
   per call using GNAT CPU intrinsics
   after runtime feature detection, with GNAT's portable implementation retained
@@ -147,6 +226,9 @@ tracing with WPR was unavailable under the current host profiling policy.
 See [CODEC_ORIGINS.md](CODEC_ORIGINS.md) for source attribution and licenses.
 The split token/expansion-array experiment was removed: it preserved archive
 bytes but did not improve measured speed or peak memory.
+The bounded analysis cache was also removed after paired trials failed to show
+a reliable improvement. Larger token blocks met compression requirements but
+did not meet the timing gate, so the existing block size remains in use.
 
 ## Separate Linux measurements
 
@@ -159,6 +241,7 @@ record that preparation outside the checkout. Copying/staging is untimed.
 ```sh
 python3 tools/benchmark-linux.py --executable bin/linux/release-native/epub-v2h \
   --input /tmp/epub-benchmark/input --reference-report /tmp/epub-benchmark/reference.json \
+  --quality-baseline-report /tmp/epub-benchmark/frozen-ada.json \
   --work-root /tmp/epub-benchmark/results --runs 8
 ```
 
@@ -170,3 +253,12 @@ checked with Python's ZIP reader against Windows Perl payloads, entry order,
 timestamps, attributes, reports, source/output hashes and aggregate compressed
 size. These results make no cross-platform Perl speedup claim. Linux peak RSS
 and Windows peak working set are different operating-system metrics.
+
+## Separate multicore follow-up
+
+Investigate isolated worker processes for independent books after single-core
+acceptance. Keep the default sequential, preserve deterministic reporting and
+per-book failure isolation, and budget total worker memory from measured peaks.
+Shared source handles currently seek and mutate reference counts without
+synchronization; they must not be shared across workers. Throughput scaling and
+total memory require separate measurements and are not single-core speed claims.

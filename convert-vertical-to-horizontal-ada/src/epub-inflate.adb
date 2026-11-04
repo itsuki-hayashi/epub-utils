@@ -2,6 +2,7 @@ with Epub.Checksums;
 with Interfaces;
 with Zip;
 
+with Epub.Performance;
 package body Epub.Inflate is
    use Interfaces;
    type Length_Array is array (Natural range <>) of Natural;
@@ -129,15 +130,30 @@ package body Epub.Inflate is
       end Refill;
 
       procedure Fill_Bits (Count : Natural) is
+         type Unaligned_Word is mod 2 ** 64 with Size => 64, Alignment => 1;
       begin
          while Available < Count loop
             if Cursor > Buffered then
                exit when Remaining = 0;
                Refill;
             end if;
-            Bits := Bits or Shift_Left (Unsigned_64 (Buffer (Cursor)), Available);
-            Available := Available + 8;
-            Cursor := Cursor + 1;
+            if Buffered - Cursor + 1 >= 8 then
+               declare
+                  Word : Unaligned_Word with Import, Address => Buffer (Cursor)'Address;
+                  Bytes : constant Positive := (64 - Available) / 8;
+                  Mask : constant Unsigned_64 := Shift_Right (Unsigned_64'Last, 64 - Bytes * 8);
+               begin
+                  --  Inspect only a complete word inside the bounded refill.
+                  --  Consume only the bytes that fit in the bit accumulator.
+                  Bits := Bits or Shift_Left (Unsigned_64 (Word) and Mask, Available);
+                  Available := Available + Bytes * 8;
+                  Cursor := Cursor + Bytes;
+               end;
+            else
+               Bits := Bits or Shift_Left (Unsigned_64 (Buffer (Cursor)), Available);
+               Available := Available + 8;
+               Cursor := Cursor + 1;
+            end if;
          end loop;
       end Fill_Bits;
 
@@ -167,8 +183,7 @@ package body Epub.Inflate is
          raise Invalid_Stream with "Invalid Huffman symbol";
       end Canonical_Symbol;
 
-      function Symbol (Tree : Huffman_Tree) return Natural is
-         pragma Inline_Always (Symbol);
+      function Symbol (Tree : Huffman_Tree) return Natural with Inline_Always is
          Entry_Code : Unsigned_16;
          Length : Natural;
       begin
@@ -257,6 +272,7 @@ package body Epub.Inflate is
          --  Huffman bits. Reject impossible sizes before allocating output.
          raise Invalid_Stream with "DEFLATE payload cannot produce its declared size";
       end if;
+      Epub.Performance.Start (Epub.Performance.Decompression);
       Output_Length := Natural (Metadata.dd.uncompressed_size);
       return Result : String (1 .. Output_Length) do
          declare
@@ -316,6 +332,23 @@ package body Epub.Inflate is
                      Check_Room (1);
                      Result (Written + 1) := Character'Val (Value);
                      Written := Written + 1;
+                     --  Bulk bit refills often leave another complete short
+                     --  literal available. Consume it without a second loop,
+                     --  retaining the normal symbol path for matches/EOB.
+                     if Available >= 9 and then Written < Output_Length then
+                        declare
+                           Next_Code : constant Unsigned_16 := Literals.Fast (Natural (Bits and 511));
+                           Next_Length : constant Natural := Natural (Shift_Right (Next_Code, 9));
+                           Next_Value : constant Natural := Natural (Next_Code and 511);
+                        begin
+                           if Next_Length > 0 and then Next_Length <= Available and then Next_Value < 256 then
+                              Bits := Shift_Right (Bits, Next_Length);
+                              Available := Available - Next_Length;
+                              Result (Written + 1) := Character'Val (Next_Value);
+                              Written := Written + 1;
+                           end if;
+                        end;
+                     end if;
                   elsif Value = 256 then
                      exit;
                   elsif Value > 285 then
@@ -375,6 +408,7 @@ package body Epub.Inflate is
                raise Invalid_Stream with "ZIP payload CRC mismatch";
             end if;
          end;
+         Epub.Performance.Stop (Epub.Performance.Decompression);
       end return;
    end Decode;
 end Epub.Inflate;

@@ -22,10 +22,14 @@ my $expected = report($expected_path);
 my $actual = report($actual_path);
 die 'Record count differs' unless @$expected == @$actual;
 my %expected = map { $_->{Book} => $_ } @$expected;
+die 'Duplicate reference book' unless keys(%expected) == @$expected;
+my %seen;
 my $entries = 0;
-my ($compressed_expected, $compressed_actual, $larger_books) = (0,0,0);
+my ($compressed_expected, $compressed_actual, $larger_books, $identical_books) = (0,0,0,0);
+my @growth;
 for my $index (0 .. $#$actual) {
     my $right = $actual->[$index];
+    die 'Duplicate actual book' if $seen{$right->{Book}}++;
     my $left = $expected{$right->{Book}} or die "Missing record $index";
     die "Conversion error $index" if $right->{Status} eq 'Error';
     for my $key (qw(Status Reason InputBytes InputSHA256 EntriesVerified)) {
@@ -40,6 +44,7 @@ for my $index (0 .. $#$actual) {
         close $file or die 'Cannot close output';
         die "Preserved copy $index" if $record->{Status} eq 'Preserved' && $record->{InputSHA256} ne $record->{OutputSHA256};
     }
+    ++$identical_books if $left->{OutputSHA256} eq $right->{OutputSHA256};
     my $before = open_archive($left->{Output});
     my $after = open_archive($right->{Output});
     my @x = $before->{zip}->members();
@@ -59,11 +64,16 @@ for my $index (0 .. $#$actual) {
     }
     $compressed_expected += $book_expected;
     $compressed_actual += $book_actual;
-    ++$larger_books if $book_actual > $book_expected;
+    if ($book_actual > $book_expected) {
+        ++$larger_books;
+        push @growth, {book=>$right->{Book}, compressed_expected=>$book_expected,
+            compressed_actual=>$book_actual, delta=>$book_actual-$book_expected};
+    }
     close_archive($before); close_archive($after);
 }
 say 'PASS books=',scalar(@$actual),' entries=',$entries;
 say 'METRICS ',encode_json({compressed_expected=>$compressed_expected,
-    compressed_actual=>$compressed_actual,larger_books=>$larger_books});
+    compressed_actual=>$compressed_actual,larger_books=>$larger_books,growth=>\@growth,
+    identical_books=>$identical_books});
 die 'Per-book compression quality gate failed' if $quality_gate eq 'PerBook' && $larger_books;
 die 'Aggregate compression quality gate failed' if $quality_gate eq 'Aggregate' && $compressed_actual>$compressed_expected;

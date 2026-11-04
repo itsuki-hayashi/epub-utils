@@ -636,6 +636,20 @@ package body Archive_Cases is
                   Assert (Epub.Archives.Find (Actual, "OPS/a.css") = 4, "Lowercase name lookup");
                   Assert (Epub.Archives.Contents (Actual, "OPS/A.css") = "upper", "Distinct payloads");
                end;
+               declare
+                  Copy : Epub.Archives.Catalogue := Original;
+               begin
+                  Copy.Replace_Element (3, Epub.Archives.Create_Member ("OPS/renamed.css", "new"));
+                  Assert (Epub.Archives.Find (Copy, "OPS/A.css") = 0 and then
+                    Epub.Archives.Find (Copy, "OPS/renamed.css") = 3, "Rename updates the index");
+                  Assert (Epub.Archives.Find (Original, "OPS/A.css") = 3, "Copied catalogue owns its index");
+                  Copy.Append (Epub.Archives.Create_Member ("OPS/a.css", "duplicate"));
+                  Assert (Epub.Archives.Find (Copy, "OPS/a.css") = 4, "Index retains the first duplicate");
+                  Copy.Delete_Last;
+                  Assert (Epub.Archives.Find (Copy, "OPS/a.css") = 4, "Removing duplicate retains first occurrence");
+                  Copy.Delete_Last;
+                  Assert (Epub.Archives.Find (Copy, "OPS/a.css") = 0, "Removing last occurrence removes index key");
+               end;
             end;
          when Metadata_Roundtrip | Zip64_Roundtrip =>
             declare

@@ -15,6 +15,7 @@ package body Epub.Conversion is
    function Process_Book (Input, Destination : String; Settings : Options) return Book_Result is
       Result : Book_Result;
    begin
+      Epub.Performance.Begin_Book;
       Result.Book := To_Unbounded_String (Epub.Files.Basename (Input));
       Result.Output := To_Unbounded_String (Destination);
       Epub.Performance.Start (Epub.Performance.Input_Read);
