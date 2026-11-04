@@ -4,6 +4,12 @@ param(
     [Parameter(Mandatory)][string]$AdaExecutable,
     [string]$BaselineAdaExecutable,
     [string]$QualityBaselineReport,
+    [ValidatePattern('^(auto|[1-9][0-9]*)$')][string]$Jobs = '1',
+    [ValidateSet('SingleCore','PhysicalCores')][string]$AffinityMode = 'SingleCore',
+    [ValidateSet('SingleCore','PhysicalCores')][string]$ControlAffinityMode = 'SingleCore',
+    [ValidateSet('Sequential','WorkerScaled')][string]$MemoryPolicy = 'Sequential',
+    [string]$ControlJobs,
+    [switch]$ReuseReferenceOutputs,
     [ValidateRange(0,[long]::MaxValue)][long]$MemoryBaselinePeakBytes = 0,
     [switch]$RequireIdenticalBaseline,
     [Parameter(Mandatory)][string]$OutputRoot,
@@ -16,7 +22,42 @@ param(
     [ValidateSet('Report','PerBook','Aggregate')][string]$CompressionGate = 'Aggregate'
 )
 $ErrorActionPreference = 'Stop'
+$benchmarkMutex = [Threading.Mutex]::new($false, 'Local\epub-utils-performance')
+$ownsBenchmarkMutex = $false
+try {
+    try { while (-not $benchmarkMutex.WaitOne(1000)) {} }
+    catch [Threading.AbandonedMutexException] { }
+    $ownsBenchmarkMutex = $true
+if ($ReuseReferenceOutputs -and (-not $BaselineAdaExecutable -or $MemoryPolicy -ne 'WorkerScaled')) {
+    throw 'Reusing frozen Perl outputs requires an Ada control and the worker-scaled memory policy.'
+}
 . (Join-Path $PSScriptRoot 'performance-statistics.ps1')
+# Keep a process handle so even sub-50ms runs and the final sample retain the
+# operating system's high-water mark after exit, before the handle is disposed.
+if (-not ('EpubBenchmarkMemory' -as [type])) {
+    Add-Type -TypeDefinition @'
+using System;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
+public static class EpubBenchmarkMemory {
+    [StructLayout(LayoutKind.Sequential)]
+    struct Counters {
+        public uint Size, Faults;
+        public UIntPtr PeakWorkingSet, WorkingSet, PeakPaged, Paged,
+            PeakNonPaged, NonPaged, PageFile, PeakPageFile;
+    }
+    [DllImport("kernel32.dll", SetLastError = true)]
+    static extern bool K32GetProcessMemoryInfo(IntPtr process, ref Counters data, uint size);
+    public static long Peak(IntPtr process) {
+        var data = new Counters();
+        data.Size = (uint)Marshal.SizeOf<Counters>();
+        if (!K32GetProcessMemoryInfo(process, ref data, data.Size))
+            throw new Win32Exception(Marshal.GetLastWin32Error());
+        return checked((long)data.PeakWorkingSet.ToUInt64());
+    }
+}
+'@
+}
 if ($ExtendInconclusive -and (-not $BaselineAdaExecutable -or $Pairs -lt 8 -or $MaximumPairs -lt $Pairs)) {
     throw 'Adaptive measurement requires a baseline executable and 8..MaximumPairs initial pairs.'
 }
@@ -107,18 +148,30 @@ function Run-Engine([string]$Engine, [string]$Tag) {
     foreach ($argument in @('--input-path',$staged,'--output-directory',(Join-Path $directory 'books'),'--json')) {
         $start.ArgumentList.Add($argument)
     }
+    if ($Engine -eq 'Ada') {
+        $start.ArgumentList.Add('--jobs'); $start.ArgumentList.Add($Jobs)
+    } elseif ($Engine -eq 'ControlAda' -and $ControlJobs) {
+        $start.ArgumentList.Add('--jobs'); $start.ArgumentList.Add($ControlJobs)
+    }
+    $start.Environment['EPUB_CONCURRENCY_STATS'] = Join-Path $directory 'workers.csv'
     $start.Environment['EPUB_PROFILE_PATH'] = Join-Path $directory 'phases.csv'
     # Children inherit the controller's affinity before their first instruction.
     $watch = [Diagnostics.Stopwatch]::StartNew()
-    $process = [Diagnostics.Process]::Start($start)
+    $parallelAffinity = ($Engine -eq 'Ada' -and $AffinityMode -eq 'PhysicalCores') -or
+        ($Engine -eq 'ControlAda' -and $ControlAffinityMode -eq 'PhysicalCores')
+    $controller.ProcessorAffinity = if ($parallelAffinity) { $originalAffinity } else { [IntPtr]$mask }
+    try { $process = [Diagnostics.Process]::Start($start) }
+    finally { $controller.ProcessorAffinity = $originalAffinity }
+    $processHandle = $process.Handle
     $stdout = $process.StandardOutput.ReadToEndAsync()
     $stderr = $process.StandardError.ReadToEndAsync()
-    $peak = 0L
+    $peak = [EpubBenchmarkMemory]::Peak($processHandle)
     try {
         while (-not $process.WaitForExit(50)) {
-            try { $process.Refresh(); $peak = [Math]::Max($peak,$process.PeakWorkingSet64) } catch { if (-not $process.HasExited) { throw } }
+            $peak = [Math]::Max($peak,[EpubBenchmarkMemory]::Peak($processHandle))
         }
         $watch.Stop()
+        $peak = [Math]::Max($peak,[EpubBenchmarkMemory]::Peak($processHandle))
         $cpu = $process.TotalProcessorTime.TotalSeconds
         $code = $process.ExitCode
         $json = $stdout.GetAwaiter().GetResult()
@@ -127,7 +180,13 @@ function Run-Engine([string]$Engine, [string]$Tag) {
         if ($code -ne 0) { throw 'Conversion failed; private diagnostics retained outside the repository.' }
         $records = @($json | ConvertFrom-Json)
         if ($records.Count -ne $selection.Count -or @($records | Where-Object Status -eq Error).Count) { throw 'Incomplete conversion.' }
-        return [pscustomobject]@{Engine=$Engine;Tag=$Tag;Seconds=$watch.Elapsed.TotalSeconds;CPUSeconds=$cpu;
+        $workers = 1
+        $workerStats = Join-Path $directory 'workers.csv'
+        if (Test-Path -LiteralPath $workerStats) {
+            $stats = @(Import-Csv -LiteralPath $workerStats)
+            $workers = [int]($stats | Where-Object Metric -eq workers).Value
+        }
+        return [pscustomobject]@{Workers=$workers;WorkerUtilization=($cpu/($watch.Elapsed.TotalSeconds*$workers));Engine=$Engine;Tag=$Tag;Seconds=$watch.Elapsed.TotalSeconds;CPUSeconds=$cpu;
             PeakBytes=$peak;OutputBytes=($records|Measure-Object OutputBytes -Sum).Sum;Report=(Join-Path $directory 'report.json')}
     } finally { $process.Dispose() }
 }
@@ -151,7 +210,13 @@ function Median($Values) {
 
 try {
     $controller.ProcessorAffinity = [IntPtr]$mask
-    $expected = Run-Engine 'Perl' 'warmup-perl'
+    if ($ReuseReferenceOutputs) {
+        $perlReport = Join-Path $session 'perl-reference.json'
+        $selection | ConvertTo-Json -Depth 8 -AsArray | Set-Content -LiteralPath $perlReport
+        $expected = [pscustomobject]@{Report=$perlReport;PeakBytes=0}
+    } else {
+        $expected = Run-Engine 'Perl' 'warmup-perl'
+    }
     $null = Validate-Output $expected $expected
     $controlEngine = if ($BaselineAdaExecutable) { 'ControlAda' } else { 'Perl' }
     if ($BaselineAdaExecutable) {
@@ -214,15 +279,23 @@ try {
         } else { $null }
         $controlPeak = Median @($rows | Where-Object Engine -eq ControlAda | ForEach-Object PeakBytes)
         $candidatePeak = Median @($rows | Where-Object Engine -eq Ada | ForEach-Object PeakBytes)
-        $summary = [pscustomobject]@{ArtifactDirectory=$session;Label=$Label;Workload=$Workload;Books=$selection.Count;Pairs=$Pairs;Limit=$Limit;
+        $candidateMaxPeak = ($rows | Where-Object Engine -eq Ada | Measure-Object PeakBytes -Maximum).Maximum
+        $controlMaxPeak = ($rows | Where-Object Engine -eq ControlAda | Measure-Object PeakBytes -Maximum).Maximum
+        $candidateWorkers = [int](Median @($rows | Where-Object Engine -eq Ada | ForEach-Object Workers))
+        $memoryLimit = if ($MemoryPolicy -eq 'WorkerScaled') { 2 * $candidateWorkers * $controlPeak } else { 2 * $controlPeak }
+        $summary = [pscustomobject]@{CandidateWorkers=$candidateWorkers;
+            CandidateWorkerUtilization=(Median @($rows | Where-Object Engine -eq Ada | ForEach-Object WorkerUtilization));
+            MemoryLimitBytes=$memoryLimit;ArtifactDirectory=$session;Label=$Label;Workload=$Workload;Books=$selection.Count;Pairs=$Pairs;Limit=$Limit;
+            CandidateMaxPeakBytes=$candidateMaxPeak;ControlMaxPeakBytes=$controlMaxPeak;
             InputSHA256s=@($selection.InputSHA256 | Sort-Object);
-            AcceptanceRun=$false;ComparisonOnly=$true;AffinityMask=$mask;CompressionGate=$CompressionGate;
+            AcceptanceRun=$false;ComparisonOnly=$true;AffinityMask=$mask;AffinityMode=$AffinityMode;ControlAffinityMode=$ControlAffinityMode;
+            Jobs=$Jobs;MemoryPolicy=$MemoryPolicy;CompressionGate=$CompressionGate;
             InputBytes=($selection|Measure-Object InputBytes -Sum).Sum;
             ControlMedianSeconds=$controlMedian;CandidateMedianSeconds=$candidateMedian;
             RelativeSpeedup=($controlMedian/$candidateMedian);
             PairedConfidence=$interval;DualCompressionGate=($CompressionGate -ne 'Report');
-            MemoryWithinBudget=($controlPeak -gt 0 -and $candidatePeak -gt 0 -and
-                $candidatePeak -le 2 * $controlPeak -and $candidatePeak -lt $expected.PeakBytes);
+            MemoryWithinBudget=($controlPeak -gt 0 -and $candidateMaxPeak -gt 0 -and
+                $candidateMaxPeak -le $memoryLimit -and ($MemoryPolicy -eq 'WorkerScaled' -or $candidateMaxPeak -lt $expected.PeakBytes));
             PromotionTimingMet=($Pairs -ge 8 -and $Limit -eq 0 -and $interval.Lower95 -gt 1 -and
                 $controlMedian/$candidateMedian -ge 1.03);
             ControlMedianCPUSeconds=(Median @($rows|Where-Object Engine -eq ControlAda|ForEach-Object CPUSeconds));
@@ -270,3 +343,8 @@ try {
     $summary | ConvertTo-Json -Depth 6 | Set-Content -LiteralPath (Join-Path $session 'summary.json')
     $summary | ConvertTo-Json -Depth 6
 } finally { $controller.ProcessorAffinity = $originalAffinity; $controller.Dispose() }
+
+} finally {
+    if ($ownsBenchmarkMutex) { $benchmarkMutex.ReleaseMutex() }
+    $benchmarkMutex.Dispose()
+}

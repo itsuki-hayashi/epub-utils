@@ -1,5 +1,5 @@
 with Ada.Exceptions;
-with Ada.Text_IO;
+with Epub.Diagnostics;
 with Interfaces;
 with Epub.Performance;
 
@@ -21,15 +21,19 @@ package body Epub.File_Streams is
       end if;
    exception
       when Error : others =>
-         Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error,
-           "File cleanup failure: " & Ada.Exceptions.Exception_Message (Error));
+         Epub.Diagnostics.Report ("File cleanup failure: " & Ada.Exceptions.Exception_Message (Error));
    end Finalize;
-   procedure Open (Item : in out Stream; Path : String; Exclusive : Boolean := False) is
+   procedure Open
+     (Item : in out Stream; Path : String; Exclusive : Boolean := False;
+      Outcome : access Epub.Native_Files.Open_Result := null) is
    begin
       if Is_Open (Item) then
          raise File_Error with "Binary stream is already open";
       end if;
-      Item.Owner.Handle := Epub.Native_Files.Open (Path, Exclusive);
+      Item.Owner.Handle := Epub.Native_Files.Open (Path, Exclusive, Outcome);
+      if Outcome /= null and then Outcome.all.Collision then
+         return;
+      end if;
       begin
          declare
             Length : constant Interfaces.Unsigned_64 := Epub.Native_Files.Size (Item.Owner.Handle);

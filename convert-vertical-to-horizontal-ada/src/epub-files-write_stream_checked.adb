@@ -1,10 +1,9 @@
 with Ada.Exceptions;
-with Ada.Strings.Fixed;
 with Epub.File_Streams;
 with Epub.Performance;
 with Epub.Publication;
 with Epub.Stream_IO;
-with GNAT.OS_Lib;
+with Epub.Temporary_Files;
 
 procedure Epub.Files.Write_Stream_Checked
   (Destination : String; Output_Bytes : out Interfaces.Unsigned_64;
@@ -12,7 +11,6 @@ procedure Epub.Files.Write_Stream_Checked
    use Ada.Strings.Unbounded;
    use type Epub.Publication.State;
    use type Zip_Streams.ZS_Size_Type;
-   Sequence : Natural := 0;
    Temporary : Unbounded_String;
    Reserved : Boolean := False;
    State : Epub.Publication.State := Epub.Publication.Unverified;
@@ -21,15 +19,7 @@ begin
    if Exists (Destination) then
       raise File_Error with "Refusing to overwrite: " & Destination;
    end if;
-   loop
-      Sequence := Sequence + 1;
-      Temporary := To_Unbounded_String (Join (Parent_Path (Destination),
-        ".epub-horizontal-" & Ada.Strings.Fixed.Trim
-          (GNAT.OS_Lib.Pid_To_Integer (GNAT.OS_Lib.Current_Process_Id)'Image, Ada.Strings.Both)
-        & "-" & Ada.Strings.Fixed.Trim (Sequence'Image, Ada.Strings.Both) & ".tmp"));
-      exit when not Exists (To_String (Temporary));
-   end loop;
-   Output.Open (To_String (Temporary), Exclusive => True);
+   Epub.Temporary_Files.Reserve (Parent_Path (Destination), Output, Temporary);
    Reserved := True;
    Epub.Performance.Start (Epub.Performance.Output_Write);
    Build (Output, Output_SHA256);

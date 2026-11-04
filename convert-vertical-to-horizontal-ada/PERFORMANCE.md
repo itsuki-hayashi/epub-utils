@@ -10,6 +10,10 @@ target was not reached. Private corpus measurements and outputs
 remain outside the repository; do not treat profiling timings or limited
 diagnostic runs as acceptance results.
 
+The results above precede concurrency. [CONCURRENCY.md](CONCURRENCY.md) describes
+the shared pool, parallel benchmark options, worker-scaled memory policy and
+task-local profiling units. Use --jobs 1 to reproduce single-core behavior.
+
 ## Build configurations
 
 ```powershell
@@ -60,7 +64,8 @@ objects cannot retain generation instrumentation during the use build:
 
 ```powershell
 ./tools/build.ps1 -BuildKind release -CpuTuning native -PgoMode generate -ProfileDirectory C:\bench\pgo-data
-bin/release-native-pgo-generate/epub-v2h.exe --input-path C:\bench\tuning-input --output-directory C:\bench\training-books --json > C:\bench\training.json
+bin/release-native-pgo-generate/epub-v2h.exe --input-path C:\bench\tuning-input --output-directory C:\bench\training-sequential --jobs 1 --json > C:\bench\training-sequential.json
+bin/release-native-pgo-generate/epub-v2h.exe --input-path C:\bench\tuning-input --output-directory C:\bench\training-parallel --jobs 2 --json > C:\bench\training-parallel.json
 ./tools/build.ps1 -BuildKind release -CpuTuning native -PgoMode use -ProfileDirectory C:\bench\pgo-data
 ```
 

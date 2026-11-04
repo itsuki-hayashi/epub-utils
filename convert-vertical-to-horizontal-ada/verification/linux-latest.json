@@ -10,15 +10,19 @@
     "zipada": "62.0.0"
   },
   "binary": {
-    "path": "bin/linux/epub-v2h",
-    "sha256": "D4EAD17A5AB5E74622759FF02B6997239F1F9F30F74B4FF5C96ED1C7AA3FCF4C",
+    "path": "external candidate-linux-lifetime (stripped validation artifact)",
+    "sha256": "4AD9F6CDE621813AC5F42CD985B824A6F536496795A9F32043E5AA428E2BA0D7",
     "format": "ELF 64-bit x86-64",
     "static": true,
     "interpreter": false,
     "dynamic_section": false
   },
   "owned_source_warnings_as_errors": true,
-  "linux_aunit": { "tests": 47, "failures": 0, "errors": 0 },
+  "linux_aunit": {
+    "tests": 86,
+    "failures": 0,
+    "errors": 0
+  },
   "reference_fixture_cli": {
     "fixtures": 21,
     "entries": 159,
@@ -27,8 +31,15 @@
     "runtime_search_paths_removed": "PASS",
     "second_pass_exact_copies": "PASS",
     "publication_race": "PASS",
-    "directory_symlink_skipping": "PASS"
+    "directory_symlink_skipping": "PASS",
+    "worker_modes": "1/2/auto byte-identical"
   },
-  "windows_regression": { "aunit_tests": 73, "failures": 0, "errors": 0, "cli": "PASS" },
-  "coverage": "Not remeasured for the platform split"
+  "windows_regression": {
+    "aunit_tests": 134,
+    "failures": 0,
+    "errors": 0,
+    "cli": "PASS"
+  },
+  "coverage": "Windows:94.16% statement,75.80% decision; required core passes; unchanged95%/90% gate unmet",
+  "native_destination_identity_cases": 19
 }

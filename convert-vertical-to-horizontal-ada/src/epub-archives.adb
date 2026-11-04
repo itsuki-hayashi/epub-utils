@@ -4,6 +4,7 @@ with Epub.Compression;
 with Epub.Encoding;
 with Epub.Performance;
 with Epub.String_Streams;
+with Ada.Exceptions;
 
 package body Epub.Archives is
    use Ada.Strings.Unbounded;
@@ -197,12 +198,12 @@ package body Epub.Archives is
    function Read_Stream
      (Stream : in out Zip_Streams.Root_Zipstream_Type'Class;
       Source : Epub.Archive_Sources.Reference;
-      Retain_Payloads : Boolean) return Catalogue;
+      Retain_Payloads : Boolean; Decode_Payloads : Boolean := True) return Catalogue;
 
    function Read_Stream
      (Stream : in out Zip_Streams.Root_Zipstream_Type'Class;
       Source : Epub.Archive_Sources.Reference;
-      Retain_Payloads : Boolean) return Catalogue is
+      Retain_Payloads : Boolean; Decode_Payloads : Boolean := True) return Catalogue is
       Ending : Zip.Headers.End_of_Central_Dir;
       Result : Catalogue;
       Central_First, Central_Last : Interfaces.Unsigned_64;
@@ -364,36 +365,52 @@ package body Epub.Archives is
                end loop;
                Regions.Append (Current);
             end;
-            Stream.Set_Index (Compressed_Start);
-            Local_Header.dd := Item.Header.short_info.dd;
-            if Local_Header.zip_type in 0 | 8 then
+            if Decode_Payloads then
+               Stream.Set_Index (Compressed_Start);
+               Local_Header.dd := Item.Header.short_info.dd;
+               if Local_Header.zip_type in 0 | 8 then
                --  The owned common decoder bounds every refill by the
                --  validated compressed size. It can read the archive stream
                --  directly without staging a second compressed copy.
                Item.Payload := To_Unbounded_String
                  (UnZip.Epub_Decompression.Decode (Stream, Local_Header));
-            else
-               declare
-                  Payload_Stream : Zip_Streams.Memory_Zipstream;
-               begin
-                  Payload_Stream.Set (To_Unbounded_String
-                    (Get_Bytes (Stream, Natural (Item.Header.short_info.dd.compressed_size))));
-                  Item.Payload := To_Unbounded_String
-                    (UnZip.Epub_Decompression.Decode (Payload_Stream, Local_Header));
-                  pragma Assert (Interfaces.Unsigned_64 (Payload_Stream.Size) = Local_Header.dd.compressed_size);
-               end;
+               else
+                  declare
+                     Payload_Stream : Zip_Streams.Memory_Zipstream;
+                  begin
+                     Payload_Stream.Set (To_Unbounded_String
+                       (Get_Bytes (Stream, Natural (Item.Header.short_info.dd.compressed_size))));
+                     Item.Payload := To_Unbounded_String
+                       (UnZip.Epub_Decompression.Decode (Payload_Stream, Local_Header));
+                     pragma Assert (Interfaces.Unsigned_64 (Payload_Stream.Size) = Local_Header.dd.compressed_size);
+                  end;
+               end if;
+               Visit (Ordinal, Item);
             end if;
-            Visit (Ordinal, Item);
             if not Retain_Payloads then
                if Source.Is_Open then
                   Item.Source := Source;
                   Item.Payload_Offset := Compressed_Start;
-                  Item.Payload_SHA256 := To_Unbounded_String (Epub.Digests.Digest (To_String (Item.Payload)));
+                  if Decode_Payloads then
+                     Item.Payload_SHA256 := To_Unbounded_String (Epub.Digests.Digest (To_String (Item.Payload)));
+                  end if;
                end if;
                Item.Payload := Null_Unbounded_String;
                Item.Payload_Loaded := False;
             end if;
             Result.Replace_Element (Ordinal, Item);
+         exception
+            when Error : others =>
+               if Decode_Payloads then
+                  raise;
+               end if;
+               Result.Structure_Error_Ordinal := Ordinal;
+               Result.Structure_Error := To_Unbounded_String (Ada.Exceptions.Exception_Message (Error));
+               if Length (Result.Structure_Error) = 0 then
+                  Result.Structure_Error := To_Unbounded_String (Ada.Exceptions.Exception_Name (Error));
+               end if;
+               Epub.Performance.Stop (Epub.Performance.Archive_Read);
+               return Result;
          end;
       end loop;
       Epub.Performance.Stop (Epub.Performance.Archive_Read);
@@ -406,6 +423,16 @@ package body Epub.Archives is
       null;
    end Ignore_Member;
    function Read_Unchecked is new Read_Stream (Ignore_Member);
+
+   procedure Read_Structure (Source : Epub.Archive_Sources.Reference; Result : out Catalogue) is
+   begin
+      declare
+         Stream : Epub.Archive_Sources.Reader :=
+           Epub.Archive_Sources.View (Source, 1, Epub.Archive_Sources.Size (Source));
+      begin
+         Result := Read_Unchecked (Stream, Source, False, Decode_Payloads => False);
+      end;
+   end Read_Structure;
 
    function Read (Bytes : String) return Catalogue is
       Stream : Zip_Streams.Memory_Zipstream;
@@ -458,10 +485,10 @@ package body Epub.Archives is
       return Result;
    end Create_Member;
 
-   procedure Rebuild (Items : Catalogue; Output : in out Zip_Streams.Root_Zipstream_Type'Class) is
-      Written : Catalogue;
-      Ending : Zip.Headers.End_of_Central_Dir;
-      Force_Zip64 : Boolean := False;
+   procedure Begin_Rebuild
+     (Items : Catalogue; Output : in out Zip_Streams.Root_Zipstream_Type'Class;
+      State : out Writer_State) is
+      Empty : Catalogue;
    begin
       if Items.Is_Empty or else To_String (Items (1).Name) /= "mimetype" then
          raise Invalid_Archive with "Expected mimetype as the first ZIP entry";
@@ -471,80 +498,100 @@ package body Epub.Archives is
       if Output.Index /= 1 or else Output.Size /= 0 then
          raise Invalid_Archive with "Archive output must be an empty stream";
       end if;
-      for Ordinal in 1 .. Items.Last_Index loop
-         declare
-            Item : Member := Items (Ordinal);
-            Payload : aliased constant String := Contents (Items, To_String (Item.Name));
-            Input : Epub.String_Streams.Reader (Payload'Access);
-            Compressed : Zip_Streams.Memory_Zipstream;
-            Compressed_Size : Zip.Zip_64_Data_Size_Type;
-            Compressed_Bytes : Unbounded_String;
-            CRC : Interfaces.Unsigned_32;
-            Method : Interfaces.Unsigned_16;
-            Keep_Original : Boolean := False;
-         begin
-            if Find (Written, To_String (Item.Name)) /= 0 then
-               raise Invalid_Archive with "Duplicate ZIP entry";
-            end if;
-            Compressed.Set (Null_Unbounded_String);
-            Epub.Performance.Start (Epub.Performance.Compression);
-            Epub.Compression.Compress
-              (Input, Compressed, Interfaces.Unsigned_64 (Payload'Length),
-               Ordinal = 1, CRC, Compressed_Size, Method,
-               Fast_Trial => not Item.Payload_Loaded and then Item.Source.Is_Open);
-            Epub.Performance.Stop (Epub.Performance.Compression);
-            if Input.Index /= Zip_Streams.ZS_Size_Type (Payload'Length) + 1 then
-               raise Invalid_Archive with "Compression did not consume the complete payload";
-            end if;
-            if Ordinal /= 1 and then not Item.Payload_Loaded and then Item.Source.Is_Open
-              and then Item.Header.short_info.zip_type = 8
-              and then Item.Header.short_info.dd.crc_32 = CRC
-              and then Item.Header.short_info.dd.compressed_size < Compressed_Size
-            then
-               --  Compression was attempted. An unchanged entry can retain
-               --  its already-validated raw DEFLATE representation if smaller.
-               --  Persisted CRC/length/hash verification still checks it below.
-               Keep_Original := True;
-               Compressed_Size := Item.Header.short_info.dd.compressed_size;
-               Method := 8;
-            else
-               Compressed.Get (Compressed_Bytes);
-            end if;
-            Item.Header.local_header_offset := Interfaces.Unsigned_64 (Output.Index - 1);
-            Item.Header.short_info.dd :=
-              (crc_32 => CRC, compressed_size => Compressed_Size,
-               uncompressed_size => Interfaces.Unsigned_64 (Payload'Length));
-            Item.Header.short_info.zip_type := Method;
-            Item.Header.short_info.bit_flag :=
-              (if Ordinal = 1 then 0 else
-                 Item.Header.short_info.bit_flag and Zip.Headers.Language_Encoding_Flag_Bit);
-            Item.Header.short_info.filename_length := Interfaces.Unsigned_16 (Length (Item.Raw_Name));
-            Item.Header.short_info.extra_field_length := 0;
-            Item.Header.comment_length := 0;
-            Item.Header.disk_number_start := 0;
-            Item.Was_Zip64 := Item.Was_Zip64 and then Ordinal /= 1;
-            Item.Header.short_info.needed_extract_version := (if Item.Was_Zip64 then 45 else 20);
-            Force_Zip64 := Force_Zip64 or else Item.Was_Zip64;
-            Zip.Headers.Write (Output, Item.Header.short_info,
-              (if Item.Was_Zip64 then Zip.Headers.force_zip_64 else Zip.Headers.force_empty));
-            Put_Bytes (Output, To_String (Item.Raw_Name));
-            if Item.Was_Zip64 then
-               Zip.Headers.Write (Output,
-                 Zip.Headers.Local_File_Header_Extension'
-                   (tag => 1, size => 16,
-                    value_64 => [Item.Header.short_info.dd.uncompressed_size,
-                                 Item.Header.short_info.dd.compressed_size, 0]), True);
-            end if;
-            if Keep_Original then
-               Epub.Archive_Sources.Copy_Range (Item.Source, Item.Payload_Offset, Compressed_Size, Output);
-            else
-               Put_Bytes (Output, Slice (Compressed_Bytes, 1, Natural (Compressed_Size)));
-            end if;
-            Written.Append (Item);
-         end;
-      end loop;
+      State.Written := Empty;
+      State.Force_Zip64 := False;
+   end Begin_Rebuild;
+
+   function Prepare_Entry (Items : Catalogue; Ordinal : Positive) return Prepared_Entry is
+      Item : constant Member := Items (Ordinal);
+      Payload : aliased constant String := Contents (Items, To_String (Item.Name));
+      Input : Epub.String_Streams.Reader (Payload'Access);
+      Compressed : Zip_Streams.Memory_Zipstream;
+      Compressed_Size : Zip.Zip_64_Data_Size_Type;
+      Compressed_Bytes : Unbounded_String;
+      CRC : Interfaces.Unsigned_32;
+      Method : Interfaces.Unsigned_16;
+      Keep_Original : Boolean := False;
+   begin
+      Compressed.Set (Null_Unbounded_String);
+      Epub.Performance.Start (Epub.Performance.Compression);
+      Epub.Compression.Compress
+        (Input, Compressed, Interfaces.Unsigned_64 (Payload'Length),
+         Ordinal = 1, CRC, Compressed_Size, Method,
+         Fast_Trial => not Item.Payload_Loaded and then Item.Source.Is_Open);
+      Epub.Performance.Stop (Epub.Performance.Compression);
+      if Input.Index /= Zip_Streams.ZS_Size_Type (Payload'Length) + 1 then
+         raise Invalid_Archive with "Compression did not consume the complete payload";
+      end if;
+      if Ordinal /= 1 and then not Item.Payload_Loaded and then Item.Source.Is_Open
+        and then Item.Header.short_info.zip_type = 8
+        and then Item.Header.short_info.dd.crc_32 = CRC
+        and then Item.Header.short_info.dd.compressed_size < Compressed_Size
+      then
+         --  Compression was attempted. An unchanged entry can retain
+         --  its already-validated raw DEFLATE representation if smaller.
+         --  Persisted CRC/length/hash verification still checks it below.
+         Keep_Original := True;
+         Compressed_Size := Item.Header.short_info.dd.compressed_size;
+         Method := 8;
+      else
+         Compressed.Get (Compressed_Bytes);
+      end if;
+      return Result : Prepared_Entry do
+         Result.Value := Item;
+         Result.Value.Header.short_info.dd :=
+           (crc_32 => CRC, compressed_size => Compressed_Size,
+            uncompressed_size => Interfaces.Unsigned_64 (Payload'Length));
+         Result.Value.Header.short_info.zip_type := Method;
+         Result.Bytes := Compressed_Bytes;
+         Result.Keep_Original := Keep_Original;
+      end return;
+   end Prepare_Entry;
+
+   procedure Append_Entry
+     (State : in out Writer_State; Output : in out Zip_Streams.Root_Zipstream_Type'Class;
+      Data : Prepared_Entry) is
+      Item : Member := Data.Value;
+      Ordinal : constant Positive := State.Written.Last_Index + 1;
+   begin
+      if Find (State.Written, To_String (Item.Name)) /= 0 then
+         raise Invalid_Archive with "Duplicate ZIP entry";
+      end if;
+      Item.Header.local_header_offset := Interfaces.Unsigned_64 (Output.Index - 1);
+      Item.Header.short_info.bit_flag :=
+        (if Ordinal = 1 then 0 else
+           Item.Header.short_info.bit_flag and Zip.Headers.Language_Encoding_Flag_Bit);
+      Item.Header.short_info.filename_length := Interfaces.Unsigned_16 (Length (Item.Raw_Name));
+      Item.Header.short_info.extra_field_length := 0;
+      Item.Header.comment_length := 0;
+      Item.Header.disk_number_start := 0;
+      Item.Was_Zip64 := Item.Was_Zip64 and then Ordinal /= 1;
+      Item.Header.short_info.needed_extract_version := (if Item.Was_Zip64 then 45 else 20);
+      State.Force_Zip64 := State.Force_Zip64 or else Item.Was_Zip64;
+      Zip.Headers.Write (Output, Item.Header.short_info,
+        (if Item.Was_Zip64 then Zip.Headers.force_zip_64 else Zip.Headers.force_empty));
+      Put_Bytes (Output, To_String (Item.Raw_Name));
+      if Item.Was_Zip64 then
+         Zip.Headers.Write (Output,
+           Zip.Headers.Local_File_Header_Extension'
+             (tag => 1, size => 16,
+              value_64 => [Item.Header.short_info.dd.uncompressed_size,
+                           Item.Header.short_info.dd.compressed_size, 0]), True);
+      end if;
+      if Data.Keep_Original then
+         Epub.Archive_Sources.Copy_Range (Item.Source, Item.Payload_Offset, Item.Header.short_info.dd.compressed_size, Output);
+      else
+         Put_Bytes (Output, Slice (Data.Bytes, 1, Natural (Item.Header.short_info.dd.compressed_size)));
+      end if;
+      State.Written.Append (Item);
+   end Append_Entry;
+
+   procedure Finish_Rebuild
+     (State : Writer_State; Output : in out Zip_Streams.Root_Zipstream_Type'Class) is
+      Ending : Zip.Headers.End_of_Central_Dir;
+   begin
       Ending.central_dir_offset := Interfaces.Unsigned_64 (Output.Index - 1);
-      for Item of Written loop
+      for Item of State.Written loop
          declare
             Header : Zip.Headers.Central_File_Header := Item.Header;
          begin
@@ -569,11 +616,11 @@ package body Epub.Archives is
       Ending.central_dir_size := Interfaces.Unsigned_64 (Output.Index - 1) - Ending.central_dir_offset;
       Ending.disknum := 0;
       Ending.disknum_with_start := 0;
-      Ending.total_entries := Interfaces.Unsigned_64 (Written.Last_Index);
+      Ending.total_entries := Interfaces.Unsigned_64 (State.Written.Last_Index);
       Ending.disk_total_entries := Ending.total_entries;
       Ending.main_comment_length := 0;
       Ending.offset_shifting := 0;
-      if Force_Zip64 or else Written.Last_Index >= 65535 then
+      if State.Force_Zip64 or else State.Written.Last_Index >= 65535 then
          declare
             Offset : constant Interfaces.Unsigned_64 := Interfaces.Unsigned_64 (Output.Index - 1);
          begin
@@ -596,6 +643,23 @@ package body Epub.Archives is
          end;
       end if;
       Zip.Headers.Write (Output, Ending);
+   end Finish_Rebuild;
+
+   procedure Rebuild (Items : Catalogue; Output : in out Zip_Streams.Root_Zipstream_Type'Class) is
+      State : Writer_State;
+   begin
+      Begin_Rebuild (Items, Output, State);
+      for Ordinal in 1 .. Items.Last_Index loop
+         if Find (State.Written, To_String (Items (Ordinal).Name)) /= 0 then
+            raise Invalid_Archive with "Duplicate ZIP entry";
+         end if;
+         declare
+            Data : constant Prepared_Entry := Prepare_Entry (Items, Ordinal);
+         begin
+            Append_Entry (State, Output, Data);
+         end;
+      end loop;
+      Finish_Rebuild (State, Output);
    end Rebuild;
 
    function Rebuild (Items : Catalogue) return String is

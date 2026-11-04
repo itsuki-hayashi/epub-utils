@@ -153,6 +153,23 @@ foreach ($arguments in @(@('--unknown'), @('--input-path'), @('unexpected-positi
 }
 $scenarios.Add('Unknown options, missing values and positional arguments rejected')
 
+foreach ($jobs in @('1','2','auto')) {
+    $target = Join-Path $runDirectory ('jobs-' + $jobs)
+    $parallel = Run-Converter @('--input-path', $fixtureDirectory, '--output-directory', $target, '--Jobs', $jobs, '--json')
+    Check ($parallel.Code -eq 0) ('Worker mode failed: ' + $jobs + ' ' + $parallel.Error)
+    $parallelRecords = @($parallel.Output | ConvertFrom-Json)
+    Check (($parallelRecords.Book -join '|') -ceq ($records.Book -join '|')) 'Parallel report order'
+    foreach ($record in $parallelRecords) {
+        $original = @($records | Where-Object Book -CEQ $record.Book)[0]
+        Check ($original.OutputSHA256 -ceq $record.OutputSHA256) 'Worker modes preserve exact archive bytes'
+    }
+}
+foreach ($jobs in @('0','-1','invalid','999999')) {
+    $invalid = Run-Converter @('--input-path', $fixtureDirectory, '--analyze-only', '--jobs', $jobs)
+    Check ($invalid.Code -eq 1) ('Invalid worker count accepted: ' + $jobs)
+}
+$scenarios.Add('Jobs 1/2/auto archive byte identity, input-order reports and invalid count rejection')
+
 & perl (Join-Path $PSScriptRoot 'verify-archive-roundtrip.pl') conversion $books
 if ($LASTEXITCODE -ne 0) { throw 'Independent Perl payload/metadata verification failed' }
 $scenarios.Add('Independent Perl verification of 159 output entries')

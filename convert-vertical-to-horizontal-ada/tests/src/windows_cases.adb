@@ -7,6 +7,9 @@ with Epub.Conversion;
 with Epub.Files;
 with Epub.Resources;
 with GNAT.SHA256;
+with Epub.CPUs;
+with Epub.Workers;
+with Interfaces.C;
 
 package body Windows_Cases is
    use AUnit.Assertions;
@@ -36,10 +39,43 @@ package body Windows_Cases is
       return To_String (Root);
    end Fresh_Directory;
 
+   procedure Check_CPU_APIs is
+      procedure Mock (Flags : Interfaces.C.unsigned)
+        with Import, Convention => C, External_Name => "epub_test_cpu_apis";
+      Original : constant Epub.CPUs.Topology := Epub.CPUs.Discover;
+      Cores : Epub.CPUs.Processor_Lists.Vector;
+      Pool : Epub.Workers.Pool;
+      Rejected : Boolean;
+   begin
+      Mock (1);
+      declare
+         Fallback : constant Epub.CPUs.Topology := Epub.CPUs.Discover;
+      begin
+         Assert (not Fallback.Classes_Known and then not Fallback.Cores.Is_Empty,
+                 "Missing CPU-set API uses physical processor relationships without inventing core classes");
+      end;
+      Mock (3);
+      Assert (Epub.CPUs.Discover.Cores.Is_Empty, "Unavailable native topology returns the sequential fallback");
+      if not Original.Cores.Is_Empty then
+         Cores.Append (Original.Cores (1));
+         for Mode in 1 .. 3 loop
+            Mock (case Mode is when 1 => 4, when 2 => 8, when others => 16);
+            Rejected := False;
+            begin Pool.Start (Cores);
+            exception when Epub.Workers.Worker_Error => Rejected := True; end;
+            Assert (Rejected and then Pool.Snapshot.Submitted = 0,
+                    "Native affinity rejection and incorrect readback fail before any conversion job");
+         end loop;
+      end if;
+      Mock (0);
+   exception when others => Mock (0); raise;
+   end Check_CPU_APIs;
+
    overriding procedure Run_Test (Item : in out Unit_Case) is
       Root : constant String := Fresh_Directory (Item.Kind);
    begin
       case Item.Kind is
+         when CPU_API_Fallbacks => Check_CPU_APIs;
          when Long_Unicode_Paths =>
             declare
                Directory : Unbounded_String := To_Unbounded_String (Root);

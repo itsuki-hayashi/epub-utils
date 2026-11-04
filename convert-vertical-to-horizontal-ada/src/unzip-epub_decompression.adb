@@ -6,12 +6,14 @@ with Ada.Unchecked_Deallocation;
 with Interfaces;
 with UnZip.Decompress;
 with Epub.Inflate;
+with Epub.Synchronization;
 
 package body UnZip.Epub_Decompression is
    use Ada.Strings.Unbounded;
    use type Interfaces.Unsigned_64;
    use type Interfaces.Unsigned_16;
    use type Zip.Headers.Data_Descriptor;
+   Compatibility_Lock : aliased Epub.Synchronization.Mutex;
 
    type Output_Stream is new Ada.Streams.Root_Stream_Type with record
       Bytes : Unbounded_String;
@@ -68,6 +70,8 @@ package body UnZip.Epub_Decompression is
       Hint : Zip.Headers.Local_File_Header := Metadata;
       Ignored_Memory : UnZip.p_Stream_Element_Array;
       Password : Unbounded_String;
+      Lock : Epub.Synchronization.Guard (Compatibility_Lock'Access);
+      pragma Unreferenced (Lock);
    begin
       Owner.Sink.all.Maximum := Metadata.dd.uncompressed_size;
       UnZip.Decompress.Decompress_Data

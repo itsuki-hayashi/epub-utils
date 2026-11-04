@@ -5,4 +5,5 @@ package Native_Faults is
                       Close_Search, Current_Directory, Full_Path, Arguments,
                       Free_Arguments, Console_Codepage);
    procedure Arm (Kind : Operation; Skip : Natural := 0);
+   procedure Arm_Write_Then_Close;
 end Native_Faults;

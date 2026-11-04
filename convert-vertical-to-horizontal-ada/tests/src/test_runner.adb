@@ -14,6 +14,7 @@ with Report_Cases;
 with Codec_Cases;
 with Stream_Cases;
 with Inflate_Cases;
+with Concurrency_Cases;
 
 procedure Test_Runner is
    use type AUnit.Status;
@@ -21,6 +22,9 @@ procedure Test_Runner is
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
       Result : constant AUnit.Test_Suites.Access_Test_Suite := AUnit.Test_Suites.New_Suite;
    begin
+      for Kind in Concurrency_Cases.Case_Kind loop
+         Result.all.Add_Test (Concurrency_Cases.Create (Kind));
+      end loop;
       for Kind in Text_Cases.Case_Kind loop
          Result.all.Add_Test (Text_Cases.Create (Kind));
       end loop;
@@ -58,9 +62,20 @@ procedure Test_Runner is
          then
             Result.all.Add_Test (Fault_Cases.Create (Kind, Streaming => True));
          end if;
+         if Kind in Native_Faults.Read_File | Native_Faults.Zero_Read |
+           Native_Faults.File_Size | Native_Faults.Write_File | Native_Faults.Zero_Write |
+           Native_Faults.Flush_File | Native_Faults.Move_File
+         then
+            Result.all.Add_Test (Fault_Cases.Create (Kind, Parallel => True));
+         end if;
       end loop;
       Result.all.Add_Test (Fault_Cases.Create (Native_Faults.Current_Directory, Skip => 1));
       Result.all.Add_Test (Fault_Cases.Create (Native_Faults.Full_Path, Skip => 1));
+      Result.all.Add_Test (Fault_Cases.Create (Native_Faults.File_Size, Skip => 2, Parallel => True));
+      Result.all.Add_Test (Fault_Cases.Create (Native_Faults.Open_File, Skip => 2, Parallel => True));
+      Result.all.Add_Test (Fault_Cases.Create (Native_Faults.Close_File, Skip => 2, Parallel => True));
+      Result.all.Add_Test (Fault_Cases.Create (Native_Faults.File_Size, Skip => 4, Parallel => True));
+      Result.all.Add_Test (Fault_Cases.Create (Native_Faults.Write_File, Parallel => True, Cleanup_Close => True));
       return Result;
    end Suite;
    function Run is new AUnit.Run.Test_Runner_With_Status (Suite);

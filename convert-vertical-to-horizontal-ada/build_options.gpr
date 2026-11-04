@@ -28,7 +28,7 @@ abstract project Build_Options is
    Profile_Directory := external ("EPUB_PGO_DIRECTORY", "");
    Pgo_Flags := ();
    case Pgo is
-      when "generate" => Pgo_Flags := ("-fprofile-generate=" & Profile_Directory);
+      when "generate" => Pgo_Flags := ("-fprofile-generate=" & Profile_Directory, "-fprofile-update=atomic");
       when "use" => Pgo_Flags := ("-fprofile-use=" & Profile_Directory);
       when "off" => null;
    end case;

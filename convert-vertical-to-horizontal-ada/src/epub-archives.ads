@@ -59,5 +59,28 @@ private
    type Catalogue is tagged record
       Members : Member_Lists.Vector;
       Names : Epub.Name_Indexes.Index;
+      Structure_Error_Ordinal : Natural := 0;
+      Structure_Error : Ada.Strings.Unbounded.Unbounded_String;
    end record;
+   --  Parallel callers validate payloads separately and report a deferred local
+   --  metadata failure only after preceding entry validation jobs have drained.
+   procedure Read_Structure (Source : Epub.Archive_Sources.Reference; Result : out Catalogue);
+   type Prepared_Entry is record
+      Value : Member;
+      Bytes : Ada.Strings.Unbounded.Unbounded_String;
+      Keep_Original : Boolean := False;
+   end record;
+   type Writer_State is limited record
+      Written : Catalogue;
+      Force_Zip64 : Boolean := False;
+   end record;
+   procedure Begin_Rebuild
+     (Items : Catalogue; Output : in out Zip_Streams.Root_Zipstream_Type'Class;
+      State : out Writer_State);
+   function Prepare_Entry (Items : Catalogue; Ordinal : Positive) return Prepared_Entry;
+   procedure Append_Entry
+     (State : in out Writer_State; Output : in out Zip_Streams.Root_Zipstream_Type'Class;
+      Data : Prepared_Entry);
+   procedure Finish_Rebuild
+     (State : Writer_State; Output : in out Zip_Streams.Root_Zipstream_Type'Class);
 end Epub.Archives;

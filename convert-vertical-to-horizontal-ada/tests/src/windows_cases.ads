@@ -3,7 +3,7 @@ with AUnit.Simple_Test_Cases;
 
 package Windows_Cases is
    type Case_Kind is (Long_Unicode_Paths, Publication_Collision,
-                      Verification_Cleanup, Recursive_Enumeration);
+                      Verification_Cleanup, Recursive_Enumeration, CPU_API_Fallbacks);
    function Create (Kind : Case_Kind) return AUnit.Simple_Test_Cases.Test_Case_Access;
 private
    type Unit_Case is new AUnit.Simple_Test_Cases.Test_Case with record

@@ -1,27 +1,82 @@
 /* Test-only linker interposition. This file is never linked into the release. */
 #include <windows.h>
 #include <shellapi.h>
+#include <stdint.h>
+#include <string.h>
 
 static int armed_operation = 0;
 static unsigned calls_to_skip = 0;
+static SRWLOCK fault_lock = SRWLOCK_INIT;
+static unsigned cpu_api_flags = 0;
+static BOOL close_after_write_failure = FALSE;
+static HANDLE failed_write_handle = INVALID_HANDLE_VALUE;
+
+void epub_test_cpu_apis(unsigned flags);
+void epub_test_cpu_apis(unsigned flags)
+{
+    AcquireSRWLockExclusive(&fault_lock);
+    cpu_api_flags = flags;
+    ReleaseSRWLockExclusive(&fault_lock);
+}
+
+static BOOL WINAPI fail_group_set(HANDLE thread, const void *data, void *previous)
+{
+    (void)thread; (void)data; (void)previous;
+    SetLastError(ERROR_ACCESS_DENIED);
+    return FALSE;
+}
+
+static BOOL WINAPI wrong_group_readback(HANDLE thread, void *data)
+{
+    (void)thread;
+    memset(data, 0, sizeof(GROUP_AFFINITY));
+    return TRUE;
+}
+
+static BOOL WINAPI wrong_group_identity(HANDLE thread, void *data)
+{
+    GROUP_AFFINITY *group = data;
+    if (!GetThreadGroupAffinity(thread, group)) return FALSE;
+    group->Group = (WORD)(group->Group ^ 1U);
+    return TRUE;
+}
 
 void epub_test_fail_next(int operation, unsigned skip);
 void epub_test_fail_next(int operation, unsigned skip)
 {
+    AcquireSRWLockExclusive(&fault_lock);
     armed_operation = operation;
     calls_to_skip = skip;
+    close_after_write_failure = FALSE;
+    failed_write_handle = INVALID_HANDLE_VALUE;
+    ReleaseSRWLockExclusive(&fault_lock);
+}
+
+void epub_test_fail_write_then_close(void);
+void epub_test_fail_write_then_close(void)
+{
+    AcquireSRWLockExclusive(&fault_lock);
+    armed_operation = 4;
+    calls_to_skip = 0;
+    close_after_write_failure = TRUE;
+    failed_write_handle = INVALID_HANDLE_VALUE;
+    ReleaseSRWLockExclusive(&fault_lock);
 }
 
 static BOOL should_fail(int operation)
 {
+    AcquireSRWLockExclusive(&fault_lock);
     if (operation != armed_operation) {
+        ReleaseSRWLockExclusive(&fault_lock);
         return FALSE;
     }
     if (calls_to_skip != 0U) {
         --calls_to_skip;
+        ReleaseSRWLockExclusive(&fault_lock);
         return FALSE;
     }
     armed_operation = 0;
+    ReleaseSRWLockExclusive(&fault_lock);
     SetLastError(ERROR_ACCESS_DENIED);
     return TRUE;
 }
@@ -29,6 +84,37 @@ static BOOL should_fail(int operation)
 #define DECLARE(result, name, parameters) \
     result WINAPI __real_##name parameters; \
     result WINAPI __wrap_##name parameters
+
+DECLARE(FARPROC, GetProcAddress, (HMODULE module, LPCSTR name));
+FARPROC WINAPI __wrap_GetProcAddress(HMODULE module, LPCSTR name)
+{
+    unsigned flags;
+    union {
+        FARPROC symbol;
+        BOOL (WINAPI *set)(HANDLE, const void *, void *);
+        BOOL (WINAPI *get)(HANDLE, void *);
+    } target;
+    AcquireSRWLockShared(&fault_lock);
+    flags = cpu_api_flags;
+    ReleaseSRWLockShared(&fault_lock);
+    if ((uintptr_t)name > UINT16_MAX) {
+        if ((flags & 1U) != 0U && strcmp(name, "GetSystemCpuSetInformation") == 0) return NULL;
+        if ((flags & 2U) != 0U && strcmp(name, "GetLogicalProcessorInformationEx") == 0) return NULL;
+        if ((flags & 4U) != 0U && strcmp(name, "SetThreadGroupAffinity") == 0) {
+            target.set = fail_group_set;
+            return target.symbol;
+        }
+        if ((flags & 8U) != 0U && strcmp(name, "GetThreadGroupAffinity") == 0) {
+            target.get = wrong_group_readback;
+            return target.symbol;
+        }
+        if ((flags & 16U) != 0U && strcmp(name, "GetThreadGroupAffinity") == 0) {
+            target.get = wrong_group_identity;
+            return target.symbol;
+        }
+    }
+    return __real_GetProcAddress(module, name);
+}
 
 DECLARE(HANDLE, CreateFileW, (LPCWSTR path, DWORD access_mode, DWORD share_mode,
     LPSECURITY_ATTRIBUTES security, DWORD creation, DWORD flags, HANDLE template_file));
@@ -53,7 +139,15 @@ BOOL WINAPI __wrap_ReadFile(HANDLE handle, LPVOID buffer, DWORD count, LPDWORD t
 DECLARE(BOOL, WriteFile, (HANDLE handle, LPCVOID buffer, DWORD count, LPDWORD transferred, LPOVERLAPPED overlap));
 BOOL WINAPI __wrap_WriteFile(HANDLE handle, LPCVOID buffer, DWORD count, LPDWORD transferred, LPOVERLAPPED overlap)
 {
-    if (should_fail(4)) { return FALSE; }
+    if (should_fail(4)) {
+        AcquireSRWLockExclusive(&fault_lock);
+        if (close_after_write_failure) {
+            failed_write_handle = handle;
+            close_after_write_failure = FALSE;
+        }
+        ReleaseSRWLockExclusive(&fault_lock);
+        return FALSE;
+    }
     if (should_fail(5)) {
         if (transferred != NULL) { *transferred = 0; }
         return TRUE;
@@ -73,8 +167,16 @@ BOOL_WRAPPER(FlushFileBuffers, 6, (HANDLE handle), (handle))
 DECLARE(BOOL, CloseHandle, (HANDLE handle));
 BOOL WINAPI __wrap_CloseHandle(HANDLE handle)
 {
+    BOOL following;
+    AcquireSRWLockExclusive(&fault_lock);
+    following = handle == failed_write_handle;
+    if (following) failed_write_handle = INVALID_HANDLE_VALUE;
+    ReleaseSRWLockExclusive(&fault_lock);
     const BOOL result = __real_CloseHandle(handle);
-    if (should_fail(7)) { return FALSE; }
+    if (following || should_fail(7)) {
+        SetLastError(ERROR_ACCESS_DENIED);
+        return FALSE;
+    }
     return result;
 }
 BOOL_WRAPPER(MoveFileW, 8, (LPCWSTR source, LPCWSTR destination), (source, destination))

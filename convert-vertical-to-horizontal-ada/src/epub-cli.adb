@@ -7,6 +7,8 @@ with Epub.Files;
 with Epub.Reports;
 with Epub.Resources;
 with Epub.Performance;
+with Epub.CPUs;
+with Epub.Archives.Concurrent;
 
 package body Epub.CLI is
    use Ada.Strings.Unbounded;
@@ -22,6 +24,7 @@ package body Epub.CLI is
       Ada.Text_IO.Put_Line ("  --report-path FILE       Write a JSON report; never overwrite");
       Ada.Text_IO.Put_Line ("  --json                   JSON stdout; diagnostics use stderr");
       Ada.Text_IO.Put_Line ("  --verbose                Show input paths on stderr");
+      Ada.Text_IO.Put_Line ("  --jobs auto|N            Physical performance-core workers (default: auto; 1 is sequential)");
       Ada.Text_IO.Put_Line ("  --help, -h               Show this help");
       Ada.Text_IO.Put_Line ("PowerShell-style aliases: --InputPath, --OutputDirectory, --Recursive,");
       Ada.Text_IO.Put_Line ("--AnalyzeOnly, --WhatIf, --ReportPath, --Verbose.");
@@ -38,6 +41,7 @@ package body Epub.CLI is
       Position : Positive := 1;
       Results : Epub.Conversion.Result_Lists.Vector;
       Failures : Natural := 0;
+      Jobs : Natural := 0;
       function Option_Value (Inline_Value : String; Has_Equals : Boolean) return String is
       begin
          if Has_Equals then
@@ -66,6 +70,24 @@ package body Epub.CLI is
                Output_Directory := To_Unbounded_String (Option_Value (Value, Equals /= 0));
             elsif Name in "--report-path" | "--ReportPath" then
                Report_Path := To_Unbounded_String (Option_Value (Value, Equals /= 0));
+            elsif Name in "--jobs" | "--Jobs" then
+               declare
+                  Text : constant String := Option_Value (Value, Equals /= 0);
+               begin
+                  if Text = "auto" then
+                     Jobs := 0;
+                  else
+                     if Text'Length = 0 then raise Constraint_Error; end if;
+                     for Digit of Text loop
+                        if Digit not in '0' .. '9' then raise Constraint_Error; end if;
+                     end loop;
+                     Jobs := Positive'Value (Text);
+                     if Jobs = 0 then raise Constraint_Error; end if;
+                  end if;
+               exception
+                  when Constraint_Error =>
+                     raise Constraint_Error with "--jobs requires auto or a positive integer";
+               end;
             elsif Equals /= 0 then
                raise Constraint_Error with "Unknown option or unexpected value: " & Argument;
             elsif Name in "--recursive" | "--Recursive" | "-r" then
@@ -106,21 +128,17 @@ package body Epub.CLI is
             raise Epub.Files.File_Error with "Report directory must already exist";
          end if;
       end if;
-      for Source of Epub.Files.EPUB_Files (To_String (Input_Path), Recursive) loop
-         declare
-            Path : constant String := To_String (Source);
-            Destination : constant String := Epub.Files.Join
-              ((if Recursive then Epub.Files.Join (Epub.Files.Parent_Path (Path), "horizontal")
-                else To_String (Output_Directory)), Epub.Files.Basename (Path));
+      declare
+         Sources : constant Epub.Resources.String_Lists.Vector :=
+           Epub.Files.EPUB_Files (To_String (Input_Path), Recursive);
+         Outputs : Epub.Resources.String_Lists.Vector;
+         Topology : Epub.CPUs.Topology;
+         Selected : Epub.CPUs.Processor_Lists.Vector;
+         procedure Emit_Result (Ordinal : Positive; Result : Epub.Conversion.Book_Result) is
          begin
             if Verbose then
-               Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, "Inspecting " & Path);
+               Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error, "Inspecting " & To_String (Sources (Ordinal)));
             end if;
-            declare
-               Result : constant Epub.Conversion.Book_Result :=
-                 Epub.Conversion.Process_Book (Path, Destination, Settings);
-            begin
-               Results.Append (Result);
                if Result.Status = Epub.Conversion.Failed then
                   Failures := Failures + 1;
                   Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error,
@@ -131,9 +149,38 @@ package body Epub.CLI is
                     (if Result.Has_Reason then Epub.Books.Reason_Name (Result.Reason) else "") &
                     Character'Val (9) & To_String (Result.Book));
                end if;
+         end Emit_Result;
+      begin
+         for Source of Sources loop
+            declare
+               Path : constant String := To_String (Source);
+            begin
+               Outputs.Append (To_Unbounded_String (Epub.Files.Join
+                 ((if Recursive then Epub.Files.Join (Epub.Files.Parent_Path (Path), "horizontal")
+                   else To_String (Output_Directory)), Epub.Files.Basename (Path))));
             end;
-         end;
-      end loop;
+         end loop;
+         if Jobs /= 1 and then (Jobs > 1 or else not Sources.Is_Empty) then
+            Topology := Epub.CPUs.Discover;
+            if Jobs > Natural'Max (1, Topology.Cores.Last_Index) then
+               raise Constraint_Error with "--jobs exceeds the available physical performance cores";
+            end if;
+            for Index in 1 .. (if Jobs = 0 then Topology.Cores.Last_Index else Jobs) loop
+               Selected.Append (Topology.Cores (Index));
+            end loop;
+            if Verbose then
+               Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error,
+                 "Eligible physical core workers:" & Natural'Max (1, Selected.Last_Index)'Image);
+               if not Topology.Classes_Known then
+                  Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error,
+                    "Core classes unavailable; using identifiable OS-visible physical cores.");
+               end if;
+            end if;
+         end if;
+         Epub.Archives.Concurrent.Process
+           (Sources, Outputs, Settings, Selected, Automatic => Jobs = 0,
+            Results => Results, Observer => Emit_Result'Access);
+      end;
       declare
          Report : constant String := Epub.Reports.JSON (Results);
       begin

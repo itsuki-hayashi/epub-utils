@@ -9,6 +9,10 @@ An Ada implementation is feasible as one executable containing the application, 
 
 The **2–4 day feasibility milestone** is included in that estimate. Archive metadata tests, CP932 round trips, static packaging checks and selected SPARK proofs now run. Full release acceptance gates remain unfinished; current evidence is recorded below and in IMPLEMENTATION.md.
 
+Concurrent processing within one EPUB and across books uses one physical-core
+pool. See [CONCURRENCY.md](CONCURRENCY.md) for --jobs, scheduling, memory,
+publication ordering, and validation.
+
 ## Current executable
 
 The Windows executable now converts the 21 reference EPUBs with matching

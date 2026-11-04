@@ -1,5 +1,7 @@
 package body Epub.Allocation_Stats is
    Calls, Bytes_Requested : Count := 0;
+   pragma Thread_Local_Storage (Calls);
+   pragma Thread_Local_Storage (Bytes_Requested);
    procedure Record_Allocation (Bytes : Count) is
    begin
       Calls := Calls + 1;

@@ -2,7 +2,7 @@
 
 This maps implemented behavior to executable checks and records gaps. Passing
 rows do not imply release completion. A numerical comparison with Perl coverage
-is pending the Devel::Cover baseline. The current Ada totals are 71 AUnit cases
+is pending the Devel::Cover baseline. The current Ada totals are 134 Windows and 86 Linux AUnit cases
 plus CLI integration; individual cases contain many assertions.
 
 | Requirement | Ada evidence | Perl reference / additional coverage | State |
@@ -27,7 +27,7 @@ plus CLI integration; individual cases contain many assertions.
 | Preserved-book byte identity, source immutability, second pass | Archive Book_Payload_Parity; test-cli.ps1 | 02-book-parity.t | Passing |
 | Long paths and supplementary Unicode filenames | Windows Long_Unicode_Paths; test-cli.ps1 | Additional native Windows tests | Passing |
 | Recursive outputs, junction skipping, case-insensitive exclusions | Windows Recursive_Enumeration; test-cli.ps1 | 03-cli.t; duplicate basenames and mixed-case horizontal directories | Passing |
-| Exclusive publication, collision rejection, failed-output cleanup | Windows Publication_Collision, Verification_Cleanup; Fault_Cases | 03-cli.t, 04-edge-cases.t; native I/O failure injection | Passing tested cases; concurrent race stress pending |
+| Exclusive publication, collision rejection, failed-output cleanup | Windows Publication_Collision, Verification_Cleanup; Fault_Cases | 03-cli.t, 04-edge-cases.t; native I/O failure injection | Passing tested cases, including concurrent reservation and publication races |
 | Open/read/write/flush/close/move/delete/enumeration failures | Fault_Cases and Native_Faults | Additional one-shot failure injection, including zero-byte transfers and second-call failures | Passing |
 | CLI aliases, defaults, analysis, dry run, stderr, exit status, batch isolation | test-cli.ps1 | 03-cli.t | Passing tested scenarios |
 | Report schema, nullability, changed-entry sorting, escapes | Report Report_Schema, JSON_Escapes; test-cli.ps1 | 03-cli.t; test-only JSON parser and explicit control escapes | Passing |
@@ -36,8 +36,11 @@ plus CLI integration; individual cases contain many assertions.
 | Patch preservation, writing-mode mapping, classification, publication proofs | proof/core.gpr | Additional SPARK contracts; 67 current checks discharged | Passing current boundary; ordered multi-edit proofs pending |
 | Owned-code warnings as errors | tools/build.ps1; tools/test.ps1 | Strict application, owned containers, tests and proof settings; third-party projects use upstream settings | Passing under revised ownership policy |
 | Unmodified dependencies | Alire pins and project imports; BUILD_POLICY.md | No vendor source forks or warning patches; JSON build configuration adapted without source edits | Passing |
-| Application coverage gates | tools/coverage.ps1 | 95% statement, 90% decision; separately required core coverage; entry point and owned decompression adapter included | Statement passing at 95.02%; decision failing at 79.26% |
+| Application coverage gates | tools/coverage.ps1 | 95% statement, 90% decision; separately required core coverage; entry point and owned decompression adapter included | Statement 94.16% and decision 75.80%; both application thresholds remain unmet |
 | Static imports and clean PATH | objdump audit; test-cli.ps1 | Four Windows DLLs only; test tools excluded | Passing current binary; automated release audit pending |
+| Concurrent entries/books, ordered assembly and reports, failure isolation | Concurrency Archive_Equivalence, Failure_Isolation, Reversed_Completion, Worker_Continuations; jobs 1/2/auto CLI comparisons | Exact archive hashes, collision precedence, native concurrent I/O faults and bounded queue accounting | Passing tested cases |
+| Physical performance cores, SMT exclusion, restricted groups and affinity startup | Concurrency Topology_Selection, Native_Topology, Affinity_Failure; worker affinity readback | Synthetic hybrid/multi-group/restricted/unavailable topology and actual native pin verification | Passing tested cases; virtual hardware exposes OS topology only |
+| Shared source lifetime and exclusive temporary reservations | Concurrency Shared_Source_Readers, Temporary_Reservations | Eight concurrent readers retain bounded private cursors after releasing original ownership; 64 reservations | Passing |
 | Windows CI and Perl coverage baseline | Not yet implemented | Release acceptance requirements | Pending |
 
 A complete assertion-by-assertion audit of all four Perl test files remains

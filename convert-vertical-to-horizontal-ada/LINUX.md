@@ -39,6 +39,13 @@ depend on a different system codec. Optional Windows regeneration uses
 pair, plus encoding throughout the supported BMP character range. Windows tests
 compare the tables against the actual Windows APIs.
 
+## Concurrency
+
+Linux supports --jobs auto|N and --Jobs, with physical-core selection and
+worker affinity readback. Missing core classes are disclosed under --verbose;
+VMs expose their OS topology. See [CONCURRENCY.md](CONCURRENCY.md) for the shared
+entry/book pool and publication ordering.
+
 ## Validation
 
 ```sh

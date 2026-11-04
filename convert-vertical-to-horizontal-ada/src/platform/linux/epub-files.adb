@@ -4,13 +4,15 @@ with Ada.Command_Line;
 with Ada.Directories;
 with Ada.Exceptions;
 with Ada.Finalization;
-with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
-with Ada.Text_IO;
 with Epub.Digests;
 with Interfaces.C;
 with System;
 with Epub.Publication;
+with Epub.Temporary_Files;
+with Epub.File_Streams;
+with Ada.Streams;
+with Epub.Diagnostics;
 
 package body Epub.Files is
    use Ada.Strings.Unbounded;
@@ -37,9 +39,6 @@ package body Epub.Files is
      with Import, Convention => C, External_Name => "epub_remove";
    function C_Publish (Source, Destination : String) return Interfaces.C.int
      with Import, Convention => C, External_Name => "epub_publish";
-   function C_PID return Interfaces.C.int
-     with Import, Convention => C, External_Name => "epub_pid";
-   Sequence : Natural := 0;
    type File_Owner is new Ada.Finalization.Limited_Controlled with record
       FD : Interfaces.C.int := -1;
    end record;
@@ -77,8 +76,7 @@ package body Epub.Files is
       Close (Owner);
    exception
       when Error : others =>
-         Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error,
-           "File cleanup failure: " & Ada.Exceptions.Exception_Message (Error));
+         Epub.Diagnostics.Report ("File cleanup failure: " & Ada.Exceptions.Exception_Message (Error));
    end Finalize;
 
    function Current_Directory return String is (Ada.Directories.Current_Directory);
@@ -118,6 +116,11 @@ package body Epub.Files is
       if not Is_Directory (Path) then
          Ada.Directories.Create_Path (Path);
       end if;
+   exception
+      when Ada.Directories.Use_Error =>
+         if not Is_Directory (Path) then
+            raise;
+         end if;
    end Ensure_Directory;
 
    function Open_File (Path : String; Exclusive : Boolean) return File_Owner is
@@ -224,15 +227,30 @@ package body Epub.Files is
             raise File_Error with "Invalid expected SHA-256 digest";
          end if;
       end loop;
-      loop
-         Sequence := Sequence + 1;
-         Temporary := To_Unbounded_String (Join (Parent_Path (Destination),
-           ".epub-horizontal-" & Ada.Strings.Fixed.Trim (C_PID'Image, Ada.Strings.Both) & "-" &
-           Ada.Strings.Fixed.Trim (Sequence'Image, Ada.Strings.Both) & ".tmp"));
-         exit when not Exists (To_String (Temporary));
-      end loop;
       Epub.Performance.Start (Epub.Performance.Output_Write);
-      Save_Exclusive (To_String (Temporary), Bytes, Reserved'Access);
+      declare
+         Output : Epub.File_Streams.Stream;
+         Buffer : Ada.Streams.Stream_Element_Array (1 .. 65_536);
+         Position : Integer := Bytes'First;
+      begin
+         Epub.Temporary_Files.Reserve (Parent_Path (Destination), Output, Temporary);
+         Reserved := True;
+         while Position <= Bytes'Last loop
+            declare
+               Count : constant Positive := Positive'Min (Buffer'Length, Bytes'Last - Position + 1);
+            begin
+               for Index in 1 .. Count loop
+                  Buffer (Ada.Streams.Stream_Element_Offset (Index)) :=
+                    Character'Pos (Bytes (Position + Index - 1));
+               end loop;
+               Output.Write (Buffer (1 .. Ada.Streams.Stream_Element_Offset (Count)));
+               Position := Position + Count;
+            end;
+         end loop;
+         Output.Flush;
+         Output.Close;
+         pragma Assert (not Output.Is_Open);
+      end;
       Epub.Performance.Stop (Epub.Performance.Output_Write);
       declare
          Saved : constant String := Read (To_String (Temporary));

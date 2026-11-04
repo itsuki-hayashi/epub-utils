@@ -5,6 +5,7 @@ Prepare inputs/reference paths before measurement. Artifacts must be outside the
 checkout. This makes no Windows-versus-Linux or Perl speedup claim.
 """
 import argparse
+import csv
 import hashlib
 import json
 import os
@@ -74,9 +75,14 @@ def main():
                         help="Frozen Ada report with paths adapted to Linux")
     parser.add_argument("--work-root", type=Path, required=True)
     parser.add_argument("--runs", type=int, default=8)
+    parser.add_argument("--jobs", help="auto or a positive count; omit for older executables")
+    parser.add_argument("--affinity-mode", choices=("SingleCore", "PhysicalCores"), default="SingleCore")
     args = parser.parse_args()
     if args.runs < 1:
         parser.error("--runs must be positive")
+    if args.jobs is not None and args.jobs != "auto" and (
+            not args.jobs.isascii() or not args.jobs.isdecimal() or int(args.jobs) < 1):
+        parser.error("--jobs requires auto or a positive integer")
     checkout = Path(__file__).resolve().parents[2]
     root = args.work_root.resolve()
     if root.is_relative_to(checkout):
@@ -98,7 +104,8 @@ def main():
         raise ValueError("A nonempty successful Windows Perl reference is required")
     directory = root / ("linux-measurement-" + uuid.uuid4().hex)
     directory.mkdir(parents=True)
-    cpu = min(os.sched_getaffinity(0))
+    allowed = sorted(os.sched_getaffinity(0))
+    affinity = allowed if args.affinity_mode == "PhysicalCores" else allowed[:1]
     rows = []
     for index in range(-1, args.runs):
         run = directory / ("warmup" if index < 0 else f"run-{index}")
@@ -108,10 +115,12 @@ def main():
             started = time.perf_counter()
             result = subprocess.run([
                 "/usr/bin/time", "-f", "%U %S %M", "-o", str(run / "resources.txt"),
-                "taskset", "-c", str(cpu), str(executable),
+                "taskset", "-c", ",".join(map(str, affinity)), str(executable),
                 "--input-path", str(args.input.resolve()),
-                "--output-directory", str(run / "books"), "--json"],
-                stdout=stdout, stderr=stderr, cwd=run, check=False)
+                "--output-directory", str(run / "books"), "--json"] +
+                (["--jobs", args.jobs] if args.jobs is not None else []),
+                stdout=stdout, stderr=stderr, cwd=run, check=False,
+                env=dict(os.environ, EPUB_CONCURRENCY_STATS=str(run / "workers.csv")))
             elapsed = time.perf_counter() - started
         if result.returncode:
             raise RuntimeError("Conversion failed; private diagnostics retained")
@@ -119,7 +128,14 @@ def main():
         baseline_quality = (validate(baseline, json.loads(report.read_text()), args.input.resolve())
                             if baseline is not None else None)
         user, system, peak = (run / "resources.txt").read_text().split()
+        workers = 1
+        if (run / "workers.csv").exists():
+            with (run / "workers.csv").open() as stream:
+                for stat in csv.DictReader(stream):
+                    if stat["Metric"] == "workers":
+                        workers = int(stat["Value"])
         row = {"Seconds": elapsed, "CPUSeconds": float(user) + float(system),
+               "Workers": workers, "WorkerUtilization": (float(user) + float(system)) / (elapsed * workers),
                "PeakRSSBytes": int(peak) * 1024, "Quality": quality,
                "BaselineQuality": baseline_quality}
         if index >= 0:
@@ -130,12 +146,14 @@ def main():
     if baseline_identity is not None:
         assert digest(args.quality_baseline_report) == baseline_identity, "Quality baseline changed"
     summary = {"ArtifactDirectory": str(directory), "Platform": "Linux", "PerlSpeedupClaim": False, "Books": len(expected),
-               "Runs": args.runs, "CPU": cpu, "BinarySHA256": identity,
+               "Runs": args.runs, "Affinity": affinity, "AffinityMode": args.affinity_mode,
+               "Jobs": args.jobs, "BinarySHA256": identity,
                "DualCompressionGate": baseline is not None,
                "BinaryBytes": executable.stat().st_size,
                "MedianSeconds": statistics.median(row["Seconds"] for row in rows),
                "MedianCPUSeconds": statistics.median(row["CPUSeconds"] for row in rows),
-               "MedianPeakRSSBytes": statistics.median(row["PeakRSSBytes"] for row in rows)}
+               "MedianPeakRSSBytes": statistics.median(row["PeakRSSBytes"] for row in rows),
+               "MaxPeakRSSBytes": max(row["PeakRSSBytes"] for row in rows)}
     (directory / "summary.json").write_text(json.dumps(summary, indent=2))
     print(json.dumps(summary, indent=2))
 

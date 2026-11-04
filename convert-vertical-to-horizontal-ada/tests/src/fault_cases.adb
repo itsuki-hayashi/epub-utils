@@ -3,6 +3,7 @@ with Ada.Calendar.Formatting;
 with Ada.Directories;
 with Ada.Exceptions;
 with Ada.Strings.Unbounded;
+with Ada.Strings.Fixed;
 with AUnit.Assertions;
 with Epub.Files;
 with Epub.Resources;
@@ -12,24 +13,85 @@ with Interfaces;
 with GNAT.SHA256;
 with Zip_Streams;
 with Epub.Stream_IO;
+with Epub.CPUs;
+with Epub.Archives.Concurrent;
+with Epub.Conversion;
 
 package body Fault_Cases is
    use Ada.Strings.Unbounded;
    use AUnit.Assertions;
    use type Native_Faults.Operation;
    type Unit_Case_Access is access all Unit_Case;
-   function Create (Kind : Native_Faults.Operation; Skip : Natural := 0; Streaming : Boolean := False)
+   function Create (Kind : Native_Faults.Operation; Skip : Natural := 0; Streaming : Boolean := False;
+                    Parallel : Boolean := False; Cleanup_Close : Boolean := False)
       return AUnit.Simple_Test_Cases.Test_Case_Access is
       Result : constant Unit_Case_Access := new Unit_Case;
    begin
       Result.all.Kind := Kind;
       Result.all.Skip := Skip;
       Result.all.Streaming := Streaming;
+      Result.all.Parallel := Parallel;
+      Result.all.Cleanup_Close := Cleanup_Close;
       return AUnit.Simple_Test_Cases.Test_Case_Access (Result);
    end Create;
    overriding function Name (Item : Unit_Case) return AUnit.Message_String is
      (AUnit.Format ("Native failure: " & Item.Kind'Image & " skip=" & Item.Skip'Image &
-       (if Item.Streaming then " streamed" else "")));
+       (if Item.Streaming then " streamed" elsif Item.Parallel then " parallel" else "") &
+       (if Item.Cleanup_Close then " then close failure" else "")));
+
+   procedure Run_Parallel (Item : Unit_Case; Root : String) is
+      Topology : constant Epub.CPUs.Topology := Epub.CPUs.Discover;
+      Cores : Epub.CPUs.Processor_Lists.Vector;
+      Sources, Outputs : Epub.Resources.String_Lists.Vector;
+      Results : Epub.Conversion.Result_Lists.Vector;
+      Settings : constant Epub.Conversion.Options := (others => <>);
+      Input : constant String := Epub.Files.Join (Root, "source.epub");
+      Original : constant String := Epub.Files.Read
+        ("../../convert-vertical-to-horizontal-perl/t/fixtures/input/vertical CSS variants.epub");
+      Errors, Successes : Natural := 0;
+      Leftover : Boolean := False;
+      use type Epub.Conversion.Processing_Status;
+      procedure Found (Entry_Value : Ada.Directories.Directory_Entry_Type) is
+         pragma Unreferenced (Entry_Value);
+      begin
+         Leftover := True;
+      end Found;
+   begin
+      if Topology.Cores.Last_Index < 2 then return; end if;
+      Cores.Append (Topology.Cores (1)); Cores.Append (Topology.Cores (2));
+      Epub.Files.Write_Exclusive (Input, Original);
+      for Index in 1 .. 2 loop
+         Sources.Append (To_Unbounded_String (Input));
+         Outputs.Append (To_Unbounded_String (Epub.Files.Join (Root, "output" & Index'Image & ".epub")));
+      end loop;
+      if Item.Cleanup_Close then Native_Faults.Arm_Write_Then_Close;
+      else Native_Faults.Arm (Item.Kind, Item.Skip); end if;
+      Epub.Archives.Concurrent.Process (Sources, Outputs, Settings, Cores, False, Results);
+      Native_Faults.Arm (Native_Faults.None);
+      for Result of Results loop
+         if Result.Status = Epub.Conversion.Failed then
+            Errors := Errors + 1;
+            Assert (Length (Result.Error) > 0 and then not Epub.Files.Exists (To_String (Result.Output)),
+                    "A failed parallel book reports its error and never publishes");
+            if Item.Cleanup_Close then
+               Assert (Ada.Strings.Fixed.Index (To_String (Result.Error), "Cannot write binary stream") = 1
+                 and then Ada.Strings.Fixed.Index
+                   (To_String (Result.Error), "; cleanup failed: Cannot close binary stream") > 0,
+                 "Cleanup preserves the earlier write error and reports the secondary close failure");
+            end if;
+         else
+            Successes := Successes + 1;
+            Assert (Result.Status = Epub.Conversion.Converted and then Epub.Files.Exists (To_String (Result.Output)),
+                    "An unrelated book completes after a worker filesystem error");
+         end if;
+      end loop;
+      Assert (Errors = 1 and then Successes = 1, "One injected filesystem failure affects exactly one parallel book");
+      Assert (Epub.Files.Read (Input) = Original, "Parallel failures preserve source bytes");
+      Ada.Directories.Search (Root, ".epub-horizontal-*.tmp", Process => Found'Access);
+      Assert (not Leftover, "Parallel failure cleanup releases every temporary file");
+   exception
+      when others => Native_Faults.Arm (Native_Faults.None); raise;
+   end Run_Parallel;
 
    overriding procedure Run_Test (Item : in out Unit_Case) is
       Stamp : constant String := Ada.Calendar.Formatting.Image
@@ -46,6 +108,7 @@ package body Fault_Cases is
          end if;
       end loop;
       Epub.Files.Ensure_Directory (To_String (Root));
+      if Item.Parallel then Run_Parallel (Item, To_String (Root)); return; end if;
       declare
          Input : constant String := Epub.Files.Join (To_String (Root), "input.epub");
          Output : constant String := Epub.Files.Join (To_String (Root), "output.epub");

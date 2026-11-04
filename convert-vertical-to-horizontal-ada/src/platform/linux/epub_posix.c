@@ -5,6 +5,9 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <sys/vfs.h>
+#include <sys/ioctl.h>
+#include <linux/fs.h>
 #include <unistd.h>
 
 /* Return negative errno values; no Ada code depends on libc struct layouts. */
@@ -79,3 +82,33 @@ int epub_publish(const char *source, const char *destination)
     return unlink(source) == 0 ? 0 : -errno;
 }
 int epub_pid(void) { return (int)getpid(); }
+
+int epub_directory_identity(const char *path, uint64_t *device,
+                            uint64_t *inode, int *case_sensitive)
+{
+    struct stat info;
+    struct statfs fs;
+    int fd, flags = 0;
+    if (stat(path, &info) != 0) return -errno;
+    if (!S_ISDIR(info.st_mode)) return -ENOTDIR;
+    *device = (uint64_t)info.st_dev;
+    *inode = (uint64_t)info.st_ino;
+    *case_sensitive = 0;
+    if (statfs(path, &fs) != 0) return 0;
+    /* For unknown or remote filesystems, conservatively serialize publication
+       within this directory instead of guessing at its filename collation. */
+    /* XFS may use its legacy ASCII-CI format. Treat it conservatively.
+       tmpfs, like ext4, can have casefold directories; never infer lookup
+       behavior from the filesystem magic alone. */
+    if ((unsigned long)fs.f_type == 0xef53UL ||    /* ext4 */
+        (unsigned long)fs.f_type == 0x9123683eUL || /* Btrfs */
+        (unsigned long)fs.f_type == 0x01021994UL) { /* tmpfs */
+        fd = open(path, O_RDONLY | O_DIRECTORY | O_CLOEXEC);
+        if (fd >= 0) {
+            if (ioctl(fd, FS_IOC_GETFLAGS, &flags) == 0 &&
+                (flags & FS_CASEFOLD_FL) == 0) *case_sensitive = 1;
+            if (close(fd) != 0) return -errno;
+        }
+    }
+    return 0;
+}

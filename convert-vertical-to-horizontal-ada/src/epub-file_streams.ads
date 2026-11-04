@@ -6,7 +6,9 @@ with Epub.Native_Files;
 
 package Epub.File_Streams is
    type Stream is new Zip_Streams.Root_Zipstream_Type with private;
-   procedure Open (Item : in out Stream; Path : String; Exclusive : Boolean := False);
+   procedure Open
+     (Item : in out Stream; Path : String; Exclusive : Boolean := False;
+      Outcome : access Epub.Native_Files.Open_Result := null);
    procedure Flush (Item : in out Stream);
    procedure Close (Item : in out Stream);
    function Is_Open (Item : Stream) return Boolean;
@@ -21,7 +23,7 @@ package Epub.File_Streams is
    File_Error : exception renames Epub.Native_Files.File_Error;
 private
    type Handle_Owner is new Ada.Finalization.Limited_Controlled with record
-      Handle : System.Address := System.Null_Address;
+      Handle : aliased System.Address := System.Null_Address;
    end record;
    overriding procedure Finalize (Owner : in out Handle_Owner);
    type Stream is new Zip_Streams.Root_Zipstream_Type with record

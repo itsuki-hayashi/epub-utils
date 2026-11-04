@@ -32,8 +32,10 @@ package body Epub.Native_Files is
       end if;
    end Check;
 
-   function Open (Path : String; Exclusive : Boolean) return System.Address is
+   function Open
+     (Path : String; Exclusive : Boolean; Outcome : access Open_Result := null) return System.Address is
    begin
+      if Outcome /= null then Outcome.all := (False, False); end if;
       for Value of Path loop
          if Value = Character'Val (0) then
             raise File_Error with "NUL in filesystem path";
@@ -43,13 +45,18 @@ package body Epub.Native_Files is
          Descriptor : constant Interfaces.C.int :=
            C_Open (Path & Character'Val (0), Boolean'Pos (Exclusive));
       begin
+         if Exclusive and then Outcome /= null and then Descriptor = -17 then
+            Outcome.all.Collision := True;
+            return System.Null_Address;
+         end if;
          Check (Interfaces.C.long_long (Descriptor), "Cannot open binary stream");
+         if Outcome /= null then Outcome.all.Created := Exclusive; end if;
          return System.Storage_Elements.To_Address
            (System.Storage_Elements.Integer_Address (Descriptor) + 1);
       end;
    end Open;
 
-   procedure Close (Handle : in out System.Address) is
+   procedure Close (Handle : aliased in out System.Address) is
       Result : constant Interfaces.C.int := C_Close (FD (Handle));
    begin
       Handle := System.Null_Address;

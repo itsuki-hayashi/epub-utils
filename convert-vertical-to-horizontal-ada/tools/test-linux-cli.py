@@ -137,6 +137,15 @@ def main():
         check(not list(root.rglob(".epub-horizontal-*.tmp")), "Temporary output cleanup")
         for arguments in [("--unknown",), ("--input-path",), ("unexpected",)]:
             check(run(*arguments).returncode == 1, "CLI invalid arguments")
+        for jobs in ("1", "2", "auto"):
+            parallel = root / ("jobs-" + jobs)
+            result = run("--input-path", fixtures / "input", "--output-directory", parallel, "--Jobs", jobs, "--json")
+            check(result.returncode == 0, "Worker mode " + jobs)
+            for record in json.loads(result.stdout):
+                check(digest(output / record["Book"]) == digest(parallel / record["Book"]), "Worker byte identity")
+        for jobs in ("0", "-1", "invalid", "999999"):
+            check(run("--input-path", sample, "--analyze-only", "--jobs", jobs).returncode == 1,
+                  "Invalid worker count rejected")
     print(json.dumps({"fixtures": len(manifest), "entries": checked, "filesystem_and_cli": "PASS", "static_elf": "PASS"}))
 
 

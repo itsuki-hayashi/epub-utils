@@ -19,7 +19,8 @@ package body Epub.Native_Files is
       end if;
    end Check;
 
-   function Open (Path : String; Exclusive : Boolean) return System.Address is
+   function Open
+     (Path : String; Exclusive : Boolean; Outcome : access Open_Result := null) return System.Address is
       function Native_Path return String is
          Absolute : constant String := Epub.Files.Absolute_Path (Path);
          function Wide (Value : String) return String is
@@ -35,6 +36,7 @@ package body Epub.Native_Files is
          end if;
       end Native_Path;
    begin
+      if Outcome /= null then Outcome.all := (False, False); end if;
       for Value of Path loop
          if Value = Character'Val (0) then
             raise File_Error with "NUL in filesystem path";
@@ -48,13 +50,18 @@ package body Epub.Native_Files is
             (if Exclusive then 1 else 3), 16#80#, System.Null_Address);
       begin
          if Handle = Invalid_Handle then
+            if Exclusive and then Outcome /= null and then Win.GetLastError in 80 | 183 then
+               Outcome.all.Collision := True;
+               return System.Null_Address;
+            end if;
             raise File_Error with "Cannot open binary stream (Windows error" & Win.GetLastError'Image & ")";
          end if;
+         if Outcome /= null then Outcome.all.Created := Exclusive; end if;
          return Handle;
       end;
    end Open;
 
-   procedure Close (Handle : in out System.Address) is
+   procedure Close (Handle : aliased in out System.Address) is
       Result : constant Win.BOOL := Win.CloseHandle (Handle);
    begin
       Handle := System.Null_Address;

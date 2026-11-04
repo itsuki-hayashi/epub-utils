@@ -3,6 +3,16 @@
 The converter is functional but has not passed all release acceptance gates.
 This file records current evidence and does not replace the agreed plan.
 
+## Concurrency implementation
+
+One shared Ada task pool now processes independent entries and books, with
+physical-core affinity, bounded batches, ordered archive assembly and reports,
+and publication as ready for independent destinations. See
+[CONCURRENCY.md](CONCURRENCY.md) for ownership, failure handling, tests and
+measurement commands. The current coverage is 94.16% statements and 75.80%
+decisions; required core coverage passes, and the unchanged 95%/90% application
+gate remains unmet.
+
 ## Performance implementation
 
 Release and profiling builds now support portable and native CPU tuning, with
@@ -26,7 +36,7 @@ both frozen Ada and the Perl reference's zlib level 9 in aggregate; a speed
 improvement cannot waive either gate.
 
 The current shared codec and file-stream tests pass on Windows and Linux:
-109 Windows cases and 74 Linux cases. Retained optimizations include a
+134 Windows cases and 86 Linux cases. Retained optimizations include a
 17-bit multiplicative-hash matcher with bounded bulk input and hoisted probes,
 adaptive search for unchanged resources, batched bit output, word-buffered
 decoding with an additional short-literal path, indexed resource lookup,

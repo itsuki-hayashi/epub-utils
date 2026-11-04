@@ -3,8 +3,12 @@ with System;
 
 --  Thin platform boundary. Handles and byte addresses stay inside owned I/O.
 package Epub.Native_Files is
-   function Open (Path : String; Exclusive : Boolean) return System.Address;
-   procedure Close (Handle : in out System.Address);
+   type Open_Result is record
+      Created, Collision : Boolean := False;
+   end record;
+   function Open
+     (Path : String; Exclusive : Boolean; Outcome : access Open_Result := null) return System.Address;
+   procedure Close (Handle : aliased in out System.Address);
    function Size (Handle : System.Address) return Interfaces.Unsigned_64;
    function Read (Handle, Buffer : System.Address; Count : Natural) return Natural;
    function Write (Handle, Buffer : System.Address; Count : Natural) return Natural;
