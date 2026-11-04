@@ -5,11 +5,14 @@ with Zip;
 with Zip_Streams;
 
 package Epub.Compression is
+   --  Fast_Trial bounds match-chain search for unchanged archive resources.
+   --  Callers may select it only when a validated original compressed stream
+   --  remains available as a smaller-output fallback.
    procedure Compress
      (Input, Output : in out Zip_Streams.Root_Zipstream_Type'Class;
       Input_Size : Zip.Zip_64_Data_Size_Type; Store_Only : Boolean;
       CRC : out Interfaces.Unsigned_32; Output_Size : out Zip.Zip_64_Data_Size_Type;
-      Method : out Interfaces.Unsigned_16);
+      Method : out Interfaces.Unsigned_16; Fast_Trial : Boolean := False);
 private
    use Zip;
    type Integer_M32 is range -(2 ** 63) .. 2 ** 63 - 1;

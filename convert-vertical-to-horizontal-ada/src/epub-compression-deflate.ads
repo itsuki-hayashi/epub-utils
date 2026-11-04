@@ -37,4 +37,5 @@ private procedure Epub.Compression.Deflate
    input_size       :        Zip_64_Data_Size_Type;
    CRC              : in out Interfaces.Unsigned_32;  --  only updated here
    output_size      :    out Zip_64_Data_Size_Type;
-   compression_ok   :    out Boolean);  --  indicates when compressed <= uncompressed
+   compression_ok   :    out Boolean;  --  indicates when compressed <= uncompressed
+   Fast_Trial       :        Boolean);

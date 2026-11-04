@@ -48,7 +48,7 @@ package body Epub.Compression is
      (Input, Output : in out Zip_Streams.Root_Zipstream_Type'Class;
       Input_Size : Zip_64_Data_Size_Type; Store_Only : Boolean;
       CRC : out Interfaces.Unsigned_32; Output_Size : out Zip_64_Data_Size_Type;
-      Method : out Interfaces.Unsigned_16) is
+      Method : out Interfaces.Unsigned_16; Fast_Trial : Boolean := False) is
       Source_Start : constant Zip_Streams.ZS_Index_Type := Input.Index;
       Output_Start : constant Zip_Streams.ZS_Index_Type := Output.Index;
       Effective : Boolean := False;
@@ -56,7 +56,7 @@ package body Epub.Compression is
       Epub.Checksums.Init (CRC);
       Output_Size := 0;
       if not Store_Only and then Input_Size > 0 then
-         Deflate (Input, Output, Input_Size, CRC, Output_Size, Effective);
+         Deflate (Input, Output, Input_Size, CRC, Output_Size, Effective, Fast_Trial);
       end if;
       if Effective then
          Method := 8;

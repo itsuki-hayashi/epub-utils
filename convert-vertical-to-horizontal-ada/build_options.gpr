@@ -25,6 +25,12 @@ abstract project Build_Options is
    end case;
    type Boolean_Kind is ("false", "true");
    Linked_Output : Boolean_Kind := external ("EPUB_LINKED_OUTPUT", "false");
+   Sections : Boolean_Kind := external ("EPUB_SECTIONS", "false");
+   Section_Flags := ();
+   case Sections is
+      when "true" => Section_Flags := ("-ffunction-sections", "-fdata-sections");
+      when "false" => null;
+   end case;
    Gprof : Boolean_Kind := external ("EPUB_GPROF", "false");
    case Gprof is
       when "true" => Instrumentation := ("-pg");

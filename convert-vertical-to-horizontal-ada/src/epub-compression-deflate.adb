@@ -40,7 +40,8 @@ procedure Epub.Compression.Deflate
    input_size       :        Zip_64_Data_Size_Type;
    CRC              : in out Interfaces.Unsigned_32;  --  only updated here
    output_size      :    out Zip_64_Data_Size_Type;
-   compression_ok   :    out Boolean)  --  indicates compressed < uncompressed
+   compression_ok   :    out Boolean;  --  indicates compressed < uncompressed
+   Fast_Trial       :        Boolean)
 is
   use Interfaces;
 
@@ -1112,7 +1113,7 @@ is
   end Flush_half_buffer;
 
   procedure Push (a : LZ_atom) is
-  pragma Inline (Push);
+  pragma Inline_Always (Push);
   begin
     lz_buffer.all (lz_buffer_index) := a;
     lz_buffer_index := lz_buffer_index + 1;  --  becomes 0 when reaching LZ_buffer_size (modular)
@@ -1171,14 +1172,15 @@ is
 
     procedure My_LZ77 is new Epub.LZ77.Encode
       (Read_Byte => Read_byte, More_Bytes => More_bytes,
-       Write_Literal => LZ77_emits_literal_byte, Write_DL_Code => LZ77_emits_DL_code);
+       Write_Literal => LZ77_emits_literal_byte, Write_DL_Code => LZ77_emits_DL_code,
+       Strategy => Epub.LZ77.Info_Zip_9_Knuth);
   begin  --  Encode
     Read_Block (IO_buffers, input, CRC);
 
     ----------------------------------------------------------------
     --  The whole compression is happening in the following line: --
     ----------------------------------------------------------------
-    My_LZ77;
+    My_LZ77 (Maximum_Chain => (if Fast_Trial then 64 else 4096));
 
     --  Done. Send the code signaling the end of compressed data block:
     if lz_buffer_index * 2 = 0 then  --  Already flushed at latest Push, or empty data

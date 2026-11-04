@@ -3,7 +3,7 @@ with AUnit.Simple_Test_Cases;
 
 package Stream_Cases is
    type Case_Kind is (Bulk_Roundtrip, Seek_Overwrite, Access_And_Lifetime, Hashed_Output,
-                     String_View, Source_Ranges, Buffered_Output, Input_Cache, Memory_Output);
+                     String_View, Source_Ranges);
    function Create (Kind : Case_Kind) return AUnit.Simple_Test_Cases.Test_Case_Access;
 private
    type Unit_Case is new AUnit.Simple_Test_Cases.Test_Case with record

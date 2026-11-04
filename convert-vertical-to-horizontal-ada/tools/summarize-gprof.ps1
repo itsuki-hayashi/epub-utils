@@ -52,7 +52,7 @@ foreach($group in $groups) {
         elseif($text -match 'epub__compression|epub__huffman|epub__lz77|epub__word_operations|zip__compress__deflate|huffman-encoding|lz77\.adb') {'DEFLATE engine'}
         elseif($text -match 'epub__checksums') {'CRC-32'}
         elseif($text -match 'epub__digests|secure_hash|sha256') {'SHA-256'}
-        elseif($text -match 'unzip__decompress|unzip-decompress') {'Decompression'}
+        elseif($text -match 'epub__inflate|epub-inflate|unzip__epub_decompression|unzip__decompress|unzip-decompress') {'Decompression'}
         elseif($text -match 'epub__file_streams') {'Owned file streams'}
         else {'Other'}
     if(-not $totals.ContainsKey($category)){$totals[$category]=0L}

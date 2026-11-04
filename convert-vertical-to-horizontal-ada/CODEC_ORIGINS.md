@@ -21,6 +21,15 @@ checkout reviewed for matching and checksum techniques was commit
 | `Epub.Digests` | Application SHA-256 buffering and padding, with GNAT bindings to the SHA round/message intrinsics. Only feature detection uses inline CPUID assembly. FIPS 180-4 defines the standard constants and hash behavior; no third-party SHA implementation is copied. CPUs without SHA support and forced-software tests use `GNAT.SHA256`. |
 | `Epub.Inflate` | Application RFC 1951 stored/DEFLATE decoder, written in Ada. Uses a nine-bit primary Huffman table with canonical long-code fallback, bounded refills, exact output allocation, geometric dictionary copying and IEEE CRC checks. Reviewed zlib-ng's table/state organization; no C decoder source is copied or linked. |
 
+The production `Info_Zip_9_Knuth` matcher uses checked four-byte keys and the
+multiplicative hash technique reviewed in zlib-ng's `insert_string_p.h`. It
+uses level-9 lazy-search limits for changed resources. Unchanged source-backed
+resources use a 64-link trial and retain their validated original stream when
+smaller. Emitted match choices and compressed sizes may differ. It is
+implemented in Ada, without compiling C source.
+Compression acceptance compares aggregate payload size against the Perl
+zlib level-9 reference and reports individual book variation.
+
 The expanded Huffman arena deliberately trades bounded per-call workspace for
 less CPU work. Overall memory acceptance must be measured at process level;
 this change alone does not establish lower RAM use than Perl.

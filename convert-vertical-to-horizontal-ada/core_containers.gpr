@@ -8,6 +8,6 @@ project Core_Containers is
    package Compiler is
       for Default_Switches ("Ada") use
         ("-gnat2022", "-gnatw.e", "-gnatwe", "-gnata", "-Wall", "-Wextra", "-Werror", "-g") &
-        Build_Options.Optimization & Build_Options.Instrumentation;
+        Build_Options.Optimization & Build_Options.Instrumentation & Build_Options.Section_Flags;
    end Compiler;
 end Core_Containers;

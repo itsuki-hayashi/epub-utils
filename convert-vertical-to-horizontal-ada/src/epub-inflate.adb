@@ -155,8 +155,20 @@ package body Epub.Inflate is
          return Result;
       end Get_Bits;
 
-      function Symbol (Tree : Huffman_Tree) return Natural is
+      function Canonical_Symbol (Tree : Huffman_Tree) return Natural is
          Code : Unsigned_32 := 0;
+      begin
+         for Size in 1 .. Tree.Maximum loop
+            Code := Shift_Left (Code, 1) or Unsigned_32 (Get_Bits (1));
+            if Code >= Tree.First (Size) and then Code - Tree.First (Size) < Unsigned_32 (Tree.Counts (Size)) then
+               return Tree.Symbols (Tree.Starts (Size) + Natural (Code - Tree.First (Size)));
+            end if;
+         end loop;
+         raise Invalid_Stream with "Invalid Huffman symbol";
+      end Canonical_Symbol;
+
+      function Symbol (Tree : Huffman_Tree) return Natural is
+         pragma Inline_Always (Symbol);
          Entry_Code : Unsigned_16;
          Length : Natural;
       begin
@@ -168,13 +180,9 @@ package body Epub.Inflate is
             Available := Available - Length;
             return Natural (Entry_Code and 511);
          end if;
-         for Size in 1 .. Tree.Maximum loop
-            Code := Shift_Left (Code, 1) or Unsigned_32 (Get_Bits (1));
-            if Code >= Tree.First (Size) and then Code - Tree.First (Size) < Unsigned_32 (Tree.Counts (Size)) then
-               return Tree.Symbols (Tree.Starts (Size) + Natural (Code - Tree.First (Size)));
-            end if;
-         end loop;
-         raise Invalid_Stream with "Invalid Huffman symbol";
+         --  Keep canonical long-code decoding and truncation checks out of
+         --  the common table-lookup path without changing their behavior.
+         return Canonical_Symbol (Tree);
       end Symbol;
 
       procedure Dynamic_Trees (Literals, Distance : out Huffman_Tree) is

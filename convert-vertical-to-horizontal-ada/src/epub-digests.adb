@@ -74,45 +74,56 @@ package body Epub.Digests is
    procedure Transform (State : in out State_Array; Block : String) is
       ABEF : Vector := [Signed (State (5)), Signed (State (4)), Signed (State (1)), Signed (State (0))];
       CDGH : Vector := [Signed (State (7)), Signed (State (6)), Signed (State (3)), Signed (State (2))];
-      Original_ABEF : constant Vector := ABEF;
-      Original_CDGH : constant Vector := CDGH;
       Messages : array (Natural range 0 .. 3) of Vector;
    begin
-      pragma Assert (Block'Length = 64);
-      for Group in 0 .. 15 loop
+      pragma Assert (Block'Length mod 64 = 0);
+      for Block_Number in 0 .. Block'Length / 64 - 1 loop
          declare
-            Slot : constant Natural := Group mod 4;
-            Words : Vector;
+            Block_First : constant Integer := Block'First + Block_Number * 64;
+            Original_ABEF : constant Vector := ABEF;
+            Original_CDGH : constant Vector := CDGH;
          begin
-            if Group < 4 then
-               for Lane in 0 .. 3 loop
+            pragma Assert (Block_First <= Block'Last - 63);
+            declare
+               Bytes : constant String (1 .. 64) with Import, Address => Block (Block_First)'Address;
+            begin
+               for Group in 0 .. 15 loop
                   declare
-                     First : constant Integer := Block'First + Group * 16 + Lane * 4;
-                     Word : constant Unaligned_Word with Import, Address => Block (First)'Address;
+                     Slot : constant Natural := Group mod 4;
+                     Words : Vector;
                   begin
-                     pragma Assert (First <= Block'Last - 3);
-                     Messages (Slot)(Lane) := Signed (Byte_Swap (Unsigned_32 (Word)));
+                     if Group < 4 then
+                        for Lane in 0 .. 3 loop
+                           declare
+                              First : constant Positive := Group * 16 + Lane * 4 + 1;
+                              Word : constant Unaligned_Word with Import, Address => Bytes (First)'Address;
+                           begin
+                              pragma Assert (First <= Bytes'Last - 3);
+                              Messages (Slot)(Lane) := Signed (Byte_Swap (Unsigned_32 (Word)));
+                           end;
+                        end loop;
+                     else
+                        declare
+                           Next_2 : constant Vector := Messages ((Group + 2) mod 4);
+                           Next_3 : constant Vector := Messages ((Group + 3) mod 4);
+                        begin
+                           Messages (Slot) := Message_2
+                             (Add (Message_1 (Messages (Slot), Messages ((Group + 1) mod 4)),
+                                   [Next_2 (1), Next_2 (2), Next_2 (3), Next_3 (0)]), Next_3);
+                        end;
+                     end if;
+                     Words := Add (Messages (Slot),
+                       [Signed (K (Group * 4)), Signed (K (Group * 4 + 1)),
+                        Signed (K (Group * 4 + 2)), Signed (K (Group * 4 + 3))]);
+                     CDGH := Rounds (CDGH, ABEF, Words);
+                     ABEF := Rounds (ABEF, CDGH, [Words (2), Words (3), Words (0), Words (0)]);
                   end;
                end loop;
-            else
-               declare
-                  Next_2 : constant Vector := Messages ((Group + 2) mod 4);
-                  Next_3 : constant Vector := Messages ((Group + 3) mod 4);
-               begin
-                  Messages (Slot) := Message_2
-                    (Add (Message_1 (Messages (Slot), Messages ((Group + 1) mod 4)),
-                          [Next_2 (1), Next_2 (2), Next_2 (3), Next_3 (0)]), Next_3);
-               end;
-            end if;
-            Words := Add (Messages (Slot),
-              [Signed (K (Group * 4)), Signed (K (Group * 4 + 1)),
-               Signed (K (Group * 4 + 2)), Signed (K (Group * 4 + 3))]);
-            CDGH := Rounds (CDGH, ABEF, Words);
-            ABEF := Rounds (ABEF, CDGH, [Words (2), Words (3), Words (0), Words (0)]);
+            end;
+            ABEF := Add (ABEF, Original_ABEF);
+            CDGH := Add (CDGH, Original_CDGH);
          end;
       end loop;
-      ABEF := Add (ABEF, Original_ABEF);
-      CDGH := Add (CDGH, Original_CDGH);
       State := [Unsigned (ABEF (3)), Unsigned (ABEF (2)), Unsigned (CDGH (3)), Unsigned (CDGH (2)),
                 Unsigned (ABEF (1)), Unsigned (ABEF (0)), Unsigned (CDGH (1)), Unsigned (CDGH (0))];
    end Transform;
@@ -142,10 +153,16 @@ package body Epub.Digests is
             end if;
          end;
       end if;
-      while Bytes'Last - Position + 1 >= 64 loop
-         Transform (Item.State, Bytes (Position .. Position + 63));
-         Position := Position + 64;
-      end loop;
+      if Position <= Bytes'Last then
+         declare
+            Count : constant Natural := (Bytes'Last - Position + 1) / 64 * 64;
+         begin
+            if Count > 0 then
+               Transform (Item.State, Bytes (Position .. Position + Count - 1));
+               Position := Position + Count;
+            end if;
+         end;
+      end if;
       if Position <= Bytes'Last then
          Item.Used := Bytes'Last - Position + 1;
          Item.Block (1 .. Item.Used) := Bytes (Position .. Bytes'Last);

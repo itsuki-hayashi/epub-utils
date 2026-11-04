@@ -25,15 +25,21 @@ project Epub_V2h_Ada is
       for Default_Switches ("Ada") use
         ("-gnat2022", "-gnatw.e", "-gnatwe", "-gnata",
          "-Wall", "-Wextra", "-Werror", "-g") &
-         Build_Options.Optimization & Build_Options.Instrumentation;
+         Build_Options.Optimization & Build_Options.Instrumentation & Build_Options.Section_Flags;
       for Default_Switches ("C") use
-        ("-std=c17", "-Wall", "-Wextra", "-Werror", "-g") & Build_Options.C_Optimization;
+        ("-std=c17", "-Wall", "-Wextra", "-Werror", "-g") &
+        Build_Options.C_Optimization & Build_Options.Section_Flags;
    end Compiler;
    package Binder is
       for Default_Switches ("Ada") use ("-static", "-we");
    end Binder;
    package Linker is
       Profiling_Linker := ();
+      Section_Linker := ();
+      case Build_Options.Sections is
+         when "true" => Section_Linker := ("-Wl,--gc-sections");
+         when "false" => null;
+      end case;
       case Platform.Target is
          when "windows" =>
             case Build_Options.Gprof is
@@ -44,7 +50,7 @@ project Epub_V2h_Ada is
       end case;
       for Default_Switches ("Ada") use
         ("-static", "-static-libgcc", "-Wl,--fatal-warnings",
-         "-Wl,-Map=epub-v2h.map") & Platform.Native_Libraries &
-         Build_Options.Instrumentation & Profiling_Linker;
+         "-Wl,-Map=" & external ("EPUB_LINK_MAP", "epub-v2h.map")) & Platform.Native_Libraries &
+         Build_Options.Instrumentation & Profiling_Linker & Section_Linker;
    end Linker;
 end Epub_V2h_Ada;

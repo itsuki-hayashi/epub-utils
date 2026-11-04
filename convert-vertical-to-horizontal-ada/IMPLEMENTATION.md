@@ -3,7 +3,7 @@
 The converter is functional but has not passed all release acceptance gates.
 This file records current evidence and does not replace the agreed plan.
 
-## Performance work in progress
+## Performance implementation
 
 Release and profiling builds now support portable and native CPU tuning, with
 separate object directories. Release optimization retains checks, assertions,
@@ -25,10 +25,11 @@ strategy is flexible, but acceptance requires compression at least as good as
 the Perl reference's zlib level 9; a speed improvement cannot waive that gate.
 
 The current shared codec and file-stream tests pass on Windows and Linux:
-110 Windows cases and 75 Linux cases. These include experimental bounded
-RAM-input and append-only buffered-output adapters; neither adapter is enabled
-in production yet. Their speed and peak-memory effects must be measured before
-adoption.
+107 Windows cases and 72 Linux cases. Retained optimizations include a
+four-byte multiplicative-hash matcher, adaptive search for unchanged resources,
+an inline Huffman decoder fast path, and bulk SHA instruction processing.
+Unused RAM-cache and buffering experiments have been removed; the compression
+workspace experiment did not improve wall time enough to retain.
 Conversion now uses file-backed catalogues with shared handle ownership,
 on-demand payload loading, sequential output hashing, and entry-at-a-time
 persisted verification. Source CRC validation still covers every entry before
@@ -36,12 +37,12 @@ analysis returns. No complete input or output ZIP buffer is retained by the
 production conversion path. Preserved books are copied in bounded chunks and
 verified by whole-file digest.
 
-The full paired benchmark confirms lower peak memory and successful
-compression-quality comparisons. Its conversion timings are effectively tied
-with Perl; a reliable speed improvement is not yet established. Benchmarks
-enforce the aggregate compression-quality floor, allowing individual books to
-vary while reporting their count; final
-performance acceptance remains open. Diagnostics are not acceptance evidence.
+The full eight-pair native Windows benchmark establishes faster conversion and
+lower peak memory than Windows Perl. Every measured output passed independent
+verification and the aggregate compression-quality floor, allowing individual
+books to vary while reporting their count. The earlier fourfold speed target
+was not reached. Private corpus timings and outputs remain outside the
+repository. Diagnostics are not acceptance evidence.
 
 `tools/benchmark.ps1` performs warm-up, alternating paired runs, single-core
 affinity, and independent payload/metadata verification. Full acceptance uses

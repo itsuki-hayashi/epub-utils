@@ -4,7 +4,6 @@ with Epub.Compression;
 with Epub.Encoding;
 with Epub.Performance;
 with Epub.String_Streams;
-with Epub.Memory_Outputs;
 
 package body Epub.Archives is
    use Ada.Strings.Unbounded;
@@ -416,8 +415,9 @@ package body Epub.Archives is
             Item : Member := Items (Ordinal);
             Payload : aliased constant String := Contents (Items, To_String (Item.Name));
             Input : Epub.String_Streams.Reader (Payload'Access);
-            Compressed : Epub.Memory_Outputs.Stream (Payload'Length);
+            Compressed : Zip_Streams.Memory_Zipstream;
             Compressed_Size : Zip.Zip_64_Data_Size_Type;
+            Compressed_Bytes : Unbounded_String;
             CRC : Interfaces.Unsigned_32;
             Method : Interfaces.Unsigned_16;
             Keep_Original : Boolean := False;
@@ -425,10 +425,12 @@ package body Epub.Archives is
             if Find (Written, To_String (Item.Name)) /= 0 then
                raise Invalid_Archive with "Duplicate ZIP entry";
             end if;
+            Compressed.Set (Null_Unbounded_String);
             Epub.Performance.Start (Epub.Performance.Compression);
             Epub.Compression.Compress
               (Input, Compressed, Interfaces.Unsigned_64 (Payload'Length),
-               Ordinal = 1, CRC, Compressed_Size, Method);
+               Ordinal = 1, CRC, Compressed_Size, Method,
+               Fast_Trial => not Item.Payload_Loaded and then Item.Source.Is_Open);
             Epub.Performance.Stop (Epub.Performance.Compression);
             if Input.Index /= Zip_Streams.ZS_Size_Type (Payload'Length) + 1 then
                raise Invalid_Archive with "Compression did not consume the complete payload";
@@ -444,6 +446,8 @@ package body Epub.Archives is
                Keep_Original := True;
                Compressed_Size := Item.Header.short_info.dd.compressed_size;
                Method := 8;
+            else
+               Compressed.Get (Compressed_Bytes);
             end if;
             Item.Header.local_header_offset := Interfaces.Unsigned_64 (Output.Index - 1);
             Item.Header.short_info.dd :=
@@ -473,7 +477,7 @@ package body Epub.Archives is
             if Keep_Original then
                Epub.Archive_Sources.Copy_Range (Item.Source, Item.Payload_Offset, Compressed_Size, Output);
             else
-               Compressed.Copy_To (Output, Natural (Compressed_Size));
+               Put_Bytes (Output, Slice (Compressed_Bytes, 1, Natural (Compressed_Size)));
             end if;
             Written.Append (Item);
          end;

@@ -2,6 +2,7 @@ param(
     [Parameter(Mandatory)][string]$InputPath,
     [Parameter(Mandatory)][string]$ReferenceReport,
     [Parameter(Mandatory)][string]$AdaExecutable,
+    [string]$BaselineAdaExecutable,
     [Parameter(Mandatory)][string]$OutputRoot,
     [ValidateSet('Converted','Preserved','Mixed')][string]$Workload = 'Converted',
     [ValidateRange(1,32)][int]$Pairs = 8,
@@ -21,6 +22,9 @@ if (($OutputRoot + [IO.Path]::DirectorySeparatorChar).StartsWith($repository + [
     throw 'Benchmark artifacts must be outside the repository.'
 }
 $AdaExecutable = [IO.Path]::GetFullPath($AdaExecutable)
+$candidateSHA256 = (Get-FileHash -LiteralPath $AdaExecutable -Algorithm SHA256).Hash
+if ($BaselineAdaExecutable) { $BaselineAdaExecutable = [IO.Path]::GetFullPath($BaselineAdaExecutable) }
+if ($BaselineAdaExecutable) { $controlSHA256 = (Get-FileHash -LiteralPath $BaselineAdaExecutable -Algorithm SHA256).Hash }
 $InputPath = [IO.Path]::GetFullPath($InputPath)
 $reference = @(Get-Content -LiteralPath $ReferenceReport -Raw | ConvertFrom-Json)
 $selection = @($reference | Where-Object {
@@ -61,6 +65,9 @@ function Run-Engine([string]$Engine, [string]$Tag) {
         $start.FileName = $perl
         $start.WorkingDirectory = $directory
         foreach ($argument in @(('-I' + (Join-Path $perlProject 'lib')),('-I' + (Join-Path $perlProject 'local/lib/perl5')),(Join-Path $perlProject 'bin/epub-v2h'))) { $start.ArgumentList.Add($argument) }
+    } elseif ($Engine -eq 'ControlAda') {
+        $start.FileName = $BaselineAdaExecutable
+        $start.WorkingDirectory = $directory
     } else {
         $start.FileName = $AdaExecutable
         $start.WorkingDirectory = $directory
@@ -117,10 +124,15 @@ try {
     $controller.ProcessorAffinity = [IntPtr]$mask
     $expected = Run-Engine 'Perl' 'warmup-perl'
     $null = Validate-Output $expected $expected
+    $controlEngine = if ($BaselineAdaExecutable) { 'ControlAda' } else { 'Perl' }
+    if ($BaselineAdaExecutable) {
+        $controlWarmup = Run-Engine $controlEngine 'warmup-control'
+        $null = Validate-Output $expected $controlWarmup
+    }
     $warmup = Run-Engine 'Ada' 'warmup-ada'
     $null = Validate-Output $expected $warmup
     for ($pair=0; $pair -lt $Pairs; $pair++) {
-        $order = if ($pair % 2) { @('Ada','Perl') } else { @('Perl','Ada') }
+        $order = if ($pair % 2) { @('Ada',$controlEngine) } else { @($controlEngine,'Ada') }
         foreach ($engine in $order) {
             $row = Run-Engine $engine ("pair-$pair-" + $engine.ToLowerInvariant())
             $quality = Validate-Output $expected $row
@@ -130,6 +142,30 @@ try {
             Write-Output ("Validated {0} pair {1}: wall={2:N3}s CPU={3:N3}s" -f $engine,($pair+1),$row.Seconds,$row.CPUSeconds)
         }
     }
+    if ((Get-FileHash -LiteralPath $AdaExecutable -Algorithm SHA256).Hash -cne $candidateSHA256 -or
+        ($BaselineAdaExecutable -and (Get-FileHash -LiteralPath $BaselineAdaExecutable -Algorithm SHA256).Hash -cne $controlSHA256)) {
+        throw 'An executable changed during measurement; results are not eligible.'
+    }
+    if ($BaselineAdaExecutable) {
+        $controlMedian = Median @($rows | Where-Object Engine -eq ControlAda | ForEach-Object Seconds)
+        $candidateMedian = Median @($rows | Where-Object Engine -eq Ada | ForEach-Object Seconds)
+        $summary = [pscustomobject]@{Label=$Label;Workload=$Workload;Books=$selection.Count;Pairs=$Pairs;
+            AcceptanceRun=$false;ComparisonOnly=$true;AffinityMask=$mask;CompressionGate=$CompressionGate;
+            InputBytes=($selection|Measure-Object InputBytes -Sum).Sum;
+            ControlMedianSeconds=$controlMedian;CandidateMedianSeconds=$candidateMedian;
+            RelativeSpeedup=($controlMedian/$candidateMedian);
+            ControlMedianCPUSeconds=(Median @($rows|Where-Object Engine -eq ControlAda|ForEach-Object CPUSeconds));
+            CandidateMedianCPUSeconds=(Median @($rows|Where-Object Engine -eq Ada|ForEach-Object CPUSeconds));
+            ControlMedianPeakBytes=(Median @($rows|Where-Object Engine -eq ControlAda|ForEach-Object PeakBytes));
+            CandidateMedianPeakBytes=(Median @($rows|Where-Object Engine -eq Ada|ForEach-Object PeakBytes));
+            ControlBinaryBytes=(Get-Item -LiteralPath $BaselineAdaExecutable).Length;
+            CandidateBinaryBytes=(Get-Item -LiteralPath $AdaExecutable).Length;
+            ControlBinarySHA256=(Get-FileHash -LiteralPath $BaselineAdaExecutable).Hash;
+            CandidateBinarySHA256=(Get-FileHash -LiteralPath $AdaExecutable).Hash}
+        $summary | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $session 'summary.json')
+        $summary | ConvertTo-Json
+        return
+    }
     $perlMedian = Median @($rows | Where-Object Engine -eq Perl | ForEach-Object Seconds)
     $adaMedian = Median @($rows | Where-Object Engine -eq Ada | ForEach-Object Seconds)
     $perlPeak = Median @($rows | Where-Object Engine -eq Perl | ForEach-Object PeakBytes)
@@ -138,7 +174,11 @@ try {
         AcceptanceRun=($Pairs -ge 8 -and $Limit -eq 0);AffinityMask=$mask;
         InputBytes=($selection|Measure-Object InputBytes -Sum).Sum;
         PerlMedianSeconds=$perlMedian;AdaMedianSeconds=$adaMedian;Speedup=($perlMedian/$adaMedian);
+        PerlMedianCPUSeconds=(Median @($rows|Where-Object Engine -eq Perl|ForEach-Object CPUSeconds));
+        AdaMedianCPUSeconds=(Median @($rows|Where-Object Engine -eq Ada|ForEach-Object CPUSeconds));
         PerlMedianPeakBytes=$perlPeak;AdaMedianPeakBytes=$adaPeak;
+        PerlOutputBytes=(Median @($rows|Where-Object Engine -eq Perl|ForEach-Object OutputBytes));
+        AdaOutputBytes=(Median @($rows|Where-Object Engine -eq Ada|ForEach-Object OutputBytes));
         FasterThanPerl=($adaMedian -lt $perlMedian);LowerPeakRAMThanPerl=($adaPeak -lt $perlPeak);
         BinaryBytes=(Get-Item -LiteralPath $AdaExecutable).Length;CompressionGate=$CompressionGate;
         AdaBinarySHA256=(Get-FileHash -LiteralPath $AdaExecutable -Algorithm SHA256).Hash;

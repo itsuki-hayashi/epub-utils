@@ -186,7 +186,9 @@ package body Codec_Cases is
             end Match;
             procedure Rich is new Epub.LZ77.Encode (Read_Byte, More, Literal, Match, Epub.LZ77.Rich);
             procedure IZ9 is new Epub.LZ77.Encode (Read_Byte, More, Literal, Match, Epub.LZ77.Info_Zip_9);
+            procedure Knuth9 is new Epub.LZ77.Encode (Read_Byte, More, Literal, Match, Epub.LZ77.Info_Zip_9_Knuth);
             type Size_List is array (Positive range <>) of Natural;
+            type Chain_List is array (Positive range <>) of Epub.LZ77.Chain_Limit;
          begin
             for Pattern in 1 .. 4 loop
                for Index in Data'Range loop
@@ -210,6 +212,13 @@ package body Codec_Cases is
                   Written := 1;
                   IZ9;
                   Assert (Read_Position = Length + 1 and then Written = Length + 1, "Complete level-9 token stream");
+                  for Budget of Chain_List'[1, 64, 4096] loop
+                     Read_Position := 1;
+                     Written := 1;
+                     Knuth9 (Budget);
+                     Assert (Read_Position = Length + 1 and then Written = Length + 1,
+                             "Complete multiplicative-hash token stream at every search budget");
+                  end loop;
                end loop;
             end loop;
          end;

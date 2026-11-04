@@ -30,7 +30,7 @@ with Epub.Word_Operations;
 package body Epub.LZ77 is
    use Interfaces;
    type Integer_M32 is range -2**31 .. 2**31 - 1;
-   procedure Encode is
+   procedure Encode (Maximum_Chain : Chain_Limit := 4096) is
     procedure LZ77_by_Rich is
       --  * PROG2.C [lz77a.c]                                             *
       --  * Simple Hashing LZ77 Sliding Dictionary Compression Program    *
@@ -371,6 +371,7 @@ package body Epub.LZ77 is
          Maximum_Match : constant := 258;
          Hash_Mask : constant := 32_767;
          type Byte_Array is array (Natural range <>) of Byte;
+         type Unaligned_Word is mod 2 ** 32 with Size => 32, Alignment => 1;
          Window : Byte_Array (0 .. Window_Capacity - 1);
          type Link_Array is array (Natural range 0 .. Window_Size - 1) of Unsigned_16;
          Head, Previous : Link_Array := [others => 0];
@@ -388,7 +389,24 @@ package body Epub.LZ77 is
             Slot : constant Natural := Position mod Window_Size;
          begin
             pragma Assert (Finish - Position >= 3);
-            Update_Hash (Window (Position + 2));
+            if Strategy = Info_Zip_9_Knuth then
+               if Finish - Position < 4 then
+                  Prior := 0;
+                  return;
+               end if;
+               --  Both supported targets are little-endian x86-64. The
+               --  lookahead check bounds the entire unaligned four-byte load.
+               --  Multiplicative hashing avoids rolling dependencies and
+               --  filters candidates by four bytes. Shorter matches may be
+               --  omitted; emitted tokens still undergo the usual checks.
+               declare
+                  Key : Unaligned_Word with Import, Address => Window (Position)'Address;
+               begin
+                  Hash := Shift_Right (Unsigned_32 (Key) * 16#9E37_79B1#, 17);
+               end;
+            else
+               Update_Hash (Window (Position + 2));
+            end if;
             Prior := Natural (Head (Natural (Hash)));
             Previous (Slot) := Unsigned_16 (Prior);
             Head (Natural (Hash)) := Unsigned_16 (Position);
@@ -421,7 +439,8 @@ package body Epub.LZ77 is
             Candidate : Natural := Prior;
             Best : Natural := Prior_Length;
             Limit : constant Natural := (if Position > Maximum_Distance then Position - Maximum_Distance else 0);
-            Count : Positive := (if Prior_Length >= 32 then 1024 else 4096);
+            Count : Positive :=
+              (if Prior_Length >= 32 then Positive'Max (1, Maximum_Chain / 4) else Maximum_Chain);
             Maximum : constant Natural := Natural'Min (Maximum_Match, Finish - Position);
          begin
             if Best >= Maximum then
@@ -460,8 +479,10 @@ package body Epub.LZ77 is
             end loop;
             return;
          end if;
-         Update_Hash (Window (0));
-         Update_Hash (Window (1));
+         if Strategy = Info_Zip_9 then
+            Update_Hash (Window (0));
+            Update_Hash (Window (1));
+         end if;
          while Position < Finish loop
             if Finish - Position >= 3 then
                Insert (Prior);
@@ -517,7 +538,7 @@ package body Epub.LZ77 is
    begin
       case Strategy is
          when Rich => LZ77_by_Rich;
-         when Info_Zip_9 => Encode_Info_Zip_9;
+         when Info_Zip_9 | Info_Zip_9_Knuth => Encode_Info_Zip_9;
       end case;
    end Encode;
 end Epub.LZ77;
