@@ -6,6 +6,7 @@ with Epub.Conversion;
 with Epub.Files;
 with Epub.Reports;
 with Epub.Resources;
+with Epub.Performance;
 
 package body Epub.CLI is
    use Ada.Strings.Unbounded;
@@ -24,8 +25,8 @@ package body Epub.CLI is
       Ada.Text_IO.Put_Line ("  --help, -h               Show this help");
       Ada.Text_IO.Put_Line ("PowerShell-style aliases: --InputPath, --OutputDirectory, --Recursive,");
       Ada.Text_IO.Put_Line ("--AnalyzeOnly, --WhatIf, --ReportPath, --Verbose.");
-      Ada.Text_IO.Put_Line ("Preserved books are exact copies. Conversion attempts Zip-Ada Deflate_R,");
-      Ada.Text_IO.Put_Line ("with native stored fallback. Recursive mode ignores --output-directory,");
+      Ada.Text_IO.Put_Line ("Preserved books are exact copies. Conversion uses DEFLATE with stored fallback.");
+      Ada.Text_IO.Put_Line ("Recursive mode ignores --output-directory,");
       Ada.Text_IO.Put_Line ("skips horizontal directories and does not follow directory links/junctions.");
    end Help;
 
@@ -143,6 +144,7 @@ package body Epub.CLI is
             Ada.Text_IO.Put (Report);
          end if;
       end;
+      Epub.Performance.Dump;
       if Failures /= 0 then
          Ada.Text_IO.Put_Line (Ada.Text_IO.Standard_Error,
            Ada.Strings.Fixed.Trim (Failures'Image, Ada.Strings.Both) &

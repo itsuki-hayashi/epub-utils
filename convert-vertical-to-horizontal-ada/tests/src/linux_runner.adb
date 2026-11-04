@@ -8,6 +8,9 @@ with Archive_Cases;
 with Core_Cases;
 with Book_Cases;
 with Report_Cases;
+with Codec_Cases;
+with Stream_Cases;
+with Inflate_Cases;
 
 procedure Linux_Runner is
    use type AUnit.Status;
@@ -22,6 +25,15 @@ procedure Linux_Runner is
       end loop;
       for Kind in Core_Cases.Case_Kind loop
          Result.all.Add_Test (Core_Cases.Create (Kind));
+      end loop;
+      for Kind in Codec_Cases.Case_Kind loop
+         Result.all.Add_Test (Codec_Cases.Create (Kind));
+      end loop;
+      for Kind in Stream_Cases.Case_Kind loop
+         Result.all.Add_Test (Stream_Cases.Create (Kind));
+      end loop;
+      for Kind in Inflate_Cases.Case_Kind loop
+         Result.all.Add_Test (Inflate_Cases.Create (Kind));
       end loop;
       for Kind in Book_Cases.Case_Kind loop
          Result.all.Add_Test (Book_Cases.Create (Kind));

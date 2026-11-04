@@ -6,28 +6,37 @@ with Ada.Strings.Unbounded;
 with AUnit.Assertions;
 with Epub.Files;
 with Epub.Resources;
+with Epub.File_Streams;
+with Epub.Files.Write_Stream_Checked;
+with Interfaces;
+with GNAT.SHA256;
+with Zip_Streams;
+with Epub.Stream_IO;
 
 package body Fault_Cases is
    use Ada.Strings.Unbounded;
    use AUnit.Assertions;
    use type Native_Faults.Operation;
    type Unit_Case_Access is access all Unit_Case;
-   function Create (Kind : Native_Faults.Operation; Skip : Natural := 0)
+   function Create (Kind : Native_Faults.Operation; Skip : Natural := 0; Streaming : Boolean := False)
       return AUnit.Simple_Test_Cases.Test_Case_Access is
       Result : constant Unit_Case_Access := new Unit_Case;
    begin
       Result.all.Kind := Kind;
       Result.all.Skip := Skip;
+      Result.all.Streaming := Streaming;
       return AUnit.Simple_Test_Cases.Test_Case_Access (Result);
    end Create;
    overriding function Name (Item : Unit_Case) return AUnit.Message_String is
-     (AUnit.Format ("Native failure: " & Item.Kind'Image & " skip=" & Item.Skip'Image));
+     (AUnit.Format ("Native failure: " & Item.Kind'Image & " skip=" & Item.Skip'Image &
+       (if Item.Streaming then " streamed" else "")));
 
    overriding procedure Run_Test (Item : in out Unit_Case) is
       Stamp : constant String := Ada.Calendar.Formatting.Image
         (Ada.Calendar.Clock, Include_Time_Fraction => True);
       Root : Unbounded_String := To_Unbounded_String
-        (Epub.Files.Absolute_Path ("../test-results/native-" & Item.Kind'Image & Item.Skip'Image & "-"));
+        (Epub.Files.Absolute_Path ("../test-results/native-" & Item.Kind'Image & Item.Skip'Image &
+          (if Item.Streaming then "-streamed-" else "-")));
       Rejected : Boolean := False;
       Snapshot : Unbounded_String;
    begin
@@ -40,6 +49,20 @@ package body Fault_Cases is
       declare
          Input : constant String := Epub.Files.Join (To_String (Root), "input.epub");
          Output : constant String := Epub.Files.Join (To_String (Root), "output.epub");
+         procedure Build
+           (Stream : in out Zip_Streams.Root_Zipstream_Type'Class; Digest : out Unbounded_String) is
+         begin
+            Stream.Write ([112, 97, 121, 108, 111, 97, 100]);
+            Digest := To_Unbounded_String (GNAT.SHA256.Digest ("payload"));
+         end Build;
+         procedure Check (Stream : in out Zip_Streams.Root_Zipstream_Type'Class) is
+            pragma Unreferenced (Stream);
+         begin
+            null;
+         end Check;
+         procedure Save is new Epub.Files.Write_Stream_Checked (Build, Check);
+         Bytes : Interfaces.Unsigned_64 := 0;
+         Digest : Unbounded_String;
       begin
          Epub.Files.Write_Exclusive (Input, "payload");
          Native_Faults.Arm (Item.Kind, Item.Skip);
@@ -47,10 +70,24 @@ package body Fault_Cases is
             case Item.Kind is
                when Native_Faults.Open_File | Native_Faults.Read_File |
                     Native_Faults.Zero_Read | Native_Faults.File_Size =>
-                  Snapshot := To_Unbounded_String (Epub.Files.Read (Input));
+                  if Item.Streaming then
+                     declare
+                        Stream : Epub.File_Streams.Stream;
+                     begin
+                        Stream.Open (Input);
+                        Snapshot := To_Unbounded_String (Epub.Stream_IO.Digest (Stream));
+                     end;
+                  else
+                     Snapshot := To_Unbounded_String (Epub.Files.Read (Input));
+                  end if;
                when Native_Faults.Write_File | Native_Faults.Zero_Write |
                     Native_Faults.Flush_File | Native_Faults.Close_File | Native_Faults.Move_File =>
-                  Epub.Files.Write_Verified (Output, "payload");
+                  if Item.Streaming then
+                     Save (Output, Bytes, Digest);
+                     Snapshot := Digest & Bytes'Image;
+                  else
+                     Epub.Files.Write_Verified (Output, "payload");
+                  end if;
                when Native_Faults.Delete_File =>
                   Epub.Files.Remove (Input);
                when Native_Faults.File_Attributes =>
@@ -80,7 +117,7 @@ package body Fault_Cases is
                   null;
             end case;
          exception
-            when Error : Epub.Files.File_Error =>
+            when Error : Epub.Files.File_Error | Epub.File_Streams.File_Error =>
                Rejected := True;
                Snapshot := To_Unbounded_String (Ada.Exceptions.Exception_Message (Error));
          end;

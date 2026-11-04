@@ -1,4 +1,5 @@
 with Ada.Directories;
+with Ada.Characters.Handling;
 with Ada.Exceptions;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
@@ -10,6 +11,10 @@ with Interfaces;
 with Test_Files;
 with Zip_Streams;
 with Zip.CRC_Crypto;
+with Epub.Files;
+with GNAT.SHA256;
+with Epub.Files.Write_Stream_Checked;
+with Epub.Hash_Streams;
 
 package body Archive_Cases is
    use AUnit.Assertions;
@@ -376,6 +381,218 @@ package body Archive_Cases is
    overriding procedure Run_Test (Item : in out Unit_Case) is
    begin
       case Item.Kind is
+         when Codec_Buffer_Boundaries =>
+            declare
+               use type Interfaces.Unsigned_32;
+               Payload : String (1 .. 1_000_000);
+               Random : Interfaces.Unsigned_32 := 16#D1CE_8703#;
+               Original : Epub.Archives.Catalogue;
+            begin
+               for Index in Payload'Range loop
+                  Random := Random * 1_664_525 + 1_013_904_223;
+                  Payload (Index) := Character'Val
+                    ((if (Index / 70_000) mod 2 = 0 then Natural (Interfaces.Shift_Right (Random, 24))
+                      else Index mod 31));
+               end loop;
+               Original.Append (Epub.Archives.Create_Member ("mimetype", "application/epub+zip"));
+               Original.Append (Epub.Archives.Create_Member ("OPS/payload.bin", Payload));
+               declare
+                  Bytes : constant String := Epub.Archives.Rebuild (Original);
+                  Actual : constant Epub.Archives.Catalogue := Epub.Archives.Read (Bytes);
+               begin
+                  Assert (Actual (2).Header.short_info.zip_type = 8, "Mixed payload retains DEFLATE output");
+                  Assert (Bytes'Length < Payload'Length - 100_000, "Compressible regions prevent whole-stream stored fallback");
+                  Assert (Epub.Archives.Contents (Actual, "OPS/payload.bin") = Payload,
+                          "Circular token wraps and stored-block short expansions reproduce every byte");
+                  Epub.Archives.Verify (Bytes, Original);
+               end;
+            end;
+         when File_Backed_Catalogue =>
+            declare
+               use Ada.Strings.Unbounded;
+               Path : constant String := "../test-results/source-catalogue.epub";
+               Bytes : String := Epub.Archives.Rebuild (Synthetic (True));
+               function Surviving_Copy return Epub.Archives.Catalogue is
+                  Original : constant Epub.Archives.Catalogue := Epub.Archives.Read_File (Path);
+                  Copy : constant Epub.Archives.Catalogue := Original;
+               begin
+                  return Copy;
+               end Surviving_Copy;
+            begin
+               Epub.Files.Remove (Path);
+               Epub.Files.Write_Exclusive (Path, Bytes);
+               declare
+                  Original : constant Epub.Archives.Catalogue := Surviving_Copy;
+                  Plan : Epub.Books.Book_Plan;
+                  Stream : Zip_Streams.Memory_Zipstream;
+                  Copied : Unbounded_String;
+               begin
+                  Assert (not Original (2).Payload_Loaded and then Length (Original (2).Payload) = 0,
+                          "Catalogue owns a source reference instead of decoded payload bytes");
+                  Assert (Epub.Archives.Contents (Original, "OPS/page.xhtml") = [1 .. 4096 => 'a'],
+                          "Payload remains available after intermediate owners finalize");
+                  Assert (Epub.Archives.Source_Size (Original) = Bytes'Length, "Exact file size");
+                  Assert (Epub.Archives.Source_Digest (Original) =
+                    Ada.Characters.Handling.To_Upper (GNAT.SHA256.Digest (Bytes)), "Streaming source digest");
+                  Stream.Set (Null_Unbounded_String);
+                  Epub.Archives.Copy_Source (Original, Stream);
+                  Stream.Get (Copied);
+                  Assert (To_String (Copied) = Bytes, "Exact-copy source streaming");
+                  Epub.Archives.Verify (Epub.Archives.Rebuild (Original), Original);
+                  Plan.Patches.Append ((To_Unbounded_String ("OPS/page.xhtml"), To_Unbounded_String ("changed")));
+                  declare
+                     Patched : constant Epub.Archives.Catalogue := Epub.Books.Apply (Original, Plan);
+                  begin
+                     Assert (Patched (2).Payload_Loaded, "Edits materialize their replacement");
+                     Epub.Archives.Verify (Epub.Archives.Rebuild (Patched), Patched);
+                     Assert (Epub.Archives.Contents (Original, "OPS/page.xhtml") = [1 .. 4096 => 'a'],
+                             "Applying edits does not mutate the shared source");
+                  end;
+               end;
+               Epub.Files.Remove (Path);
+               Bytes (39) := 'X';
+               Epub.Files.Write_Exclusive (Path, Bytes);
+               begin
+                  declare
+                     Invalid : constant Epub.Archives.Catalogue := Epub.Archives.Read_File (Path);
+                  begin
+                     Assert (Invalid.Is_Empty, "Corrupt source must be rejected before returning a catalogue");
+                  end;
+                  Assert (False, "File-backed loading retains CRC validation for every entry");
+               exception
+                  when AUnit.Assertions.Assertion_Error => raise;
+                  when others => null;
+               end;
+               Epub.Files.Remove (Path);
+            end;
+         when Streaming_Publication =>
+            declare
+               use Ada.Strings.Unbounded;
+               Expected : constant Epub.Archives.Catalogue := Synthetic;
+               Destination : constant String := "../test-results/stream-published.epub";
+               type Failure_Kind is (None, Build_Failure, Bad_Digest, Verify_Failure, Publication_Race);
+               Failure : Failure_Kind := None;
+               Checked : Natural := 0;
+               procedure Build
+                 (Output : in out Zip_Streams.Root_Zipstream_Type'Class; Digest : out Unbounded_String) is
+                  Hashed : Epub.Hash_Streams.Stream (Output'Access);
+               begin
+                  Epub.Archives.Rebuild (Expected, Hashed);
+                  if Failure = Build_Failure then
+                     raise Epub.Files.File_Error with "injected build failure";
+                  end if;
+                  Digest := To_Unbounded_String ((if Failure = Bad_Digest then [1 .. 64 => '0'] else Hashed.Digest));
+               end Build;
+               procedure Check (Input : in out Zip_Streams.Root_Zipstream_Type'Class) is
+               begin
+                  Checked := Checked + 1;
+                  Epub.Archives.Verify (Input, Expected);
+                  if Failure = Verify_Failure then
+                     raise Epub.Files.File_Error with "injected verification failure";
+                  elsif Failure = Publication_Race then
+                     Epub.Files.Write_Exclusive (Destination, "racer");
+                  end if;
+               end Check;
+               procedure Save is new Epub.Files.Write_Stream_Checked (Build, Check);
+               Bytes : Interfaces.Unsigned_64 := 0;
+               Digest : Unbounded_String;
+               Rejected : Boolean;
+            begin
+               for Mode in Failure_Kind loop
+                  Failure := Mode;
+                  Checked := 0;
+                  Rejected := False;
+                  Epub.Files.Remove (Destination);
+                  begin
+                     Save (Destination, Bytes, Digest);
+                  exception
+                     when others => Rejected := True;
+                  end;
+                  Assert (Rejected = (Mode /= None), "Streaming failure blocks publication");
+                  Assert (Checked = (if Mode in Build_Failure | Bad_Digest then 0 else 1),
+                          "Persisted verification occurs exactly once, after digest verification");
+                  if Mode = None then
+                     Assert (Bytes = Epub.Files.Read (Destination)'Length, "Published length");
+                     Assert (To_String (Digest) = Ada.Characters.Handling.To_Upper
+                       (GNAT.SHA256.Digest (Epub.Files.Read (Destination))), "Published digest");
+                     begin
+                        Save (Destination, Bytes, Digest);
+                        Assert (False, "Streaming publication refuses an existing destination");
+                     exception
+                        when Epub.Files.File_Error => null;
+                     end;
+                  elsif Mode = Publication_Race then
+                     Assert (Epub.Files.Read (Destination) = "racer", "Publication race cannot replace the winner");
+                  else
+                     Assert (not Epub.Files.Exists (Destination), "Failed output remains unpublished");
+                  end if;
+                  Epub.Files.Remove (Destination);
+               end loop;
+            end;
+         when Persisted_Verification | Persisted_Corruption | Reused_Digest =>
+            declare
+               Expected : constant Epub.Archives.Catalogue := Synthetic;
+               Bytes : String := Epub.Archives.Rebuild (Expected);
+               Root : Ada.Strings.Unbounded.Unbounded_String;
+               Sequence : Natural := 0;
+               Calls : Natural := 0;
+               Rejected : Boolean := False;
+               procedure Check_Saved (Saved : String) is
+               begin
+                  Calls := Calls + 1;
+                  Epub.Archives.Verify (Saved, Expected);
+               end Check_Saved;
+               procedure Save is new Epub.Files.Write_Checked (Check_Saved);
+            begin
+               loop
+                  Sequence := Sequence + 1;
+                  Root := Ada.Strings.Unbounded.To_Unbounded_String
+                    ("../test-results/persisted-" & Sequence'Image);
+                  exit when not Epub.Files.Exists (Ada.Strings.Unbounded.To_String (Root));
+               end loop;
+               Epub.Files.Ensure_Directory (Ada.Strings.Unbounded.To_String (Root));
+               declare
+                  Destination : constant String := Epub.Files.Join
+                    (Ada.Strings.Unbounded.To_String (Root), "result.epub");
+               begin
+                  if Item.Kind = Persisted_Corruption then
+                     Bytes (39) := 'X';
+                  end if;
+                  begin
+                     if Item.Kind = Reused_Digest then
+                        Save (Destination, Bytes, GNAT.SHA256.Digest (Bytes));
+                     else
+                        Save (Destination, Bytes);
+                     end if;
+                  exception
+                     when others => Rejected := True;
+                  end;
+                  Assert (Calls = 1, "Exactly one persisted archive verification");
+                  Assert (Rejected = (Item.Kind = Persisted_Corruption), "Corruption blocks publication");
+                  Assert (Epub.Files.Exists (Destination) = not Rejected, "Publication eligibility");
+                  if not Rejected then
+                     Assert (Epub.Files.Read (Destination) = Bytes, "Verified bytes published");
+                  end if;
+                  if Item.Kind = Reused_Digest then
+                     Rejected := False;
+                     begin
+                        Save (Destination & ".bad", Bytes, [1 .. 64 => '0']);
+                     exception
+                        when Epub.Files.File_Error => Rejected := True;
+                     end;
+                     Assert (Rejected and then Calls = 1, "Incorrect reused digest rejected before callback");
+                     Assert (not Epub.Files.Exists (Destination & ".bad"), "Incorrect digest never published");
+                  end if;
+                  declare
+                     Search : Ada.Directories.Search_Type;
+                  begin
+                     Ada.Directories.Start_Search
+                       (Search, Ada.Strings.Unbounded.To_String (Root), ".epub-horizontal-*.tmp");
+                     Assert (not Ada.Directories.More_Entries (Search), "Temporary output cleaned");
+                     Ada.Directories.End_Search (Search);
+                  end;
+               end;
+            end;
          when Mimetype_Flags =>
             declare
                Flag_Values : constant array (1 .. 2) of Interfaces.Unsigned_64 :=

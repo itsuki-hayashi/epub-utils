@@ -43,6 +43,10 @@ package Epub.Windows is
      with Import, Convention => Stdcall, External_Name => "WriteFile";
    function FlushFileBuffers (Handle : System.Address) return BOOL
      with Import, Convention => Stdcall, External_Name => "FlushFileBuffers";
+   function SetFilePointerEx
+     (Handle : System.Address; Distance : Interfaces.Integer_64;
+      Position : System.Address; Origin : DWORD) return BOOL
+     with Import, Convention => Stdcall, External_Name => "SetFilePointerEx";
    function GetFullPathNameW
      (Path : System.Address; Capacity : DWORD; Buffer, File_Part : System.Address) return DWORD
      with Import, Convention => Stdcall, External_Name => "GetFullPathNameW";

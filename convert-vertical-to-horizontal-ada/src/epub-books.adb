@@ -1,3 +1,4 @@
+with Epub.Performance;
 with Ada.Characters.Handling;
 with Ada.Strings.Fixed;
 with Epub.Encoding;
@@ -108,6 +109,7 @@ package body Epub.Books is
          end if;
       end Patch;
    begin
+      Epub.Performance.Start (Epub.Performance.Analysis);
       for Item of Container loop
          if To_String (Item.Name) = "rootfile" then
             Root_Count := Root_Count + 1;
@@ -125,6 +127,7 @@ package body Epub.Books is
       begin
          if Is_Fixed (Package_Doc) then
             Result.Reason := Epub.Classification.Fixed_Layout;
+            Epub.Performance.Stop (Epub.Performance.Analysis);
             return Result;
          end if;
          for Item of Package_Doc loop
@@ -212,6 +215,7 @@ package body Epub.Books is
          end if;
          Result.Reason := Epub.Classification.Classify (False, Images, Texts, False);
          if Result.Reason in Epub.Classification.Image_Only | Epub.Classification.Image_Dominated then
+            Epub.Performance.Stop (Epub.Performance.Analysis);
             return Result;
          end if;
          declare
@@ -240,6 +244,7 @@ package body Epub.Books is
          Result.Reason := Epub.Classification.Classify
            (False, Images, Texts, Primary_Vertical or else Inline_Vertical or else Active_Vertical);
          if Result.Reason /= Epub.Classification.Vertical_Text then
+            Epub.Performance.Stop (Epub.Performance.Analysis);
             return Result;
          end if;
          if Epub.Archives.Find (Items, "META-INF/signatures.xml") /= 0
@@ -262,6 +267,7 @@ package body Epub.Books is
             raise Invalid_Book with "Vertical evidence found but no supported direction setting could be changed";
          end if;
       end;
+      Epub.Performance.Stop (Epub.Performance.Analysis);
       return Result;
    end Analyze_Book;
 
@@ -269,15 +275,18 @@ package body Epub.Books is
       return Epub.Archives.Catalogue is
       Result : Epub.Archives.Catalogue := Items;
    begin
+      Epub.Performance.Start (Epub.Performance.Patch_Planning);
       for Patch of Plan.Patches loop
          declare
             Position : constant Natural := Epub.Archives.Find (Result, To_String (Patch.Name));
             Item : Epub.Archives.Member := Result (Position);
          begin
             Item.Payload := Patch.Payload;
+            Item.Payload_Loaded := True;
             Result.Replace_Element (Position, Item);
          end;
       end loop;
+      Epub.Performance.Stop (Epub.Performance.Patch_Planning);
       return Result;
    end Apply;
 

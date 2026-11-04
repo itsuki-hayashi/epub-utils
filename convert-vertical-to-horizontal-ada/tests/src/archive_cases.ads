@@ -6,7 +6,8 @@ package Archive_Cases is
                       Corrupt_Payload, Fixture_Roundtrips, Book_Payload_Parity,
                       Header_Consistency, ZIP64_Field_Bounds, Archive_Region_Bounds,
                       Case_Sensitive_Names, Data_Descriptors, Duplicate_ZIP64_Fields,
-                      Entry_Overlap, Mimetype_Flags);
+                      Entry_Overlap, Mimetype_Flags, Persisted_Verification, Persisted_Corruption,
+                      Reused_Digest, File_Backed_Catalogue, Streaming_Publication, Codec_Buffer_Boundaries);
    function Create (Kind : Case_Kind)
       return AUnit.Simple_Test_Cases.Test_Case_Access;
 private

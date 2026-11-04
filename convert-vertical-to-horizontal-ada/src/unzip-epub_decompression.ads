@@ -8,5 +8,9 @@ package UnZip.Epub_Decompression is
    function Decode
      (Source_Stream : in out Zip_Streams.Root_Zipstream_Type'Class;
       Metadata : Zip.Headers.Local_File_Header) return String;
+   --  Retained for uncommon ZIP methods and independent decoder tests.
+   function Decode_Compatibility
+     (Source_Stream : in out Zip_Streams.Root_Zipstream_Type'Class;
+      Metadata : Zip.Headers.Local_File_Header) return String;
    Invalid_Payload : exception;
 end UnZip.Epub_Decompression;

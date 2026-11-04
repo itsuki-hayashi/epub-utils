@@ -15,6 +15,8 @@ The Windows executable now converts the 21 reference EPUBs with matching
 classification, changed-entry lists, payloads and specified ZIP metadata.
 The complete coverage, proof and release acceptance gates are still
 in progress; see [implementation status](IMPLEMENTATION.md).
+Build configurations, benchmarking commands, and profiling limitations are in
+[PERFORMANCE.md](PERFORMANCE.md).
 
 ```powershell
 ./tools/build.ps1
@@ -27,8 +29,10 @@ in progress; see [implementation status](IMPLEMENTATION.md).
 
 The executable requires normal Windows system libraries. Perl is used only by
 the independent development verifier. The selected encodings are UTF-8,
-UTF-16LE/BE and CP932. Conversion attempts Zip-Ada Deflate_R, with its native
-stored-entry fallback; preserved books remain exact copies.
+UTF-16LE/BE and CP932. Conversion uses an owned DEFLATE encoder adapted from
+Zip-Ada, with stored-entry fallback; preserved books remain exact copies.
+Compression strategy may change during optimization, with Perl's zlib level 9
+as the compression-quality floor. See [CODEC_ORIGINS.md](CODEC_ORIGINS.md).
 
 ## Existing Perl behavior and baseline
 
@@ -117,7 +121,7 @@ Replace the Perl regular-expression machinery with small deterministic scanners 
 
 Implement a narrow archive adapter using Zip-Ada's lower-level headers and streams, or maintain a small pinned upstream extension. Preserve raw DOS timestamps and attributes without lossy calendar conversions; check UTF-8 names, empty directories, ZIP64, duplicate names, CRC failures and local/central header consistency. Set case-sensitive name lookup explicitly, since Zip-Ada's Load default is case-insensitive.
 
-[Zip-Ada compression modes](https://github.com/zertovitch/zip-ada/blob/v62/zip_lib/zip-compress.ads) are not zlib's numerical levels. Its Deflate variants cannot truthfully be described as “zlib level 9.” The approved implementation uses Zip.Compress.Deflate_R and permits its native stored-entry fallback when compression is ineffective. No zlib dependency will be added. [zlib_ada](https://alire.ada.dev/crates/zlib_ada) is a binding depending on zlib; merely installing that binding does not establish static linking or source-building of the native dependency. Pin and build the native source explicitly. C dependencies are compatible with an Ada application and the requested single executable.
+[Zip-Ada compression modes](https://github.com/zertovitch/zip-ada/blob/v62/zip_lib/zip-compress.ads) are not zlib's numerical levels. Its Deflate variants cannot truthfully be described as “zlib level 9.” The original implementation selected Deflate_R with stored fallback. Performance work now maintains the required encoder subset in owned source, with no zlib dependency. The revised acceptance requirement is compressed output no larger than Perl's zlib level 9 for each book; strategy may change, but output quality must be measured. [zlib_ada](https://alire.ada.dev/crates/zlib_ada) is a binding depending on zlib; installing it alone would not establish static linking or source-building of the native dependency.
 
 The compression-policy change to the all-Ada compressor was explicitly approved. Compressed byte identity is unnecessary: the Perl fixture tests compare decompressed payloads and specified metadata. Preserved books still require exact whole-file copies.
 

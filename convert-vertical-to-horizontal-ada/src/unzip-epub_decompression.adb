@@ -1,9 +1,11 @@
 with Ada.Finalization;
+with Ada.Exceptions;
 with Ada.Streams;
 with Ada.Strings.Unbounded;
 with Ada.Unchecked_Deallocation;
 with Interfaces;
 with UnZip.Decompress;
+with Epub.Inflate;
 
 package body UnZip.Epub_Decompression is
    use Ada.Strings.Unbounded;
@@ -59,7 +61,7 @@ package body UnZip.Epub_Decompression is
       Free (Owner.Sink);
    end Finalize;
 
-   function Decode
+   function Decode_Compatibility
      (Source_Stream : in out Zip_Streams.Root_Zipstream_Type'Class;
       Metadata : Zip.Headers.Local_File_Header) return String is
       Owner : Output_Owner;
@@ -89,5 +91,20 @@ package body UnZip.Epub_Decompression is
          raise Invalid_Payload with "Decompressed payload is shorter than its declared size";
       end if;
       return To_String (Owner.Sink.all.Bytes);
+   end Decode_Compatibility;
+
+   function Decode
+     (Source_Stream : in out Zip_Streams.Root_Zipstream_Type'Class;
+      Metadata : Zip.Headers.Local_File_Header) return String is
+   begin
+      if Metadata.zip_type in 0 | 8 then
+         begin
+            return Epub.Inflate.Decode (Source_Stream, Metadata);
+         exception
+            when Error : Epub.Inflate.Invalid_Stream =>
+               raise Invalid_Payload with Ada.Exceptions.Exception_Message (Error);
+         end;
+      end if;
+      return Decode_Compatibility (Source_Stream, Metadata);
    end Decode;
 end UnZip.Epub_Decompression;

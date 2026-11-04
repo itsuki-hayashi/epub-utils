@@ -1,0 +1,33 @@
+abstract project Build_Options is
+   type Build_Kind is ("development", "release", "profile");
+   Build : Build_Kind := external ("EPUB_BUILD", "development");
+   type Tuning_Kind is ("portable", "native");
+   Tuning : Tuning_Kind := external ("EPUB_TUNING", "portable");
+   Optimization := ("-O2");
+   C_Optimization := ("-O2");
+   Instrumentation := ();
+   Profiling_Directory := "off";
+   case Build is
+      when "release" =>
+         Optimization := ("-O3", "-gnatn");
+         C_Optimization := ("-O3");
+      when "profile" =>
+         Optimization := ("-O3", "-gnatn");
+         C_Optimization := ("-O3");
+         Profiling_Directory := "on";
+      when others => null;
+   end case;
+   case Tuning is
+      when "native" =>
+         Optimization := Optimization & ("-march=native", "-mtune=native");
+         C_Optimization := C_Optimization & ("-march=native", "-mtune=native");
+      when others => null;
+   end case;
+   type Boolean_Kind is ("false", "true");
+   Linked_Output : Boolean_Kind := external ("EPUB_LINKED_OUTPUT", "false");
+   Gprof : Boolean_Kind := external ("EPUB_GPROF", "false");
+   case Gprof is
+      when "true" => Instrumentation := ("-pg");
+      when others => null;
+   end case;
+end Build_Options;

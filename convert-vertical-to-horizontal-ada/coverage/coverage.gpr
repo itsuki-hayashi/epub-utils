@@ -4,10 +4,11 @@ with "aunit";
 with "../tests/json_dependency.gpr";
 with "../core_containers.gpr";
 with "../tests/native_options.gpr";
+with "../tests/codec_reference.gpr";
 
 project Coverage is
    for Languages use ("Ada", "C");
-   for Source_Dirs use ("../src", "../src/platform/windows", "../tests/src");
+   for Source_Dirs use ("../src", "../src/platform/windows", "../tests/src", "../src/profiling/off");
    for Excluded_Source_Files use ("epub.ads", "epub-lists.ads", "epub-lists.adb");
    for Object_Dir use "../obj/coverage";
    for Exec_Dir use "../bin/coverage";

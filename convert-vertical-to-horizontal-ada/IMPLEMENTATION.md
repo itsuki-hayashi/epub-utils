@@ -3,6 +3,54 @@
 The converter is functional but has not passed all release acceptance gates.
 This file records current evidence and does not replace the agreed plan.
 
+## Performance work in progress
+
+Release and profiling builds now support portable and native CPU tuning, with
+separate object directories. Release optimization retains checks, assertions,
+static linking, and strict owned-code diagnostics. Dependency sources and their
+warning settings are unchanged.
+
+An owned, attributed subset of the Zip-Ada encoder now provides DEFLATE and
+stored fallback. It includes a level-9 lazy matcher, checked word comparisons,
+a linear-time Huffman fast path with bounded package-merge fallback, compact
+token storage, and block-based slicing-by-eight IEEE CRC-32. SHA-256 uses GNAT
+SHA intrinsics when supported, with runtime CPU dispatch and a tested GNAT
+software fallback. The common stored/DEFLATE decoder is owned Ada code, with
+bounded input refills, exact output-size checks, CRC verification and a retained
+Zip-Ada compatibility path for uncommon methods. Compressor input uses a
+lifetime-bound bulk string view; short match prefixes come directly from the
+match finder rather than a reconstructed second dictionary.
+See [CODEC_ORIGINS.md](CODEC_ORIGINS.md) for provenance and licensing. Compressor
+strategy is flexible, but acceptance requires compression at least as good as
+the Perl reference's zlib level 9; a speed improvement cannot waive that gate.
+
+The current shared codec and file-stream tests pass on Windows and Linux:
+110 Windows cases and 75 Linux cases. These include experimental bounded
+RAM-input and append-only buffered-output adapters; neither adapter is enabled
+in production yet. Their speed and peak-memory effects must be measured before
+adoption.
+Conversion now uses file-backed catalogues with shared handle ownership,
+on-demand payload loading, sequential output hashing, and entry-at-a-time
+persisted verification. Source CRC validation still covers every entry before
+analysis returns. No complete input or output ZIP buffer is retained by the
+production conversion path. Preserved books are copied in bounded chunks and
+verified by whole-file digest.
+
+The full paired benchmark confirms lower peak memory and successful
+compression-quality comparisons. Its conversion timings are effectively tied
+with Perl; a reliable speed improvement is not yet established. Benchmarks
+enforce the aggregate compression-quality floor, allowing individual books to
+vary while reporting their count; final
+performance acceptance remains open. Diagnostics are not acceptance evidence.
+
+`tools/benchmark.ps1` performs warm-up, alternating paired runs, single-core
+affinity, and independent payload/metadata verification. Full acceptance uses
+eight pairs without an input limit and an explicit compression gate. Profiling
+executables are diagnostic only. Raw inputs, outputs and measurement artifacts
+must remain outside the repository.
+
+## Earlier functional validation
+
 Linux x86-64 is implemented using separate filesystem and CP932 adapters. It
 builds with the same pinned toolchain and strict owned-source diagnostics.
 The executable is a static ELF with no interpreter or dynamic dependencies.
@@ -17,8 +65,9 @@ The Windows CLI uses GNAT 16.1.0, GPRbuild 26.0.1, Ada 2022, XML/Ada 26.0.0
 and Zip-Ada 62.0.0. All 21 reference EPUBs match the expected classification,
 changed resources, decompressed payloads, entry order, attributes and timestamps.
 Nine books convert and twelve remain exact whole-file copies. Independent Perl
-verification checks all 159 output entries. Converted resources attempt Deflate_R
-with Zip-Ada's native stored fallback; `mimetype` is first and stored.
+verification checks all 159 output entries. The original encoder attempted
+Deflate_R with stored fallback; the owned encoder's changes are described above.
+`mimetype` remains first and stored.
 
 The implementation includes source-preserving CSS/markup scanners, strict UTF-8
 and UTF-16LE/BE handling, Windows CP932 conversion, SAX inspection with entity

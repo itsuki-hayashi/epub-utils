@@ -11,6 +11,9 @@ with Book_Cases;
 with Fault_Cases;
 with Native_Faults;
 with Report_Cases;
+with Codec_Cases;
+with Stream_Cases;
+with Inflate_Cases;
 
 procedure Test_Runner is
    use type AUnit.Status;
@@ -30,6 +33,15 @@ procedure Test_Runner is
       for Kind in Core_Cases.Case_Kind loop
          Result.all.Add_Test (Core_Cases.Create (Kind));
       end loop;
+      for Kind in Codec_Cases.Case_Kind loop
+         Result.all.Add_Test (Codec_Cases.Create (Kind));
+      end loop;
+      for Kind in Stream_Cases.Case_Kind loop
+         Result.all.Add_Test (Stream_Cases.Create (Kind));
+      end loop;
+      for Kind in Inflate_Cases.Case_Kind loop
+         Result.all.Add_Test (Inflate_Cases.Create (Kind));
+      end loop;
       for Kind in Book_Cases.Case_Kind loop
          Result.all.Add_Test (Book_Cases.Create (Kind));
       end loop;
@@ -39,6 +51,12 @@ procedure Test_Runner is
       for Kind in Native_Faults.Operation loop
          if Kind /= Native_Faults.None then
             Result.all.Add_Test (Fault_Cases.Create (Kind));
+         end if;
+         if Kind in Native_Faults.Open_File | Native_Faults.Read_File | Native_Faults.Zero_Read |
+           Native_Faults.File_Size | Native_Faults.Write_File | Native_Faults.Zero_Write |
+           Native_Faults.Flush_File | Native_Faults.Close_File | Native_Faults.Move_File
+         then
+            Result.all.Add_Test (Fault_Cases.Create (Kind, Streaming => True));
          end if;
       end loop;
       Result.all.Add_Test (Fault_Cases.Create (Native_Faults.Current_Directory, Skip => 1));

@@ -41,7 +41,7 @@ function Run-Converter([string[]]$Arguments, [switch]$CleanPath, [string]$Workin
 
 $manifest = Get-Content -LiteralPath $manifestPath -Raw | ConvertFrom-Json
 $help = Run-Converter @('--help')
-Check ($help.Code -eq 0 -and $help.Output -match '--analyze-only' -and $help.Output -match 'Deflate_R') 'Help output'
+Check ($help.Code -eq 0 -and $help.Output -match '--analyze-only' -and $help.Output -match 'DEFLATE') 'Help output'
 $scenarios.Add('Help describes supported options and compression policy')
 $originalHashes = @{}
 foreach ($case in $manifest) {

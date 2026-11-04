@@ -19,6 +19,13 @@ int epub_open(const char *path, int exclusive)
 }
 
 int epub_close(int fd) { return close(fd) == 0 ? 0 : -errno; }
+int epub_seek(int fd, long long offset)
+{
+    off_t result;
+    do { result = lseek(fd, (off_t)offset, SEEK_SET); }
+    while (result < 0 && errno == EINTR);
+    return result < 0 ? -errno : 0;
+}
 int epub_flush(int fd)
 {
     int result;

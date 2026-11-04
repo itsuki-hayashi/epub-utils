@@ -1,3 +1,4 @@
+with Epub.Performance;
 with Ada.Characters.Handling;
 with Ada.Exceptions;
 with Ada.Finalization;
@@ -5,7 +6,7 @@ with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
 with Ada.Strings.UTF_Encoding.Wide_Wide_Strings;
 with Ada.Text_IO;
-with GNAT.SHA256;
+with Epub.Digests;
 with Interfaces;
 with Interfaces.C;
 with System.Address_To_Access_Conversions;
@@ -316,14 +317,30 @@ package body Epub.Files is
              "Cannot publish without replacement: " & Destination);
    end Publish;
 
-   procedure Write_Checked (Destination, Bytes : String) is
+   procedure Write_Checked (Destination, Bytes : String; Expected_SHA256 : String := "") is
       Temporary : Unbounded_String;
+      Expected : Unbounded_String;
       Reserved : aliased Boolean := False;
       State : Epub.Publication.State := Epub.Publication.Unverified;
    begin
       if Exists (Destination) then
          raise File_Error with "Refusing to overwrite: " & Destination;
       end if;
+      if Expected_SHA256 = "" then
+         Epub.Performance.Start (Epub.Performance.Hashing);
+         Expected := To_Unbounded_String (Ada.Characters.Handling.To_Upper (Epub.Digests.Digest (Bytes)));
+         Epub.Performance.Stop (Epub.Performance.Hashing);
+      else
+         Expected := To_Unbounded_String (Ada.Characters.Handling.To_Upper (Expected_SHA256));
+      end if;
+      if Length (Expected) /= 64 then
+         raise File_Error with "Invalid expected SHA-256 digest";
+      end if;
+      for Value of To_String (Expected) loop
+         if Value not in '0' .. '9' | 'A' .. 'F' then
+            raise File_Error with "Invalid expected SHA-256 digest";
+         end if;
+      end loop;
       loop
          Sequence := Sequence + 1;
          Temporary := To_Unbounded_String (Join (Parent_Path (Destination),
@@ -331,20 +348,26 @@ package body Epub.Files is
            & "-" & Ada.Strings.Fixed.Trim (Sequence'Image, Ada.Strings.Both) & ".tmp"));
          exit when not Exists (To_String (Temporary));
       end loop;
+      Epub.Performance.Start (Epub.Performance.Output_Write);
       Save_Exclusive (To_String (Temporary), Bytes, Reserved'Access);
+      Epub.Performance.Stop (Epub.Performance.Output_Write);
       declare
          Saved : constant String := Read (To_String (Temporary));
       begin
-         if GNAT.SHA256.Digest (Saved) /= GNAT.SHA256.Digest (Bytes) then
+         Epub.Performance.Start (Epub.Performance.Hashing);
+         if Ada.Characters.Handling.To_Upper (Epub.Digests.Digest (Saved)) /= To_String (Expected) then
             raise File_Error with "Temporary output verification failed";
          end if;
+         Epub.Performance.Stop (Epub.Performance.Hashing);
          Verify_Bytes (Saved);
          Epub.Publication.Mark_Verified (State);
       end;
       if not Epub.Publication.Eligible (State, Exists (Destination)) then
          raise File_Error with "Refusing to publish unverified output or overwrite: " & Destination;
       end if;
+      Epub.Performance.Start (Epub.Performance.Publication);
       Publish (To_String (Temporary), Destination);
+      Epub.Performance.Stop (Epub.Performance.Publication);
       Epub.Publication.Mark_Published (State);
       pragma Assert (State = Epub.Publication.Published);
       Reserved := False;
@@ -362,7 +385,7 @@ package body Epub.Files is
          raise;
    end Write_Checked;
 
-   procedure Write_Verified (Destination, Bytes : String) is
+   procedure Write_Verified (Destination, Bytes : String; Expected_SHA256 : String := "") is
       procedure No_Additional_Check (Saved : String) is
          pragma Unreferenced (Saved);
       begin
@@ -370,7 +393,7 @@ package body Epub.Files is
       end No_Additional_Check;
       procedure Save is new Write_Checked (No_Additional_Check);
    begin
-      Save (Destination, Bytes);
+      Save (Destination, Bytes, Expected_SHA256);
    end Write_Verified;
 
    procedure Sort (Items : in out Epub.Resources.String_Lists.Vector) is
