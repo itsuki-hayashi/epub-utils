@@ -1,5 +1,8 @@
 # Performance builds and validation
 
+Instruction-level CRC acceleration, its rejected matcher experiment and release
+measurements are documented in [SIMD_PERFORMANCE.md](SIMD_PERFORMANCE.md).
+
 The thread-only XML fork is documented in [XML_CONCURRENCY.md](XML_CONCURRENCY.md).
 Use `-MemoryPolicy FrozenParallel` for its promotion comparisons: the candidate's
 worst measured peak must stay within four times the frozen matching-workload
@@ -234,7 +237,8 @@ elapsed time rather than the sum of accounted timers as the denominator.
 - Case-sensitive first-occurrence indexes accelerate archive and manifest lookup.
   Ordered vectors and deep-copy ownership remain intact. Scoped read-only queries
   avoid controlled-element copies in attribute lookup and persisted verification.
-- Owned CRC uses slicing-by-eight IEEE CRC-32. SHA-256 processes multiple blocks
+- Owned CRC uses runtime-dispatched PCLMUL folding with a slicing-by-eight IEEE
+  CRC-32 fallback. SHA-256 processes multiple blocks
   per call using GNAT CPU intrinsics
   after runtime feature detection, with GNAT's portable implementation retained
   and independently exercised as a forced fallback.

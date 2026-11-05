@@ -16,6 +16,15 @@ for --jobs, scheduling, memory, publication, and validation.
 
 ## Current executable
 
+Use `bin/release-native-sections/epub-v2h.exe` for optimized conversion on the
+machine that built it. Build it with
+`./tools/build.ps1 -BuildKind release -CpuTuning native -SectionGC`.
+For other x86-64 machines, build with `-CpuTuning portable` and use
+`bin/release-portable-sections/epub-v2h.exe`. Both retain runtime checks,
+assertions, the fixed book-worker pool and CPU-dispatched checksum acceleration.
+See [instruction optimization results](SIMD_PERFORMANCE.md) for measurements,
+binary identities and preservation checks.
+
 The Windows executable now converts the 21 reference EPUBs with matching
 classification, changed-entry lists, payloads and specified ZIP metadata.
 The complete coverage, proof and release acceptance gates are still

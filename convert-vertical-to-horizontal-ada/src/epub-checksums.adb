@@ -1,3 +1,5 @@
+with Epub.Checksums.Hardware;
+
 package body Epub.Checksums is
    use Interfaces;
    type Lookup_Table is array (Natural range 0 .. 7, Natural range 0 .. 255) of Unsigned_32;
@@ -22,15 +24,27 @@ package body Epub.Checksums is
       return Result;
    end Make_Tables;
    Tables : constant Lookup_Table := Make_Tables;
+   function Hardware_Available return Boolean is (Hardware.Available);
    procedure Init (CRC : out Unsigned_32) is
    begin
       CRC := 16#FFFF_FFFF#;
    end Init;
-   procedure Update (CRC : in out Unsigned_32; Bytes : Zip.Byte_Buffer) is
+   procedure Update (CRC : in out Unsigned_32; Bytes : Zip.Byte_Buffer;
+                     Software_Only : Boolean := False) is
       Position : Integer := Bytes'First;
       Value : Unsigned_32 := CRC;
       Remaining : Natural := Bytes'Length;
    begin
+      if Hardware.Available and then not Software_Only and then Remaining >= 64 then
+         declare
+            Count : constant Positive := Remaining / 16 * 16;
+         begin
+            Hardware.Update (Value, Bytes (Position .. Position + (Count - 1)));
+            Remaining := Remaining - Count;
+            if Remaining = 0 then CRC := Value; return; end if;
+            Position := Position + Count;
+         end;
+      end if;
       while Remaining >= 8 loop
          Value := Value xor (Unsigned_32 (Bytes (Position)) or
            Shift_Left (Unsigned_32 (Bytes (Position + 1)), 8) or

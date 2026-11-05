@@ -4,158 +4,158 @@
 == 1. ASSESSMENT CONTEXT ==
 ===========================
 
-Date and time of execution: 2026-11-05 15:35:14 +09:00
+Date and time of execution: 2026-11-05 17:12:25 +09:00
 Tool version: XCOV FSF 26.2
 
 Command line:
-C:\Users\Itsuki\AppData\Local\alire\cache\releases\gnatcov_26.2.1_625863ef\bin\gnatcov.exe coverage -P coverage.gpr --subdirs=standalone --units=epub.* --units=unzip.epub_decompression --units=epub_v2h_main --projects=Coverage --projects=Core_Containers --no-subprojects --level=stmt+mcdc --annotate=report -o C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\verification\coverage-latest.txt @C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces.list -XEPUB_XML_ROLE=coverage
+C:\Users\Itsuki\AppData\Local\alire\cache\releases\gnatcov_26.2.1_625863ef\bin\gnatcov.exe coverage -P coverage.gpr --subdirs=standalone --units=epub.* --units=unzip.epub_decompression --units=epub_v2h_main --projects=Coverage --projects=Core_Containers --no-subprojects --level=stmt+mcdc --annotate=report -o C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\verification\coverage-latest.txt @C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces.list -XEPUB_XML_ROLE=coverage
 
 Coverage level: stmt+mcdc
 
 Trace files:
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-1824-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-322c-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-1d8c-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-3414-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-35f8-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-51c0-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-49b4-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-82c4-6aec3a63-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:19 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-5790-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-8e7c-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-689c-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-9f5c-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-83a4-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-9f9c-6aec3a63-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:19 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-84bc-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-ac34-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-86d0-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-b054-6aec3a63-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:19 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-88d8-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-b874-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-9240-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-c0f4-6aec3a63-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:19 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-9d28-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-c358-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-a780-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-d004-6aec3a61-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:17 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-aa98-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-d054-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-ab68-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-d224-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-ad5c-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-db60-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-b3a8-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e23c-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-b5d8-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e3f0-6aec3a63-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:19 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-bda8-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e440-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-bf2c-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e458-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-c568-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e4c4-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-cbd0-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e524-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-cd2c-6aec239c-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e5c0-6aec3a62-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:08 +09:00
+  date     : 2026-11-05 17:12:18 +09:00
   tag      :
 
-C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-8710d8003e58449192e384174a3b3aa6\traces\epub-6aec237d-e18-6aec239b-0.srctrace
+C:\Users\Itsuki\workspace\epub-utils\convert-vertical-to-horizontal-ada\test-results\coverage-6126e6e3a5a4473094ddcd4151ca34ff\traces\epub-6aec3a3d-e718-6aec3a63-0.srctrace
   kind     : source
   program  : Coverage
-  date     : 2026-11-05 15:35:07 +09:00
+  date     : 2026-11-05 17:12:19 +09:00
   tag      :
 
 ============================
@@ -625,6 +625,7 @@ epub-books.adb:81:69: condition has no independent influence pair, MC/DC not ach
 epub-books.adb:86:24: condition has no independent influence pair, MC/DC not achieved
 epub-books.adb:107:24: condition has no independent influence pair, MC/DC not achieved
 epub-books.adb:142:54: decision outcome FALSE never exercised
+epub-checksums.adb:38:10: condition has no independent influence pair, MC/DC not achieved
 epub-cli.adb:163:33: condition has no independent influence pair, MC/DC not achieved
 epub-cli.adb:163:54: condition has no independent influence pair, MC/DC not achieved
 epub-code_pages.adb:63:13: condition has no independent influence pair, MC/DC not achieved
@@ -711,7 +712,7 @@ epub-xml.adb:357:90: condition has no independent influence pair, MC/DC not achi
 epub-xml.adb:358:24: condition has no independent influence pair, MC/DC not achieved
 epub-xml.adb:359:24: condition has no independent influence pair, MC/DC not achieved
 
-106 violations.
+107 violations.
 
 =========================
 == 3. ANALYSIS SUMMARY ==
@@ -719,6 +720,6 @@ epub-xml.adb:359:24: condition has no independent influence pair, MC/DC not achi
 
 251 STMT violations.
 176 DECISION violations.
-106 MCDC violations.
+107 MCDC violations.
 
 ** END OF REPORT **

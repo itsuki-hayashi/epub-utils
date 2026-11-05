@@ -17,7 +17,7 @@ checkout reviewed for matching and checksum techniques was commit
 | `Epub.Huffman.Encoding` | Canonical-code construction adapted from `Huffman.Encoding`. |
 | `Epub.Huffman.Length_Limited_Coding` | Boundary package-merge adaptation; a bounded monotonic arena with compact indices replaces pool scans and garbage collection. An owned linear-time two-queue fast path handles ordinary trees already satisfying the bit limit. Differential and exhaustive tests require identical lengths and tie decisions. |
 | `Epub.Word_Operations` | Application implementation using checked spans, unaligned word loads and GNAT's trailing-zero intrinsic. No out-of-span loads or zero-input intrinsic calls. |
-| `Epub.Checksums` | Application implementation of slicing-by-eight IEEE CRC-32. It does not substitute the different CRC-32C polynomial implemented by SSE4.2's CRC instruction. |
+| `Epub.Checksums`, `Epub.Checksums.Hardware` | Slicing-by-eight IEEE CRC-32 with a runtime-dispatched PCLMUL folding path. The bounded Ada adaptation of Chromium's 128-bit folding/reduction algorithm uses the same reflected IEEE polynomial, software tails and a forced-software test path. It does not substitute SSE4.2 CRC-32C. Attribution and BSD license are below. No C codec is compiled. |
 | `Epub.Digests` | Application SHA-256 buffering and padding, with GNAT bindings to the SHA round/message intrinsics. Only feature detection uses inline CPUID assembly. FIPS 180-4 defines the standard constants and hash behavior; no third-party SHA implementation is copied. CPUs without SHA support and forced-software tests use `GNAT.SHA256`. |
 | `Epub.Inflate` | Application RFC 1951 stored/DEFLATE decoder, written in Ada. Uses a nine-bit primary Huffman table with canonical long-code fallback, bounded word refills, an opportunistic second-literal path, exact output allocation, geometric dictionary copying and IEEE CRC checks. Reviewed zlib-ng's table/state organization; no C decoder source is copied or linked. |
 
@@ -45,6 +45,45 @@ CPUID before entering that function. Native-tuned builds retain their documented
 machine-specific instruction requirements. Known-answer and differential tests
 cover padding boundaries, fragmented updates, non-consuming digest calls,
 unaligned input views, and the forced GNAT fallback.
+
+The CRC folding reference is Chromium `third_party/zlib/crc32_simd.c`, Git blob
+`f9d52a6311e9b45452d02109536bb95f5812b951`, copyright 2017 The Chromium Authors.
+The downloaded source SHA-256 is
+`b15894ba217a111236b481f551c985e9375a4bb8dd8db4d2e74e055b1631ace3`;
+its computed Git blob identity matches the upstream record.
+The reflected fold constants and Barrett reduction are adapted into Ada; the
+four-lane path processes only complete 16-byte blocks with a minimum of 64 bytes.
+CPUID leaf 1's PCLMUL bit guards the `pclmul,sse2` target-specific function. Short
+inputs and remaining bytes use the original slicing-by-eight implementation.
+All stream state remains caller-owned. See [the primary source](https://chromium.googlesource.com/chromium/src/+/refs/heads/main/third_party/zlib/crc32_simd.c).
+
+## Chromium CRC adaptation license
+
+Copyright 2017 The Chromium Authors. The Chromium repository license also carries
+Copyright 2015 The Chromium Authors.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+* Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+* Redistributions in binary form must reproduce the above copyright notice,
+  this list of conditions and the following disclaimer in the documentation
+  and/or other materials provided with the distribution.
+* Neither the name of Google LLC nor the names of its contributors may be used
+  to endorse or promote products derived from this software without specific
+  prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
+THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
+IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Original license for adapted portions
 

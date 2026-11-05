@@ -99,6 +99,7 @@ try {
         Copy-Item -LiteralPath (Join-Path (Split-Path $linked -Parent) 'epub-v2h.map') -Destination (Split-Path $binary -Parent) -Force
         & alr -n exec -- strip --preserve-dates --strip-debug --strip-unneeded $binary
         if ($LASTEXITCODE -ne 0) { throw 'Stripping release binary failed.' }
+        Copy-Item -LiteralPath (Join-Path $projectDirectory 'CODEC_ORIGINS.md') -Destination (Split-Path $binary -Parent) -Force
     } elseif ($isolated) {
         $destination = Join-Path $projectDirectory "bin/$suffix"
         $linkedDirectory = Join-Path $projectDirectory "obj/linked/$buildSubdirectory"

@@ -1,13 +1,13 @@
 {
-  "StatementPercent": 93.89,
-  "DecisionPercent": 75.88,
+  "StatementPercent": 93.97,
+  "DecisionPercent": 76.08,
   "StatementCounts": [
-    3857,
-    4108
+    3914,
+    4165
   ],
   "DecisionCounts": [
-    645,
-    850
+    652,
+    857
   ],
   "RequiredCorePass": true,
   "ApplicationCoveragePass": false,
@@ -148,18 +148,33 @@
       ]
     },
     {
-      "Unit": "epub-checksums.adb",
+      "Unit": "epub-checksums-hardware.adb",
       "Statements": [
-        34,
-        34
+        48,
+        48
       ],
       "Decisions": [
-        4,
-        4
+        5,
+        5
       ],
       "MCDC": [
-        4,
-        4
+        5,
+        5
+      ]
+    },
+    {
+      "Unit": "epub-checksums.adb",
+      "Statements": [
+        43,
+        43
+      ],
+      "Decisions": [
+        6,
+        6
+      ],
+      "MCDC": [
+        7,
+        8
       ]
     },
     {

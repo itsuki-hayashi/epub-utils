@@ -10,6 +10,8 @@ with Epub.Digests;
 with GNAT.SHA256;
 with Ada.Characters.Handling;
 with Ada.Streams;
+with Interfaces.C;
+with System;
 
 package body Codec_Cases is
    use AUnit.Assertions;
@@ -23,7 +25,8 @@ package body Codec_Cases is
    end Create;
    overriding function Name (Item : Unit_Case) return AUnit.Message_String is
      (AUnit.Format ("Codec: " & Item.Kind'Image &
-       (if Item.Kind = SHA_Differential then " hardware=" & Epub.Digests.Hardware_Available'Image else "")));
+       (if Item.Kind = SHA_Differential then " hardware=" & Epub.Digests.Hardware_Available'Image
+        elsif Item.Kind = CRC_Compatibility then " hardware=" & Epub.Checksums.Hardware_Available'Image else "")));
 
    overriding procedure Run_Test (Item : in out Unit_Case) is
       subtype Symbol is Test_Huffman.Symbol;
@@ -292,8 +295,8 @@ package body Codec_Cases is
       end if;
       if Item.Kind = CRC_Compatibility then
          declare
-            Buffer : Zip.Byte_Buffer (0 .. 32_775);
-            Expected_CRC, Whole_CRC, Split_CRC : Interfaces.Unsigned_32;
+            Buffer : Zip.Byte_Buffer (0 .. 32_799);
+            Expected_CRC, Whole_CRC, Split_CRC, Software_CRC : Interfaces.Unsigned_32;
             type Size_List is array (Positive range <>) of Natural;
          begin
             for Index in Buffer'Range loop
@@ -302,12 +305,16 @@ package body Codec_Cases is
             end loop;
             Assert (Epub.Checksums.CRC32 ("") = 0, "Empty IEEE CRC-32");
             Assert (Epub.Checksums.CRC32 ("123456789") = 16#CBF4_3926#, "ZIP IEEE polynomial known answer");
-            for Alignment in 0 .. 7 loop
-               for Size of Size_List'[0, 1, 2, 3, 7, 8, 9, 15, 16, 17, 255, 256, 257, 32_767, 32_768] loop
+            for Alignment in 0 .. 31 loop
+               for Size of Size_List'[0, 1, 2, 3, 7, 8, 9, 15, 16, 17, 31, 32, 33, 63, 64, 65,
+                                     79, 80, 81, 127, 128, 129, 255, 256, 257, 32_767, 32_768] loop
                   Zip.CRC_Crypto.Init (Expected_CRC);
                   Zip.CRC_Crypto.Update (Expected_CRC, Buffer (Alignment .. Alignment + Size - 1));
                   Epub.Checksums.Init (Whole_CRC);
                   Epub.Checksums.Update (Whole_CRC, Buffer (Alignment .. Alignment + Size - 1));
+                  Epub.Checksums.Init (Software_CRC);
+                  Epub.Checksums.Update (Software_CRC, Buffer (Alignment .. Alignment + Size - 1), Software_Only => True);
+                  Assert (Software_CRC = Whole_CRC, "Hardware CRC agrees with forced software path");
                   Assert (Epub.Checksums.Final (Whole_CRC) = Zip.CRC_Crypto.Final (Expected_CRC), "Slicing-by-eight CRC");
                   declare
                      Bytes : String (7 .. Size + 6);
@@ -321,19 +328,65 @@ package body Codec_Cases is
                   Epub.Checksums.Init (Split_CRC);
                   declare
                      Position : Natural := Alignment;
+                     Step : Natural := 0;
+                     Chunks : constant Size_List := [1, 7, 15, 16, 63, 64, 65, 257, 4096];
                   begin
                      while Position < Alignment + Size loop
                         declare
-                           Count : constant Positive := Positive'Min (13, Alignment + Size - Position);
+                           Count : constant Positive := Positive'Min
+                             (Chunks (Step mod Chunks'Length + Chunks'First), Alignment + Size - Position);
                         begin
                            Epub.Checksums.Update (Split_CRC, Buffer (Position .. Position + Count - 1));
                            Position := Position + Count;
+                           Step := Step + 1;
                         end;
                      end loop;
                   end;
                   Assert (Split_CRC = Whole_CRC, "Streaming CRC agrees across unaligned chunks");
                end loop;
             end loop;
+            declare
+               Edge : Zip.Byte_Buffer (Integer'Last - 80 .. Integer'Last);
+            begin
+               Edge := Buffer (0 .. 80);
+               Epub.Checksums.Init (Whole_CRC);
+               Epub.Checksums.Init (Software_CRC);
+               Epub.Checksums.Update (Whole_CRC, Edge);
+               Epub.Checksums.Update (Software_CRC, Buffer (0 .. 80), Software_Only => True);
+               Assert (Whole_CRC = Software_CRC, "CRC span ending at Integer'Last");
+            end;
+            declare
+               use type System.Address;
+               function Guard_Open (Size : access Interfaces.C.size_t) return System.Address
+                 with Import, Convention => C, External_Name => "epub_test_codec_guard_open";
+               procedure Guard_Close (Address : System.Address; Size : Interfaces.C.size_t)
+                 with Import, Convention => C, External_Name => "epub_test_codec_guard_close";
+               Size : aliased Interfaces.C.size_t := 0;
+               Address : constant System.Address := Guard_Open (Size'Access);
+            begin
+               Assert (Address /= System.Null_Address, "Allocate inaccessible pages around the CRC input");
+               declare
+                  Bytes : Zip.Byte_Buffer (0 .. Integer (Size) - 1) with Import, Address => Address;
+               begin
+                  for Index in Bytes'Range loop Bytes (Index) := Interfaces.Unsigned_8 (Index mod 251); end loop;
+                  for Length in 0 .. 256 loop
+                     Random := Random * 1_664_525 + 1_013_904_223;
+                     Whole_CRC := Random;
+                     Software_CRC := Random;
+                     Epub.Checksums.Update (Whole_CRC, Bytes (Bytes'Last - Length + 1 .. Bytes'Last));
+                     Epub.Checksums.Update (Software_CRC, Bytes (Bytes'Last - Length + 1 .. Bytes'Last), Software_Only => True);
+                     Assert (Whole_CRC = Software_CRC, "No CRC read past a protected page for every tail/alignment");
+                  end loop;
+                  Epub.Checksums.Init (Whole_CRC);
+                  Epub.Checksums.Init (Software_CRC);
+                  Epub.Checksums.Update (Whole_CRC, Bytes (0 .. 127));
+                  Epub.Checksums.Update (Software_CRC, Bytes (0 .. 127), Software_Only => True);
+                  Assert (Whole_CRC = Software_CRC, "No CRC read before the protected input page");
+               end;
+               Guard_Close (Address, Size);
+            exception
+               when others => Guard_Close (Address, Size); raise;
+            end;
          end;
          return;
       end if;
@@ -348,7 +401,7 @@ package body Codec_Cases is
                Data (Index) := Interfaces.Unsigned_8 (Index mod 251);
             end loop;
             Assert (Match (Data, -100, 5000, 0) = 0, "Zero-length spans do not load memory");
-            for Alignment in 0 .. 7 loop
+            for Alignment in 0 .. 31 loop
                for Mismatch in 0 .. 258 loop
                   declare
                      Left : constant Integer := 16 + Alignment;

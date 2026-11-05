@@ -86,6 +86,7 @@ if [ "$build_kind" = release ]; then
     cp "$linked" "$binary"
     cp "$linked.map" "$(dirname "$binary")/epub-v2h.map"
     alr -n exec -- strip --preserve-dates --strip-debug --strip-unneeded "$binary"
+    cp CODEC_ORIGINS.md "$(dirname "$binary")/CODEC_ORIGINS.md"
 elif [ "$linked_output" = true ]; then
     destination=bin/linux/$suffix
     mkdir -p "$destination"

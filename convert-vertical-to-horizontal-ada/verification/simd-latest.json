@@ -1,0 +1,411 @@
+{
+  "Date": "2026-11-05",
+  "CPU": "AMD Ryzen 9 7950X3D",
+  "BaselineCommit": "decadc0836d04948a086c3f6357ee1b94c03ad85",
+  "ControlBinarySHA256": "2E7662A990A15B0EBB81B39E75865CACBBF7CEF6E9D1F47A8F04211CA6236FE7",
+  "CandidateBinarySHA256": "2EAC4054BB5F6D418AE8FD627F4835FC7CFDAE3F586B8C09E5E524A0144D78DC",
+  "PortableBinarySHA256": "F1A0CB53ACE981C20C1C7D42460138AFF9D137B64D7A3CED7C3D7E3645EF59ED",
+  "LinuxNativeBinarySHA256": "9D793CEE1183ED781851F4FACFC9ABF376F280434F4DCCAA7678C0F2E2FEAC85",
+  "LinuxPortableBinarySHA256": "059DA95E1F3D2F4110FA02DA7E4E044AE25CA0A5E5A154185CCD40879ED1BD32",
+  "ForkSourceSHA256": "65cb5f52604c8432f83ada2cea5ce066a6bcda20c0d55b125130ddb1848e8480",
+  "PrimaryObjective": "Single-core instruction optimization and separately qualified 16-worker Converted throughput",
+  "SingleCorePromotable": true,
+  "ParallelConvertedPromotable": true,
+  "ParallelMixedThreePercentTargetMet": false,
+  "TuningBooks": 266,
+  "HoldoutBooks": 71,
+  "ExactArchiveBooks": 337,
+  "Converted": 322,
+  "Preserved": 15,
+  "Errors": 0,
+  "CompressedPayloadBytes": 3053535091,
+  "PerlCompressedPayloadBytes": 3054746896,
+  "BooksGrowingVsAda": 0,
+  "BooksGrowingVsPerl": 51,
+  "WindowsUnitTests": 141,
+  "LinuxUnitTests": 91,
+  "LinuxNativeFaultCases": 19,
+  "RequiredProofChecks": 67,
+  "CoverageStatementPercent": 93.97,
+  "CoverageDecisionPercent": 76.08,
+  "RequiredCoreCoveragePass": true,
+  "GlobalCoveragePass": false,
+  "CRCUnitStatements": [
+    48,
+    48
+  ],
+  "CRCUnitDecisions": [
+    5,
+    5
+  ],
+  "Comparisons": [
+    {
+      "Label": "crc-holdout-converted-1",
+      "Workload": "Converted",
+      "Books": 68,
+      "Workers": 1,
+      "Pairs": 8,
+      "ControlMedianSeconds": 17.9022529,
+      "CandidateMedianSeconds": 17.266109450000002,
+      "Speedup": 1.0368434737334529,
+      "Lower95": 1.0325190767882984,
+      "Upper95": 1.0416929107637656,
+      "ControlMedianCPUSeconds": 17.0859375,
+      "CandidateMedianCPUSeconds": 16.421875,
+      "ControlMedianPeakBytes": 23234560.0,
+      "CandidateMedianPeakBytes": 22450176.0,
+      "CandidateWorstPeakBytes": 22474752.0,
+      "MemoryLimitBytes": 46469120.0,
+      "MemoryPass": true,
+      "LatencyPass": true,
+      "ThreePercentTimingPass": true
+    },
+    {
+      "Label": "crc-holdout-preserved-1",
+      "Workload": "Preserved",
+      "Books": 3,
+      "Workers": 1,
+      "Pairs": 8,
+      "ControlMedianSeconds": 0.45894935000000003,
+      "CandidateMedianSeconds": 0.45184945,
+      "Speedup": 1.0157129769661113,
+      "Lower95": 0.9969875622188056,
+      "Upper95": 1.0266713509377168,
+      "ControlMedianCPUSeconds": 0.40625,
+      "CandidateMedianCPUSeconds": 0.390625,
+      "ControlMedianPeakBytes": 13606912.0,
+      "CandidateMedianPeakBytes": 13631488.0,
+      "CandidateWorstPeakBytes": 13643776.0,
+      "MemoryLimitBytes": 27213824.0,
+      "MemoryPass": true,
+      "LatencyPass": true,
+      "ThreePercentTimingPass": false
+    },
+    {
+      "Label": "crc-holdout-1",
+      "Workload": "Mixed",
+      "Books": 71,
+      "Workers": 1,
+      "Pairs": 8,
+      "ControlMedianSeconds": 18.3168765,
+      "CandidateMedianSeconds": 17.621009649999998,
+      "Speedup": 1.0394907479095559,
+      "Lower95": 1.0280775098036745,
+      "Upper95": 1.0482488784399557,
+      "ControlMedianCPUSeconds": 17.453125,
+      "CandidateMedianCPUSeconds": 16.71875,
+      "ControlMedianPeakBytes": 22347776.0,
+      "CandidateMedianPeakBytes": 22779904.0,
+      "CandidateWorstPeakBytes": 22831104.0,
+      "MemoryLimitBytes": 44695552.0,
+      "MemoryPass": true,
+      "LatencyPass": true,
+      "ThreePercentTimingPass": true
+    },
+    {
+      "Label": "crc-holdout-converted",
+      "Workload": "Converted",
+      "Books": 68,
+      "Workers": 16,
+      "Pairs": 8,
+      "ControlMedianSeconds": 1.51525655,
+      "CandidateMedianSeconds": 1.45977305,
+      "Speedup": 1.0380083054691276,
+      "Lower95": 1.0183671359051327,
+      "Upper95": 1.0589334975552311,
+      "ControlMedianCPUSeconds": 19.015625,
+      "CandidateMedianCPUSeconds": 18.3515625,
+      "ControlMedianPeakBytes": 104019968.0,
+      "CandidateMedianPeakBytes": 106702848.0,
+      "CandidateWorstPeakBytes": 110039040.0,
+      "MemoryLimitBytes": 416079872.0,
+      "MemoryPass": true,
+      "LatencyPass": true,
+      "ThreePercentTimingPass": true
+    },
+    {
+      "Label": "crc-holdout-preserved",
+      "Workload": "Preserved",
+      "Books": 3,
+      "Workers": 16,
+      "Pairs": 8,
+      "ControlMedianSeconds": 0.33035545,
+      "CandidateMedianSeconds": 0.33220784999999997,
+      "Speedup": 0.9944239728230384,
+      "Lower95": 0.9909921058342339,
+      "Upper95": 1.012877741884177,
+      "ControlMedianCPUSeconds": 0.390625,
+      "CandidateMedianCPUSeconds": 0.3828125,
+      "ControlMedianPeakBytes": 17037312.0,
+      "CandidateMedianPeakBytes": 16930816.0,
+      "CandidateWorstPeakBytes": 17022976.0,
+      "MemoryLimitBytes": 68149248.0,
+      "MemoryPass": true,
+      "LatencyPass": true,
+      "ThreePercentTimingPass": false
+    },
+    {
+      "Label": "crc-holdout-16",
+      "Workload": "Mixed",
+      "Books": 71,
+      "Workers": 16,
+      "Pairs": 8,
+      "ControlMedianSeconds": 1.53754765,
+      "CandidateMedianSeconds": 1.49747375,
+      "Speedup": 1.0267610033230967,
+      "Lower95": 1.0200235702225815,
+      "Upper95": 1.0335897677808843,
+      "ControlMedianCPUSeconds": 19.296875,
+      "CandidateMedianCPUSeconds": 18.7109375,
+      "ControlMedianPeakBytes": 103673856.0,
+      "CandidateMedianPeakBytes": 104816640.0,
+      "CandidateWorstPeakBytes": 106897408.0,
+      "MemoryLimitBytes": 414695424.0,
+      "MemoryPass": true,
+      "LatencyPass": true,
+      "ThreePercentTimingPass": false
+    },
+    {
+      "Label": "crc-preserved",
+      "Workload": "Preserved",
+      "Books": 15,
+      "Workers": 16,
+      "Pairs": 8,
+      "ControlMedianSeconds": 0.7775844999999999,
+      "CandidateMedianSeconds": 0.7665380500000001,
+      "Speedup": 1.0144108306169535,
+      "Lower95": 1.001737022896955,
+      "Upper95": 1.024586605414433,
+      "ControlMedianCPUSeconds": 2.0234375,
+      "CandidateMedianCPUSeconds": 1.984375,
+      "ControlMedianPeakBytes": 42915840.0,
+      "CandidateMedianPeakBytes": 43442176.0,
+      "CandidateWorstPeakBytes": 45608960.0,
+      "MemoryLimitBytes": 171663360.0,
+      "MemoryPass": true,
+      "LatencyPass": true,
+      "ThreePercentTimingPass": false
+    }
+  ],
+  "PerlMemoryProbe": {
+    "Pairs": 1,
+    "Purpose": "Matching-workload memory safeguard, not timing qualification",
+    "Books": 71,
+    "PerlPeakBytes": 77180928.0,
+    "CandidateWorstQualifiedSingleWorkerPeakBytes": 22831104.0,
+    "BelowPerl": true
+  },
+  "Profiles": [
+    {
+      "Workers": 1,
+      "InstrumentedOnly": true,
+      "AccountedTaskWallSeconds": 18.136612602,
+      "Ranking": [
+        {
+          "Phase": "MATCH_FINDING",
+          "ExclusiveSeconds": 7.211485162,
+          "Fraction": 0.39762028997657256
+        },
+        {
+          "Phase": "DECOMPRESSION",
+          "ExclusiveSeconds": 4.132001618,
+          "Fraction": 0.22782653567537453
+        },
+        {
+          "Phase": "ENTROPY_ENCODING",
+          "ExclusiveSeconds": 1.347215656,
+          "Fraction": 0.0742815478041052
+        },
+        {
+          "Phase": "HASHING",
+          "ExclusiveSeconds": 0.917335742,
+          "Fraction": 0.05057922127635023
+        },
+        {
+          "Phase": "HUFFMAN_BUILDING",
+          "ExclusiveSeconds": 0.796146477,
+          "Fraction": 0.043897198141190134
+        },
+        {
+          "Phase": "ANALYSIS",
+          "ExclusiveSeconds": 0.782268407,
+          "Fraction": 0.04313200177820063
+        },
+        {
+          "Phase": "NATIVE_IO",
+          "ExclusiveSeconds": 0.669330323,
+          "Fraction": 0.03690492473364018
+        },
+        {
+          "Phase": "OUTPUT_WRITE",
+          "ExclusiveSeconds": 0.61256534,
+          "Fraction": 0.033775068886482684
+        },
+        {
+          "Phase": "XML_PARSING",
+          "ExclusiveSeconds": 0.578674556,
+          "Fraction": 0.031906429756137986
+        },
+        {
+          "Phase": "ARCHIVE_READ",
+          "ExclusiveSeconds": 0.455713661,
+          "Fraction": 0.025126724102258576
+        },
+        {
+          "Phase": "TEXT_DECODING",
+          "ExclusiveSeconds": 0.325387585,
+          "Fraction": 0.017940923817500416
+        },
+        {
+          "Phase": "COMPRESSION",
+          "ExclusiveSeconds": 0.178801814,
+          "Fraction": 0.009858611303209001
+        },
+        {
+          "Phase": "XML_SUMMARY_CONSTRUCTION",
+          "ExclusiveSeconds": 0.084246929,
+          "Fraction": 0.004645130314505904
+        },
+        {
+          "Phase": "PUBLICATION",
+          "ExclusiveSeconds": 0.020912399,
+          "Fraction": 0.0011530487781215499
+        },
+        {
+          "Phase": "XML_SUMMARY_CONSUMPTION",
+          "ExclusiveSeconds": 0.015655636,
+          "Fraction": 0.0008632061754615406
+        },
+        {
+          "Phase": "INPUT_READ",
+          "ExclusiveSeconds": 0.006686699,
+          "Fraction": 0.00036868510932756154
+        },
+        {
+          "Phase": "VERIFICATION",
+          "ExclusiveSeconds": 0.002084299,
+          "Fraction": 0.00011492217679999162
+        },
+        {
+          "Phase": "PATCH_PLANNING",
+          "ExclusiveSeconds": 0.000100299,
+          "Fraction": 5.530194761338157E-06
+        }
+      ]
+    },
+    {
+      "Workers": 16,
+      "InstrumentedOnly": true,
+      "AccountedTaskWallSeconds": 22.451357995000002,
+      "Ranking": [
+        {
+          "Phase": "MATCH_FINDING",
+          "ExclusiveSeconds": 8.564621098,
+          "Fraction": 0.3814745237195617
+        },
+        {
+          "Phase": "DECOMPRESSION",
+          "ExclusiveSeconds": 4.693265704,
+          "Fraction": 0.2090415067563043
+        },
+        {
+          "Phase": "ENTROPY_ENCODING",
+          "ExclusiveSeconds": 1.824731966,
+          "Fraction": 0.08127490401277172
+        },
+        {
+          "Phase": "NATIVE_IO",
+          "ExclusiveSeconds": 1.056731901,
+          "Fraction": 0.04706761618764166
+        },
+        {
+          "Phase": "HASHING",
+          "ExclusiveSeconds": 1.018386741,
+          "Fraction": 0.04535969455508208
+        },
+        {
+          "Phase": "ANALYSIS",
+          "ExclusiveSeconds": 1.008304049,
+          "Fraction": 0.04491060403671586
+        },
+        {
+          "Phase": "HUFFMAN_BUILDING",
+          "ExclusiveSeconds": 0.913002814,
+          "Fraction": 0.04066581692756977
+        },
+        {
+          "Phase": "ARCHIVE_READ",
+          "ExclusiveSeconds": 0.805787113,
+          "Fraction": 0.035890350738670314
+        },
+        {
+          "Phase": "OUTPUT_WRITE",
+          "ExclusiveSeconds": 0.782263049,
+          "Fraction": 0.03484257162414019
+        },
+        {
+          "Phase": "XML_PARSING",
+          "ExclusiveSeconds": 0.718456505,
+          "Fraction": 0.03200058121918518
+        },
+        {
+          "Phase": "COMPRESSION",
+          "ExclusiveSeconds": 0.453321137,
+          "Fraction": 0.02019125689862307
+        },
+        {
+          "Phase": "TEXT_DECODING",
+          "ExclusiveSeconds": 0.442854404,
+          "Fraction": 0.019725060911621704
+        },
+        {
+          "Phase": "XML_SUMMARY_CONSTRUCTION",
+          "ExclusiveSeconds": 0.110508712,
+          "Fraction": 0.004922139321131964
+        },
+        {
+          "Phase": "PUBLICATION",
+          "ExclusiveSeconds": 0.026182599,
+          "Fraction": 0.0011661922190110265
+        },
+        {
+          "Phase": "XML_SUMMARY_CONSUMPTION",
+          "ExclusiveSeconds": 0.017630209,
+          "Fraction": 0.0007852624773934081
+        },
+        {
+          "Phase": "INPUT_READ",
+          "ExclusiveSeconds": 0.012347598,
+          "Fraction": 0.0005499710976391652
+        },
+        {
+          "Phase": "VERIFICATION",
+          "ExclusiveSeconds": 0.002830297,
+          "Fraction": 0.00012606351030660672
+        },
+        {
+          "Phase": "PATCH_PLANNING",
+          "ExclusiveSeconds": 0.000132099,
+          "Fraction": 5.883786630163704E-06
+        }
+      ]
+    }
+  ],
+  "RejectedExperiments": [
+    {
+      "Name": "SSE2 16-byte matcher",
+      "Pairs": 4,
+      "TuningConvertedBooks": 24,
+      "Speedup": 1.0086374639308566,
+      "Lower95": 0.9941212053879718,
+      "Upper95": 1.0194736400337625,
+      "Reason": "Below 3%; interval includes no improvement",
+      "Retained": false
+    }
+  ],
+  "PrivateArtifacts": "epub-simd-20261105 outside repository",
+  "SourceSHA256": "B91595C0DC374C3AE5F93AF520ECF3FF8F661B82ACFE9B207586EB3CB77A7417",
+  "SourceIdentityMethod": "tools/build.ps1 Windows PGO fingerprint; owned sources, GPR projects, manifests, lockfile and XML fork source/patch identity",
+  "GNATVersion": "16.1.0",
+  "GPRbuildVersion": "26.0.1"
+}
