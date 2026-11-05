@@ -1,24 +1,54 @@
 with Ada.Characters.Handling;
 with Ada.Strings.Fixed;
 with Ada.Strings.Unbounded;
+with Ada.Finalization;
+with Ada.Unchecked_Deallocation;
 with Epub.CSS;
-with Epub.Lists;
 
 package body Epub.Markup is
    use Ada.Strings.Unbounded;
    type Attribute_Span is record
-      Name : Unbounded_String;
+      Name_First : Positive;
+      Name_Last : Natural;
       First : Positive;
       Last : Natural;
    end record;
-   package Attribute_Lists is new Epub.Lists (Attribute_Span);
+   type Attribute_Array is array (Positive range <>) of Attribute_Span;
+   type Attributes_Access is access Attribute_Array;
+   type Attribute_Owner is new Ada.Finalization.Limited_Controlled with record
+      Data : Attributes_Access;
+      Used : Natural := 0;
+   end record;
+   overriding procedure Finalize (Item : in out Attribute_Owner);
+   overriding procedure Finalize (Item : in out Attribute_Owner) is
+      procedure Free is new Ada.Unchecked_Deallocation (Attribute_Array, Attributes_Access);
+   begin
+      Free (Item.Data);
+   end Finalize;
+   procedure Append (Item : in out Attribute_Owner; Value : Attribute_Span) is
+      procedure Free is new Ada.Unchecked_Deallocation (Attribute_Array, Attributes_Access);
+   begin
+      if Item.Data = null or else Item.Used = Item.Data.all'Length then
+         declare
+            Capacity : constant Positive :=
+              (if Item.Used = 0 then 8 elsif Item.Used > Natural'Last / 2 then Natural'Last else Item.Used * 2);
+            Data : constant Attributes_Access := new Attribute_Array (1 .. Capacity);
+         begin
+            if Item.Used > 0 then Data.all (1 .. Item.Used) := Item.Data.all (1 .. Item.Used); end if;
+            Free (Item.Data);
+            Item.Data := Data;
+         end;
+      end if;
+      Item.Used := Item.Used + 1;
+      Item.Data.all (Item.Used) := Value;
+   end Append;
 
    function Space (Value : Character) return Boolean is
      (Value = ' ' or else Value in Character'Val (9) .. Character'Val (13));
 
    function Convert_Attribute_Tag
      (Tag, Local_Name : String; Package_Only : Boolean) return String is
-      Attributes : Attribute_Lists.Vector;
+      Attributes : Attribute_Owner;
       Position : Integer := Tag'First + 1;
       Primary_Mode : Boolean := False;
       Result : Unbounded_String;
@@ -64,8 +94,7 @@ package body Epub.Markup is
                   end loop;
                   Attributes.Append
                     (Attribute_Span'
-                       (Name => To_Unbounded_String
-                          (Ada.Characters.Handling.To_Lower (Tag (Name_Start .. Name_End))),
+                       (Name_First => Name_Start, Name_Last => Name_End,
                         First => Value_Start, Last => Position - 1));
                   Position := Position + 1;
                else
@@ -77,18 +106,23 @@ package body Epub.Markup is
          end;
       end loop;
       if Package_Only and then Local_Name = "meta" then
-         for Attr of Attributes loop
-            if To_String (Attr.Name) = "name" and then
+         for Attr_Position in 1 .. Attributes.Used loop
+            declare
+               Attr : Attribute_Span renames Attributes.Data.all (Attr_Position);
+            begin
+            if Ada.Characters.Handling.To_Lower (Tag (Attr.Name_First .. Attr.Name_Last)) = "name" and then
               Ada.Characters.Handling.To_Lower (Tag (Attr.First .. Attr.Last)) =
                 "primary-writing-mode"
             then
                Primary_Mode := True;
             end if;
+            end;
          end loop;
       end if;
-      for Attr of Attributes loop
+      for Attr_Position in 1 .. Attributes.Used loop
          declare
-            Name : constant String := To_String (Attr.Name);
+            Attr : Attribute_Span renames Attributes.Data.all (Attr_Position);
+            Name : constant String := Ada.Characters.Handling.To_Lower (Tag (Attr.Name_First .. Attr.Name_Last));
             Value : constant String := Tag (Attr.First .. Attr.Last);
             Lower : constant String := Ada.Characters.Handling.To_Lower (Value);
             Replacement : Unbounded_String := To_Unbounded_String (Value);

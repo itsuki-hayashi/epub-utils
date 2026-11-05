@@ -1,6 +1,7 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
+python3 tools/audit-xml-fork.py
 alr -n build --stop-after=pre-build
 build_kind=${EPUB_BUILD:-development}
 cpu_tuning=${EPUB_TUNING:-portable}
@@ -73,6 +74,7 @@ if [ -n "$ada_flags" ]; then set -- "$@" -cargs:Ada $ada_flags; fi
 if [ -n "$c_flags" ]; then set -- "$@" -cargs:C $c_flags; fi
 if [ "$lto" = true ]; then set -- "$@" -largs -flto=auto; fi
 alr -n exec -- gprbuild "$@"
+python3 tools/audit-xml-fork.py --link-map "$project_directory/$map_directory/epub-v2h.map"
 if [ "$pgo" = generate ]; then
     python3 tools/pgo-identity.py record --project "$PWD" --profile "$profile_directory" --tuning "$cpu_tuning" --sections "$sections"
 fi

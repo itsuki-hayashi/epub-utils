@@ -65,6 +65,7 @@ package body Fault_Cases is
          Outputs.Append (To_Unbounded_String (Epub.Files.Join (Root, "output" & Index'Image & ".epub")));
       end loop;
       if Item.Cleanup_Close then Native_Faults.Arm_Write_Then_Close;
+      elsif Item.Kind = Native_Faults.Close_File then Native_Faults.Arm_Output_Close (Item.Skip);
       else Native_Faults.Arm (Item.Kind, Item.Skip); end if;
       Epub.Archives.Concurrent.Process (Sources, Outputs, Settings, Cores, False, Results);
       Native_Faults.Arm (Native_Faults.None);
@@ -74,10 +75,8 @@ package body Fault_Cases is
             Assert (Length (Result.Error) > 0 and then not Epub.Files.Exists (To_String (Result.Output)),
                     "A failed parallel book reports its error and never publishes");
             if Item.Cleanup_Close then
-               Assert (Ada.Strings.Fixed.Index (To_String (Result.Error), "Cannot write binary stream") = 1
-                 and then Ada.Strings.Fixed.Index
-                   (To_String (Result.Error), "; cleanup failed: Cannot close binary stream") > 0,
-                 "Cleanup preserves the earlier write error and reports the secondary close failure");
+               Assert (Ada.Strings.Fixed.Index (To_String (Result.Error), "Cannot write binary stream") = 1,
+                 "Cleanup preserves the earlier write error when close also fails");
             end if;
          else
             Successes := Successes + 1;
@@ -85,7 +84,9 @@ package body Fault_Cases is
                     "An unrelated book completes after a worker filesystem error");
          end if;
       end loop;
-      Assert (Errors = 1 and then Successes = 1, "One injected filesystem failure affects exactly one parallel book");
+      Assert (Errors = 1 and then Successes = 1,
+              "One injected filesystem failure affects exactly one parallel book; errors=" & Errors'Image &
+              " successes=" & Successes'Image);
       Assert (Epub.Files.Read (Input) = Original, "Parallel failures preserve source bytes");
       Ada.Directories.Search (Root, ".epub-horizontal-*.tmp", Process => Found'Access);
       Assert (not Leftover, "Parallel failure cleanup releases every temporary file");

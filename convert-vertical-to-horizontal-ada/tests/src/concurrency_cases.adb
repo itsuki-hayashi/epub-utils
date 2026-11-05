@@ -393,12 +393,17 @@ package body Concurrency_Cases is
       Sources, Outputs : Epub.Resources.String_Lists.Vector;
       Results : Epub.Conversion.Result_Lists.Vector;
       Seen : Natural := 0;
+      Seen_Ordinals : array (1 .. 3) of Boolean := [others => False];
+      Statuses : array (1 .. 3) of Epub.Conversion.Processing_Status := [others => Epub.Conversion.Failed];
       Settings : constant Epub.Conversion.Options := (others => <>);
       use type Epub.Conversion.Processing_Status;
       procedure Observe (Ordinal : Positive; Result : Epub.Conversion.Book_Result) is
       begin
          Seen := Seen + 1;
-         Assert (Ordinal = Seen, "Coordinator reports in input order despite completion order");
+         Assert (Ordinal in Seen_Ordinals'Range and then not Seen_Ordinals (Ordinal),
+                 "Every completion identifies a distinct input");
+         Seen_Ordinals (Ordinal) := True;
+         Statuses (Ordinal) := Result.Status;
          Assert (Length (Result.Book) > 0, "Completed report retains source identity");
       end Observe;
       procedure Clean is
@@ -444,16 +449,17 @@ package body Concurrency_Cases is
       Sources.Append (To_Unbounded_String ("concurrent-book.epub"));
       Outputs.Append (To_Unbounded_String ("concurrent-first.epub"));
       Epub.Archives.Concurrent.Process (Sources, Outputs, Settings, Cores, False, Results, Observe'Access);
-      Assert (Seen = 3 and then Results.Last_Index = 3, "Every input yields exactly one ordered result");
-      Assert (Results (2).Status = Epub.Conversion.Converted, "Independent book succeeds alongside collision or error");
+      Assert (Seen = 3 and then Results.Last_Index = 3, "Every input yields exactly one completion");
+      Assert (Statuses (2) = Epub.Conversion.Converted, "Independent book succeeds alongside collision or error");
       if Failure_Test then
-         Assert (Results (1).Status = Epub.Conversion.Failed and then Results (3).Status = Epub.Conversion.Converted,
+         Assert (Statuses (1) = Epub.Conversion.Failed and then Statuses (3) = Epub.Conversion.Converted,
                  "A failed predecessor releases its destination without cancelling other books");
       else
-         Assert (Results (1).Status = Epub.Conversion.Converted and then Results (3).Status = Epub.Conversion.Failed,
-                 "Input precedence chooses the first successful publisher for a colliding destination");
+         Assert ((Statuses (1) = Epub.Conversion.Converted and then Statuses (3) = Epub.Conversion.Failed)
+                 or else (Statuses (3) = Epub.Conversion.Converted and then Statuses (1) = Epub.Conversion.Failed),
+                 "Exactly one racing book publishes to a colliding destination");
          Assert (Epub.Files.Read ("concurrent-serial.epub") = Epub.Files.Read ("concurrent-first.epub"),
-                 "Parallel batches preserve exact archive bytes, metadata and compression decisions");
+                 "Whole-book workers preserve exact archive bytes, metadata and compression decisions");
       end if;
       Assert (Epub.Files.Read ("concurrent-first.epub") = Epub.Files.Read ("concurrent-second.epub"),
               "Independent and collision-serialized books have identical output");

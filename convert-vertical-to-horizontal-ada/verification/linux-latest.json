@@ -6,12 +6,12 @@
     "gnat_native": "16.1.0",
     "gprbuild_alire_release": "26.0.1",
     "gprbuild_version_output": "26.0.0 (2026-04-15)",
-    "xmlada": "26.0.0",
-    "zipada": "62.0.0"
+    "zipada": "62.0.0",
+    "xmlada_epub": "26.0.0-epub.1"
   },
   "binary": {
-    "path": "external candidate-linux-lifetime (stripped validation artifact)",
-    "sha256": "4AD9F6CDE621813AC5F42CD985B824A6F536496795A9F32043E5AA428E2BA0D7",
+    "path": "external thread-only XML-context native release",
+    "sha256": "123DB9170793DEE7DCD16857E4710CC432BD9ED02D6CB1DCFCB2711F2F9E1078",
     "format": "ELF 64-bit x86-64",
     "static": true,
     "interpreter": false,
@@ -19,7 +19,7 @@
   },
   "owned_source_warnings_as_errors": true,
   "linux_aunit": {
-    "tests": 86,
+    "tests": 91,
     "failures": 0,
     "errors": 0
   },
@@ -35,11 +35,15 @@
     "worker_modes": "1/2/auto byte-identical"
   },
   "windows_regression": {
-    "aunit_tests": 134,
+    "aunit_tests": 141,
     "failures": 0,
     "errors": 0,
     "cli": "PASS"
   },
-  "coverage": "Windows:94.16% statement,75.80% decision; required core passes; unchanged95%/90% gate unmet",
-  "native_destination_identity_cases": 19
+  "coverage": "Windows:93.89% statement,75.88% decision; required core passes; unchanged95%/90% gate unmet",
+  "native_destination_identity_cases": 19,
+  "scheduler": "Fixed worker pool; one whole book per queued job; completion-order reports",
+  "validation_date": "2026-11-05",
+  "xml_contexts": "Independent task-owned contexts; lock-free SAX summaries; no process workers",
+  "process_syscalls": "One initial exec; 16 CLONE_THREAD calls; zero fork/vfork/helper exec"
 }

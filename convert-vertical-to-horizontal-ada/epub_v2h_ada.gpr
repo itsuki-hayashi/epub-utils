@@ -1,4 +1,4 @@
-with "xmlada_sax";
+with "xmlada_epub_sax";
 with "zipada";
 with "core_containers.gpr";
 with "platform.gpr";

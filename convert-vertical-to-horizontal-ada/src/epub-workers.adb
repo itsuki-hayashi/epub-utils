@@ -149,7 +149,8 @@ package body Epub.Workers is
          Epub.Performance.End_Task;
    end Worker;
 
-   procedure Start (Item : in out Pool; Cores : Epub.CPUs.Processor_Lists.Vector) is
+   procedure Start (Item : in out Pool; Cores : Epub.CPUs.Processor_Lists.Vector;
+                    Queue_Capacity : Natural := 0) is
    begin
       if Item.Shared /= null or else Cores.Is_Empty then
          raise Worker_Error with "Worker pool requires a fresh pool and eligible cores";
@@ -157,7 +158,8 @@ package body Epub.Workers is
       Item.Shared := new State;
       Item.Shared.all.Cores := Cores;
       Item.Shared.all.Measurements := new Worker_Statistics_Array (1 .. Cores.Last_Index);
-      Item.Shared.all.Storage := new Job_Array'(1 .. 4 * Cores.Last_Index => null);
+      Item.Shared.all.Storage := new Job_Array'
+        (1 .. (if Queue_Capacity = 0 then 4 * Cores.Last_Index else Queue_Capacity) => null);
       Item.Shared.all.Jobs.Initialize (Item.Shared.all.Storage, Cores.Last_Index);
       Item.Tasks := new Worker_Array'(1 .. Cores.Last_Index => null);
       for Number in Item.Tasks.all'Range loop
@@ -182,6 +184,10 @@ package body Epub.Workers is
          Work := null;
       end if;
    end Submit;
+   procedure Finish_Submission (Item : in out Pool) is
+   begin
+      if Item.Shared /= null then Item.Shared.all.Jobs.Close; end if;
+   end Finish_Submission;
    procedure Join (Item : in out Pool) is
    begin
       if Item.Shared /= null then

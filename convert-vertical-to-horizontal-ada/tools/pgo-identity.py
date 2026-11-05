@@ -9,7 +9,10 @@ from pathlib import Path
 def identity(project, tuning, sections):
     sources = sorted([p for p in (project / "src").rglob("*")
                       if p.suffix in {".adb", ".ads", ".c"}] +
-                     list(project.glob("*.gpr")) + [project / "alire/alire.lock"])
+                     list(project.glob("*.gpr")) + [project / "alire.toml", project / "alire/alire.lock"] +
+                     [p for p in (project / "vendor/xmlada_epub").rglob("*")
+                      if p.is_file() and p.suffix in {".adb", ".ads", ".gpr", ".toml", ".json"}
+                      and not any(part in {"obj", "lib", "alire", "config"} for part in p.relative_to(project / "vendor/xmlada_epub").parts)])
     hashes = "\n".join(p.relative_to(project).as_posix() + ":" +
                        hashlib.sha256(p.read_bytes()).hexdigest() for p in sources)
     return {"SourceSHA256": hashlib.sha256(hashes.encode()).hexdigest(),

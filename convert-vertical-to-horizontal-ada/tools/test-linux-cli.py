@@ -56,10 +56,9 @@ def main():
         check(records == json.loads(report.read_text()), "Stdout/report agreement")
         check(len(records) == len(manifest) == 21, "All fixtures processed")
         expected_by_name = {item["Book"]: item for item in manifest}
-        check([item["Book"] for item in records] == sorted(expected_by_name), "Fixture traversal order")
+        check(sorted(item["Book"] for item in records) == sorted(expected_by_name), "Every queued fixture reports once")
         for actual in records:
             expected = expected_by_name[actual["Book"]]
-            check(actual["Book"] == expected["Book"], "Fixture order")
             check(actual["Reason"] == expected["Reason"], "Fixture classification")
             check(actual["ChangedEntries"] == expected["ChangedEntries"], "Fixture patches")
             name = expected["Book"]
@@ -121,7 +120,7 @@ def main():
         (mixed / "a-bad.epub").write_bytes(b"not a ZIP")
         shutil.copyfile(sample, mixed / "z-good.epub")
         result = run("--input-path", mixed, "--output-directory", root / "mixed-output", "--json")
-        check(result.returncode == 1 and [item["Status"] for item in json.loads(result.stdout)] ==
+        check(result.returncode == 1 and sorted(item["Status"] for item in json.loads(result.stdout)) ==
               ["Error", "Preserved"], "Per-book failure isolation")
         dangling = root / "dangling"
         dangling.mkdir()

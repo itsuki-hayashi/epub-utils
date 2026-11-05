@@ -12,12 +12,16 @@ with Codec_Cases;
 with Stream_Cases;
 with Inflate_Cases;
 with Concurrency_Cases;
+with XML_Cases;
 
 procedure Linux_Runner is
    use type AUnit.Status;
    function Suite return AUnit.Test_Suites.Access_Test_Suite is
       Result : constant AUnit.Test_Suites.Access_Test_Suite := AUnit.Test_Suites.New_Suite;
    begin
+      for Kind in XML_Cases.Case_Kind loop
+         Result.all.Add_Test (XML_Cases.Create (Kind));
+      end loop;
       for Kind in Concurrency_Cases.Case_Kind loop
          Result.all.Add_Test (Concurrency_Cases.Create (Kind));
       end loop;

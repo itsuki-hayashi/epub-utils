@@ -2,13 +2,17 @@ with Ada.Calendar;
 with Ada.Calendar.Formatting;
 with Ada.Directories;
 with Ada.Strings.Unbounded;
+with Ada.Strings.Fixed;
 with AUnit.Assertions;
 with Epub.Conversion;
 with Epub.Files;
 with Epub.Resources;
+with Epub.XML;
+with Epub.Markup;
 with GNAT.SHA256;
 with Epub.CPUs;
 with Epub.Workers;
+with Epub.Archives.Concurrent;
 with Interfaces.C;
 
 package body Windows_Cases is
@@ -71,11 +75,107 @@ package body Windows_Cases is
    exception when others => Mock (0); raise;
    end Check_CPU_APIs;
 
+   procedure Check_Rolling_Queue (Root : String) is
+      function Begin_Rolling return Interfaces.C.int
+        with Import, Convention => C, External_Name => "epub_test_begin_rolling";
+      function End_Rolling return Interfaces.C.int
+        with Import, Convention => C, External_Name => "epub_test_end_rolling";
+      use type Interfaces.C.int;
+      Topology : constant Epub.CPUs.Topology := Epub.CPUs.Discover;
+      Cores : Epub.CPUs.Processor_Lists.Vector;
+      Sources, Outputs : Epub.Resources.String_Lists.Vector;
+      Results : Epub.Conversion.Result_Lists.Vector;
+      Original : constant String := Epub.Files.Read
+        ("../../convert-vertical-to-horizontal-perl/t/fixtures/input/vertical CSS variants.epub");
+      Seen : Natural := 0;
+      procedure Observe (Ordinal : Positive; Result : Epub.Conversion.Book_Result) is
+      begin
+         if Seen = 0 then
+            Assert (Ordinal = 2 and then Result.Status = Epub.Conversion.Converted,
+                    "The completed second book reports while the first book is still blocked");
+         end if;
+         Seen := Seen + 1;
+      end Observe;
+   begin
+      if Topology.Cores.Last_Index < 2 then return; end if;
+      Cores.Append (Topology.Cores (1)); Cores.Append (Topology.Cores (2));
+      Sources.Append (To_Unbounded_String (Epub.Files.Join (Root, "rolling-first.epub")));
+      Sources.Append (To_Unbounded_String (Epub.Files.Join (Root, "rolling-second.epub")));
+      Sources.Append (To_Unbounded_String (Epub.Files.Join (Root, "rolling-third.epub")));
+      for Index in 1 .. Sources.Last_Index loop
+         Epub.Files.Write_Exclusive (To_String (Sources (Index)), (if Index = 3 then "invalid archive" else Original));
+         Outputs.Append (To_Unbounded_String (Epub.Files.Join (Root, "output" & Index'Image & ".epub")));
+      end loop;
+      Assert (Begin_Rolling = 1, "Create the deterministic queue gate");
+      Epub.Archives.Concurrent.Process (Sources, Outputs, (others => False), Cores, False, Results, Observe'Access);
+      Assert (End_Rolling = 1,
+              "A reused worker starts the third queued book before the blocked first book can finish");
+      Assert (Seen = 3 and then Results.Last_Index = 3, "Every queued book completes independently");
+   exception
+      when others =>
+         declare
+            Ignored : constant Interfaces.C.int := End_Rolling;
+            pragma Unreferenced (Ignored);
+         begin null; end;
+         raise;
+   end Check_Rolling_Queue;
+
+   procedure Check_XML_Allocation_Recovery is
+      procedure Arm (Skip : Interfaces.C.unsigned)
+        with Import, Convention => C, External_Name => "epub_test_heap_failure";
+      procedure Clear
+        with Import, Convention => C, External_Name => "epub_test_heap_clear";
+      Document : constant String :=
+        "<html xmlns='urn:test'><body><p class='vertical' id='sentinel'>visible</p></body></html>";
+      Failures : Natural := 0;
+      procedure Inspect is
+         Summary : constant Epub.XML.Summary := Epub.XML.Inspect_Content (Document);
+      begin
+         Assert (Epub.XML.Has_Visible_Text (Summary), "Successful parse after allocation failure");
+      end Inspect;
+   begin
+      Inspect;
+      for Skip in 0 .. 63 loop
+         Arm (Interfaces.C.unsigned (Skip));
+         begin
+            declare
+               Summary : constant Epub.XML.Summary := Epub.XML.Inspect_Content (Document);
+            begin
+               Clear;
+               Assert (Epub.XML.Has_Visible_Text (Summary), "Parse with a later failure point");
+            end;
+         exception
+            when Storage_Error => Failures := Failures + 1;
+         end;
+         Clear;
+         Inspect;
+      end loop;
+      for Skip in 0 .. 15 loop
+         Arm (Interfaces.C.unsigned (Skip));
+         begin
+            declare
+               Text : constant String := Epub.Markup.Convert
+                 ("<p STYLE='writing-mode:vertical-rl' data-x='x'>visible</p>");
+            begin
+               Clear;
+               Assert (Ada.Strings.Fixed.Index (Text, "horizontal-tb") > 0, "Source spans survive a later failure point");
+            end;
+         exception when Storage_Error => Failures := Failures + 1; end;
+         Clear;
+         Inspect;
+      end loop;
+      Assert (Failures > 0, "Inject actual XML allocation failures");
+   exception
+      when others => Clear; raise;
+   end Check_XML_Allocation_Recovery;
+
    overriding procedure Run_Test (Item : in out Unit_Case) is
       Root : constant String := Fresh_Directory (Item.Kind);
    begin
       case Item.Kind is
          when CPU_API_Fallbacks => Check_CPU_APIs;
+         when Rolling_Book_Queue => Check_Rolling_Queue (Root);
+         when XML_Allocation_Recovery => Check_XML_Allocation_Recovery;
          when Long_Unicode_Paths =>
             declare
                Directory : Unbounded_String := To_Unbounded_String (Root);

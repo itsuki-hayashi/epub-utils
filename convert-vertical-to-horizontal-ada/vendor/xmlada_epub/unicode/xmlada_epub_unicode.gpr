@@ -1,0 +1,10 @@
+with "../xmlada_epub_shared.gpr";
+project Xmlada_Epub_unicode is
+   for Languages use ("Ada");
+   for Source_Dirs use (".");
+   for Library_Name use "xmlada_epub_unicode";
+   for Library_Kind use "static";
+   for Object_Dir use "obj/" & Xmlada_Epub_Shared.Configuration;
+   for Library_Dir use "lib/" & Xmlada_Epub_Shared.Configuration;
+   package Compiler renames Xmlada_Epub_Shared.Compiler;
+end Xmlada_Epub_unicode;

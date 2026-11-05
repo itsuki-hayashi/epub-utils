@@ -76,9 +76,9 @@ package body Book_Cases is
    begin
       begin
          declare
-            Document : constant Epub.XML.Document := Epub.XML.Parse (Text);
+            Document : constant Epub.XML.Summary := Epub.XML.Inspect_Package (Text);
          begin
-            Nodes := Document.Last_Index;
+            Nodes := Document.Count;
          end;
       exception
          when others => Rejected := True;
@@ -215,11 +215,11 @@ package body Book_Cases is
             Reject_XML ("<!DOCTYPE root [<!ENTITY x SYSTEM 'file:///must-not-load'>]><root>&x;</root>");
             Reject_XML ("<!DOCTYPE root [<!ENTITY % x SYSTEM 'file:///must-not-load'>]><root/>");
             declare
-               Parsed : constant Epub.XML.Document := Epub.XML.Parse
-                 ("<!DOCTYPE root SYSTEM 'file:///must-not-load'><root>allowed &amp; text</root>");
+               Parsed : constant Epub.XML.Summary := Epub.XML.Inspect_Package
+                 ("<!DOCTYPE meta SYSTEM 'file:///must-not-load'><meta>allowed &amp; text</meta>");
             begin
-               Assert (Parsed.Last_Index = 1, "External DTD reference does not load a resource");
-               Assert (To_String (Parsed (1).Content) = "allowed & text", "Predefined XML entities remain supported");
+               Assert (Parsed.Count = 1, "External DTD reference does not load a resource");
+               Assert (Parsed.Direct_Text (1) = "allowed & text", "Predefined XML entities remain supported");
             end;
          when Image_Thresholds =>
             Image_Book (9, 1, Epub.Classification.Vertical_Text);

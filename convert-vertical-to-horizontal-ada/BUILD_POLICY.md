@@ -12,9 +12,15 @@ Compilation failures and behavioral failures remain errors. Static linkage,
 dependency pins, import audits, application coverage and core proof gates remain
 required.
 
-Production uses the original pinned Alire XML/Ada and Zip-Ada projects. All
-experimental dependency source patches, vendor copies, patch generators and
-warning-cleanup projects have been removed.
+Production uses the maintained `xmlada_epub=26.0.0-epub.1` SAX/input/Unicode
+fork, pinned by relative path in the application, tests and coverage manifests.
+This is the explicitly approved dependency-source exception for task-owned
+XML parsing. It is not a warning-cleanup fork. Bounds checks and assertions
+remain enabled; ownership checks are executable code, independent of assertions.
+Original XML/Ada is restricted to the separately linked test oracle. DOM and
+schema are not exported by the production profile and are not concurrency-safe
+interfaces. See [fork provenance](vendor/xmlada_epub/EPUB_FORK.md).
+Zip-Ada and all other dependencies remain unmodified at their existing versions.
 
 Test-only JSON sources are also unmodified. `tests/json_dependency.gpr` supplies
 the compatible build configuration: the upstream No_Implementation_Extensions

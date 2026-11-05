@@ -6,4 +6,5 @@ package Native_Faults is
                       Free_Arguments, Console_Codepage);
    procedure Arm (Kind : Operation; Skip : Natural := 0);
    procedure Arm_Write_Then_Close;
+   procedure Arm_Output_Close (Skip : Natural);
 end Native_Faults;

@@ -1,6 +1,5 @@
 with Epub.Performance;
 with Ada.Characters.Handling;
-with Ada.Strings.Fixed;
 with Epub.Encoding;
 with Epub.Markup;
 with Epub.Resources;
@@ -20,67 +19,13 @@ package body Epub.Books is
    function Vertical_Mode (Value : String) return Boolean is
      (Ada.Characters.Handling.To_Lower (Value) in
         "vertical-rl" | "vertical-lr" | "tb-rl" | "tb-lr");
-   function Get (Item : Epub.XML.Node; Name : String) return String renames Epub.XML.Get_Attribute;
-
-   function Is_Fixed (Document : Epub.XML.Document) return Boolean is
-   begin
-      for Item of Document loop
-         if To_String (Item.Name) = "meta" then
-            if (Get (Item, "property") = "rendition:layout"
-                and then Ada.Strings.Fixed.Trim (To_String (Item.Content), Ada.Strings.Both) = "pre-paginated")
-              or else (Get (Item, "name") = "fixed-layout" and then Get (Item, "content") = "true")
-            then
-               return True;
-            end if;
-         elsif To_String (Item.Name) = "itemref" then
-            if Epub.Resources.Contains
-              (Epub.Resources.Tokens (Get (Item, "properties")), "rendition:layout-pre-paginated")
-            then
-               return True;
-            end if;
-         end if;
-      end loop;
-      return False;
-   end Is_Fixed;
-
-   function Has_Visible_Text (Document : Epub.XML.Document) return Boolean is
-   begin
-      for Position in 1 .. Document.Last_Index loop
-         declare
-            Item : constant Epub.XML.Node := Document (Position);
-            Has_Text : Boolean := False;
-            In_Content : Boolean := False;
-            Excluded : Boolean := False;
-            Ancestor : Natural := Position;
-         begin
-            for Value of To_String (Item.Content) loop
-               Has_Text := Has_Text or else
-                 (Value /= ' ' and then Value not in Character'Val (9) .. Character'Val (13));
-            end loop;
-            if Has_Text then
-               while Ancestor /= 0 loop
-                  declare
-                     Parent : constant Epub.XML.Node := Document (Ancestor);
-                     Name : constant String := To_String (Parent.Name);
-                  begin
-                     In_Content := In_Content or else Name = "body"
-                       or else (Name = "svg" and then Parent.Parent = 0);
-                     Excluded := Excluded or else Name in "script" | "style" | "title" | "desc";
-                     Ancestor := Parent.Parent;
-                  end;
-               end loop;
-               if In_Content and then not Excluded then
-                  return True;
-               end if;
-            end if;
-         end;
-      end loop;
-      return False;
-   end Has_Visible_Text;
+   use type Epub.XML.Element_Kind;
+   function Get (Document : Epub.XML.Summary; Position : Positive; Field : Epub.XML.Field_Kind)
+      return String renames Epub.XML.Field_Value;
 
    function Analyze_Book (Items : Epub.Archives.Catalogue) return Book_Plan is
       Result : Book_Plan;
-      Container : constant Epub.XML.Document := Epub.XML.Parse
+      Container : constant Epub.XML.Summary := Epub.XML.Inspect_Container
         (Epub.Encoding.Text (Epub.Encoding.Decode (Epub.Archives.Contents (Items, "META-INF/container.xml"))));
       Package_Path : Unbounded_String;
       Root_Count : Natural := 0;
@@ -112,11 +57,11 @@ package body Epub.Books is
       end Patch;
    begin
       Epub.Performance.Start (Epub.Performance.Analysis);
-      for Item of Container loop
-         if To_String (Item.Name) = "rootfile" then
+      for Position in 1 .. Container.Count loop
+         if Container.Kind (Position) = Epub.XML.Rootfile then
             Root_Count := Root_Count + 1;
             Package_Path := To_Unbounded_String
-              (Epub.Resources.Resolve ("container.xml", Get (Item, "full-path")));
+              (Epub.Resources.Resolve ("container.xml", Get (Container, Position, Epub.XML.Full_Path)));
          end if;
       end loop;
       if Root_Count /= 1 then
@@ -125,24 +70,24 @@ package body Epub.Books is
       declare
          Package_Payload : constant Epub.Encoding.Payload :=
            Epub.Encoding.Decode (Epub.Archives.Contents (Items, To_String (Package_Path)));
-         Package_Doc : constant Epub.XML.Document := Epub.XML.Parse (Epub.Encoding.Text (Package_Payload));
+         Package_Doc : constant Epub.XML.Summary := Epub.XML.Inspect_Package (Epub.Encoding.Text (Package_Payload));
       begin
-         if Is_Fixed (Package_Doc) then
+         if Epub.XML.Is_Fixed (Package_Doc) then
             Result.Reason := Epub.Classification.Fixed_Layout;
             Epub.Performance.Stop (Epub.Performance.Analysis);
             return Result;
          end if;
-         for Item of Package_Doc loop
-            if To_String (Item.Name) = "meta" and then Get (Item, "name") = "primary-writing-mode"
-              and then Vertical_Mode (Get (Item, "content"))
+         for Position in 1 .. Package_Doc.Count loop
+            if Package_Doc.Kind (Position) = Epub.XML.Meta and then Get (Package_Doc, Position, Epub.XML.Name) = "primary-writing-mode"
+              and then Vertical_Mode (Get (Package_Doc, Position, Epub.XML.Content))
             then
                Primary_Vertical := True;
-            elsif To_String (Item.Name) = "item" and then Item.Parent /= 0
-              and then To_String (Package_Doc (Item.Parent).Name) = "manifest"
+            elsif Package_Doc.Kind (Position) = Epub.XML.Manifest_Item
+              and then Package_Doc.Parent_Kind (Position) = Epub.XML.Manifest
             then
                declare
-                  Path : constant String := Epub.Resources.Resolve (To_String (Package_Path), Get (Item, "href"));
-                  Id : constant String := Get (Item, "id");
+                  Path : constant String := Epub.Resources.Resolve (To_String (Package_Path), Get (Package_Doc, Position, Epub.XML.Href));
+                  Id : constant String := Get (Package_Doc, Position, Epub.XML.Id);
                begin
                   if Epub.Archives.Find (Items, Path) = 0 then
                      raise Invalid_Book with "Missing manifest resource: " & Path;
@@ -152,21 +97,21 @@ package body Epub.Books is
                   end if;
                   Manifest.Append (Manifest_Item'
                     (Id => To_Unbounded_String (Id), Path => To_Unbounded_String (Path),
-                     Media => To_Unbounded_String (Get (Item, "media-type"))));
+                     Media => To_Unbounded_String (Get (Package_Doc, Position, Epub.XML.Media_Type))));
                   Manifest_Ids.Insert_First (Id, Manifest.Last_Index);
                end;
             end if;
          end loop;
-         for Reference of Package_Doc loop
-            if To_String (Reference.Name) = "itemref" and then Reference.Parent /= 0
-              and then To_String (Package_Doc (Reference.Parent).Name) = "spine"
+         for Position in 1 .. Package_Doc.Count loop
+            if Package_Doc.Kind (Position) = Epub.XML.Spine_Item
+              and then Package_Doc.Parent_Kind (Position) = Epub.XML.Spine
             then
                Spine_Count := Spine_Count + 1;
                declare
-                  Found : constant Natural := Manifest_Ids.Find (Get (Reference, "idref"));
+                  Found : constant Natural := Manifest_Ids.Find (Get (Package_Doc, Position, Epub.XML.Idref));
                begin
                   if Found = 0 then
-                     raise Invalid_Book with "Unknown spine idref: " & Get (Reference, "idref");
+                     raise Invalid_Book with "Unknown spine idref: " & Get (Package_Doc, Position, Epub.XML.Idref);
                   end if;
                   declare
                      Resource : constant Manifest_Item := Manifest (Found);
@@ -179,24 +124,36 @@ package body Epub.Books is
                         declare
                            Payload : constant Epub.Encoding.Payload := Epub.Encoding.Decode (Epub.Archives.Contents (Items, Path));
                            Text : constant String := Epub.Encoding.Text (Payload);
-                           Document : constant Epub.XML.Document := Epub.XML.Parse (Text);
-                           Has_Image : Boolean := False;
+                           Document : constant Epub.XML.Summary := Epub.XML.Inspect_Content (Text);
+                           procedure Include_Class (Value : String) is
+                           begin Epub.Resources.Include (Classes, Value); end Include_Class;
+                           procedure Classes_From is new Epub.Resources.Query_Tokens (Include_Class);
                         begin
-                           for Item of Document loop
-                              for Class of Epub.Resources.Tokens (Get (Item, "class")) loop
-                                 Epub.Resources.Include (Classes, To_String (Class));
-                              end loop;
-                              Epub.Resources.Include (Ids, Get (Item, "id"));
-                              if To_String (Item.Name) = "link" and then Epub.Resources.Contains
-                                (Epub.Resources.Tokens (Ada.Characters.Handling.To_Lower (Get (Item, "rel"))), "stylesheet")
-                              then
-                                 Epub.Resources.Include (Styles, Epub.Resources.Resolve (Path, Get (Item, "href")));
+                           for Node_Position in 1 .. Document.Count loop
+                              Classes_From (Get (Document, Node_Position, Epub.XML.Class_Value));
+                              Epub.Resources.Include (Ids, Get (Document, Node_Position, Epub.XML.Id));
+                              if Document.Kind (Node_Position) = Epub.XML.Link then
+                                 -- Inspect_Content retains a link only when rel
+                                 -- contains stylesheet, or it has class/id data.
+                                 declare
+                                    Stylesheet : Boolean := False;
+                                    procedure Check_Rel (Value : String) is
+                                    begin
+                                       Stylesheet := Stylesheet or else Ada.Characters.Handling.To_Lower (Value) = "stylesheet";
+                                    end Check_Rel;
+                                    procedure Rel_From is new Epub.Resources.Query_Tokens (Check_Rel);
+                                 begin
+                                    Rel_From (Get (Document, Node_Position, Epub.XML.Rel));
+                                    if Stylesheet then
+                                       Epub.Resources.Include (Styles,
+                                         Epub.Resources.Resolve (Path, Get (Document, Node_Position, Epub.XML.Href)));
+                                    end if;
+                                 end;
                               end if;
-                              Has_Image := Has_Image or else To_String (Item.Name) in "img" | "image";
                            end loop;
-                           if Has_Visible_Text (Document) then
+                           if Document.Has_Visible_Text then
                               Texts := Texts + 1;
-                           elsif Has_Image then
+                           elsif Document.Has_Image then
                               Images := Images + 1;
                            end if;
                            Inline_Vertical := Inline_Vertical or else Epub.Markup.Convert (Text) /= Text;

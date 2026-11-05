@@ -1,8 +1,9 @@
 $ErrorActionPreference = 'Stop'
 $projectDirectory = Split-Path $PSScriptRoot -Parent
+& (Join-Path $PSScriptRoot 'audit-xml-fork.ps1')
 Push-Location -LiteralPath (Join-Path $projectDirectory 'tests')
 try {
-    & alr -n exec -- gprbuild -p -P tests.gpr
+    & alr -n exec -- gprbuild -p -P tests.gpr -XEPUB_XML_ROLE=tests
     if ($LASTEXITCODE -ne 0) { throw 'Unit-test build failed.' }
     & (Join-Path $projectDirectory 'bin/tests/test-runner.exe')
     if ($LASTEXITCODE -ne 0) { throw 'Unit tests failed.' }

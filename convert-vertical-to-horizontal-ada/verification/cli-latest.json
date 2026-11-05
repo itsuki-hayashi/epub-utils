@@ -12,7 +12,7 @@
     "Recursive Unicode paths, duplicate basenames, output exclusion and junction skipping",
     "Execution with only Windows system directories on PATH",
     "Unknown options, missing values and positional arguments rejected",
-    "Jobs 1/2/auto archive byte identity, input-order reports and invalid count rejection",
+    "Jobs 1/2/auto archive byte identity, unordered complete reports and invalid count rejection",
     "Independent Perl verification of 159 output entries"
   ]
 }

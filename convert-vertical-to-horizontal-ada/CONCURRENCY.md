@@ -1,254 +1,219 @@
-# Concurrent EPUB processing
+# Book worker queue
 
-`--jobs auto` is the default. `--jobs N` (also `--Jobs`) selects a positive
-worker count; `--jobs 1` uses the original sequential conversion path. Zero,
-invalid values and counts above the eligible core count are errors. Automatic
-mode keeps one book sequential below 1 MiB expanded data or two entry batches.
+The XML path now uses the maintained context-owned XML/Ada fork and compact SAX
+summaries. See [XML_CONCURRENCY.md](XML_CONCURRENCY.md) for the dependency,
+ownership, runtime synchronization and scaling evidence.
+
+Each EPUB is one runnable task containing its input path, destination, conversion
+options and result identity. All task descriptors are prepared before workers
+start. A fixed Ada worker pool takes these tasks from one FIFO queue. A worker
+processes its complete book, publishes the verified result, and immediately
+takes the next task. Workers drain the queue and exit. There are no groups of
+books that must finish together, entry-stage continuations, or nested pools.
+
+`--jobs auto` uses the available physical performance cores. `--jobs N` (also
+`--Jobs`) selects a positive count within that limit. `--jobs 1` retains the
+direct sequential path. Invalid values, zero and excessive counts are rejected.
+For a parallel run, the selected workers are created once at the beginning;
+threads are reused until every queued book is processed. One book uses one
+worker, including when it is the only input.
 
 ```powershell
 bin/release-native/epub-v2h.exe --input-path books --jobs auto --json
-bin/release-native/epub-v2h.exe --input-path book.epub --jobs 2 --json
+bin/release-native/epub-v2h.exe --input-path books --jobs 4 --json
 ```
 
 ## Core selection
 
-Windows queries CPU sets and process defaults, intersects process/group affinity,
+Windows queries CPU sets and process defaults, respects process/group affinity,
 selects the highest exposed efficiency class, and chooses one logical processor
-per physical core. The compatibility topology path uses processor-core
-relationships. Each worker sets group-aware hard affinity and reads it back
-before the pool accepts conversion jobs. The current Windows test host exposes
-16 eligible cores and one efficiency class.
+per physical core. Each worker sets group-aware hard affinity and reads it back.
+Linux intersects online CPUs with `sched_getaffinity`, deduplicates hardware
+siblings, and uses exposed performance-core masks or capacity information.
 
-Linux intersects online processors with `sched_getaffinity`, deduplicates
-`thread_siblings_list`, and uses `cpu_core/cpus` or `cpu_capacity` when available.
-Workers set and read back their affinity. Core counts are never inferred by
-halving logical processor counts. If performance cores are entirely excluded by
-process restrictions, selection falls back to one allowed processor. Missing
-physical topology also results in sequential execution. Unknown core classes are
-disclosed with `--verbose`; topology describes OS-visible processors, including
-virtual processors inside a VM, rather than inaccessible host hardware.
+Unknown core classes are disclosed with `--verbose`. Missing physical topology
+falls back to sequential processing. Virtual-machine topology describes the
+processors exposed by the guest OS. Core counts are never inferred by halving
+the logical processor count.
 
-Worker creation is deferred until a parallel run is needed. The startup barrier
-checks every selected worker before conversion starts. Automatic mode reports a
-startup failure and falls back to sequential conversion; an explicit parallel
-count fails. No job starts before successful affinity validation.
+Every selected worker completes startup and affinity validation before any book
+is submitted. Automatic mode falls back to sequential processing if startup
+fails; an explicit parallel count fails. No task is converted before this
+startup check succeeds.
 
 API references: [Windows CPU sets](https://learn.microsoft.com/en-us/windows/win32/api/winnt/ns-winnt-system_cpu_set_information),
 [process group affinity](https://learn.microsoft.com/en-us/windows/win32/api/processtopologyapi/nf-processtopologyapi-getprocessgroupaffinity),
 [Linux topology](https://www.kernel.org/doc/html/latest/admin-guide/cputopology.html).
 
-## Scheduling and ownership
+## Processing and ownership
 
-One shared Ada task pool serves entries and books. For N workers, admission is
-bounded to N active books and 2N entry batches across the entire run. Completed
-compressed batches waiting for the writer retain their admission credit. Batches
-contain consecutive entries up to 256 KiB expanded data or 32 entries. A larger
-entry occupies one batch. The job queue and completion mailbox each hold at most
-4N jobs. Workers never wait for child jobs or create nested pools.
+With N workers, at most N books are processing at once. The queue contains all
+remaining book descriptors; it does not preload their ZIP payloads. Only task
+metadata and completed report records grow with the number of inputs. Book
+catalogues, XML readers, codec state and payload buffers belong to the worker
+currently processing that book.
 
-Each book parses metadata in archive order, validates all initial payloads in
-parallel, and then performs its existing analysis and patch planning sequentially.
-Entry compression runs in parallel; a single writer consumes results in original
-entry order, accumulating the output hash and ZIP offsets. After checked flush
-and close, an independently opened persisted file is hashed and its entries are
-verified in parallel. Only a completely verified book can publish. Preserved
-books keep the existing bounded copy and independent persisted hash checks.
+Each task calls the existing complete-book conversion path. It validates every
+initial entry, classifies and transforms the book, retains all compression
+attempts and the validated-original-stream fallback, writes the archive, checks
+flush/close, independently hashes the persisted file, verifies the saved entries,
+and publishes atomically without replacement. A failed book reports its error,
+cleans its temporary output, and allows the same worker to take another book.
 
-Each entry keeps the existing DEFLATE decisions, compression attempts and
-validated-original-stream fallback. No individual DEFLATE stream is split.
-Whole-file hashing, central-directory emission and publication remain sequential
-within each book. Output archives must remain byte-identical to frozen Ada.
+Archive entry order, DEFLATE decisions, encodings, hashes and ZIP metadata remain
+unchanged. There is no parallel splitting of an entry or a book. Shared reference
+counts, temporary reservations and directory creation remain thread safe.
+Compatibility decoding that requires shared Zip-Ada state keeps its narrow lock.
+Runtime checks, assertions, static packaging and dependency pins are retained.
 
-Bounded source readers have private cursors over the same opened source. A short
-lock covers each seek/read of at most 64 KiB; decoding runs outside that lock.
-Reference lifetime uses a separate protected counter, with one operation per
-copy or release. The last owner frees the source after leaving that operation.
-Mutable codec state,
-XML readers/symbol tables, buffers and replies belong to individual jobs.
-Uncommon Zip-Ada compatibility decoding uses a separate narrow lock; owned
-stored/DEFLATE decoding remains parallel. Catalogues are changed only after their
-readers drain. Pool-owned jobs transfer replies to the coordinator after local
-controlled objects have finalized.
+## Completion and output
 
-Failures are selected by stage and original entry ordinal. A failed book stops
-admitting work, drains running jobs, closes resources and removes its temporary
-output. A cleanup close failure retains the earlier error and adds its own
-diagnostic. Other books continue. Temporary names use one protected sequence,
-exclusive reservation and collision retry. Concurrent directory creation accepts
-only a directory that actually exists after the race.
+Books publish independently from their workers. The coordinator emits results
+and diagnostics as completions arrive. Console lines and JSON/report records
+have no input-order guarantee. The original input ordinal remains attached to
+each result for identification; it is not used to delay delivery.
 
-## Publication and reporting
+Colliding output destinations race through the existing atomic no-replacement
+publication operation. One successful publisher wins; existing files are never
+overwritten. There is no input-order precedence or collision-group scheduling.
 
-Independent verified books publish as ready. Destination groups use existing
-parent identity plus native filename rules. Case aliases, potential DOS aliases,
-unknown filesystem collation and failed identity queries serialize a conservative
-scope. Colliding destinations preserve input-order precedence, including when an
-earlier book fails. Final publication always uses atomic no-replacement semantics.
-External publishers can still win a race; their existing files are never replaced.
+The only final wait is for the queue to drain before returning the process exit
+status. A worker never waits for another book to finish before taking its next
+available task. Output collection does not control admission of new books.
 
-Linux checks per-directory casefold flags before treating ext4, Btrfs or tmpfs
-names as case-sensitive. Unavailable queries and XFS use conservative grouping:
-[tmpfs supports per-directory casefold](https://cdn.kernel.org/doc/html/latest/filesystems/tmpfs.html),
-and [XFS still supports its deprecated ASCII-CI format](https://cdn.kernel.org/doc/html/latest/admin-guide/xfs.html).
+## Diagnostics and measurements
 
-Only the coordinator emits console output and report records. Results and
-warnings remain in input order, so a later book may be published before its report
-is printed. The report schema and all existing CLI options are retained.
+`EPUB_CONCURRENCY_STATS` writes worker placement, jobs per worker, queue high-water
+mark, maximum simultaneous books and worker busy wall time. Submitted/completed
+jobs now count books. The legacy `batch_high_water` field is zero. Busy wall time
+includes I/O; process CPU seconds divided by elapsed time and worker count is
+reported separately as CPU utilization.
 
-## Memory, diagnostics and PGO
+Use the benchmark with `-Jobs auto -AffinityMode PhysicalCores`. Comparisons with
+the previous scheduler use its frozen executable with `-ControlJobs auto
+-ControlAffinityMode PhysicalCores`. Reports are matched by book identity rather
+than array position. Exact archive bytes and both aggregate compression floors
+remain required. Private inputs, outputs and profiles stay outside the checkout.
 
-Memory may scale with active workers. A large entry is not divided or retained
-in a global cache. Workers reserve 16 MiB stacks; physical memory use depends on
-actual stack use and live batches. Peak process memory is measured, rather than
-estimated from stack reservations. `--jobs 1` remains available for constrained
-systems.
+The approved latency policy allows at most 20 ms added median time when the
+frozen control median is below 250 ms. At 250 ms and above, the 2% limit applies.
+The absolute allowance does not add another 2%. `evaluate-performance.ps1`
+applies this rule; include sequential and single-file summaries when evaluating
+those cases. The pinned GNAT tasking runtime has a fixed shutdown wait, which
+has not been bypassed or patched.
 
-Set `EPUB_CONCURRENCY_STATS` to an external CSV path to record selected cores,
-submitted/completed jobs, queue/batch/book high-water marks, pool elapsed time,
-and each worker's job count and busy wall time. Busy wall time includes I/O and
-is not CPU utilization. The benchmark reports process CPU seconds divided by
-elapsed seconds and worker count separately.
+PGO remains optional. Generate with `-fprofile-update=atomic`, train on a
+representative reserved set, and rebuild with the matching source/configuration
+identity. Earlier entry-stage scheduler measurements are historical and do not
+describe this book-queue implementation. LTO remains disabled by default.
 
-Profiling timer stacks and allocation counters are task-local. Repeated resource
-decoding is tracked per book across workers. Phase seconds sum task-local wall
-durations and may overlap; they are neither process CPU time nor elapsed time.
-Use `summarize-performance.ps1 -Workers N` for parallel profiles. It does not
-calculate a serial Amdahl ceiling from parallel work totals. Release profiling
-hooks remain empty and inlined. Use `--jobs 1` with gprof.
+## Validation
 
-PGO remains optional. Generation compiles and links with
-`-fprofile-update=atomic`, and source/configuration identity must match the use
-build. Train on the reserved tuning set with both `--jobs 1` and multiple
-workers, using separate output directories, then validate holdout data. Atomic instrumentation can contend heavily at large worker counts;
-its speed is not a release performance result. LTO remains optional and disabled.
-Runtime checks, assertions, static linking and dependency pins are unchanged.
+The Windows unit suite includes a deterministic two-worker, three-book test.
+The first book is blocked at its source open; the second completes and reports;
+the same worker then opens the third queued book and releases the first. This
+checks worker reuse, continuous queue consumption and completion-order reporting.
+The Windows suite has 141 cases; Linux has 91. Public CLI checks cover 21 books,
+159 saved entries, encodings, jobs 1/2/auto byte identity, failure isolation,
+recursive paths and atomic publication races. Applicable proofs and the existing
+coverage thresholds remain part of validation. Coverage gaps are reported without
+weakening their gates.
 
-Parallel-only PGO training was rejected after a measured 2.73% sequential
-regression. GCC [optimizes untrained code for size by default](https://gcc.gnu.org/onlinedocs/gcc/Optimize-Options.html#index-fprofile-partial-training),
-so sequential behavior must be included in training and checked independently.
-Balanced training alone also missed the conservative median gate (3.37% slower).
-After replacing controlled lifetime-lock guards with the narrow protected
-counter, a 32-pair sequential comparison measured 0.36% slower, with a
-paired 95% speedup interval of 0.980–1.016. It meets the median tolerance and does
-not establish a sequential speed change.
+On 2026-11-05, eight alternating native-release pairs on the reserved 71-book
+Mixed holdout compared this queue with the frozen previous entry-stage scheduler.
+Both used 16 physical-core workers. Median elapsed time fell from 2.198 s to
+1.940 s (11.7% less time, 1.133x throughput; paired 95% speedup interval
+1.108–1.191). Median peak working set fell from 145,592,320 to 122,128,384 bytes;
+the candidate's highest observed peak was 127,647,744 bytes. These measurements
+compare two parallel Ada schedulers, not Ada with Perl or serial execution.
+An untimed accounting run submitted and completed 71 book jobs with 16 workers,
+16 simultaneous books and zero batches. Each worker processed 3–7 books.
 
-## Reproducing acceptance measurements
+Independent full-corpus validation covered 337 books: 322 Converted, 15 Preserved,
+no errors, and exact archive identity with frozen Ada for every book. Compressed
+payload totaled 3,053,535,091 bytes, equal to frozen Ada and below Perl level 9's
+3,054,746,896 bytes. The existing 51 individual books larger than Perl are listed
+in the private validation report; none grew against frozen Ada.
 
-Freeze executable/source/profile identities before modification and retain private
-inputs, outputs, profiles and raw reports outside the checkout. For parallel
-Windows measurements use the existing benchmark with these additional options:
+The earlier queue-only native Windows import audit and static Linux ELF audit passed. Windows had
+135 passing AUnit cases, Linux 86, with 19 additional Linux native filesystem
+identity cases and 67 discharged proof checks. Application coverage is 93.73%
+statements and 75.67% decisions: required core coverage passes, while the existing
+95%/90% application thresholds remain unmet. Private measurements, frozen binaries,
+source inventory and logs are retained outside the repository.
 
-```powershell
-./tools/benchmark.ps1 -InputPath C:\bench\input -ReferenceReport C:\bench\perl.json `
-  -QualityBaselineReport C:\bench\frozen-ada.json -BaselineAdaExecutable C:\bench\frozen-ada.exe `
-  -AdaExecutable C:\bench\candidate.exe -OutputRoot C:\bench\results -Workload Converted `
-  -Jobs auto -AffinityMode PhysicalCores -MemoryPolicy WorkerScaled `
-  -Pairs 8 -ExtendInconclusive -MaximumPairs 32 -RequireIdenticalBaseline -CompressionGate Aggregate
-```
+## One versus sixteen workers
 
-Repeat for Preserved and Mixed. Linux Ada-only diagnostic runs accept
-`benchmark-linux.py --jobs auto --affinity-mode PhysicalCores`; its default
-single-core mode remains available, and it makes no cross-platform speed claim. The candidate inherits the controller's original
-allowed affinity before startup; frozen Ada/Perl controls inherit single-core
-affinity. `-ControlJobs 1` supports a newer control with the jobs option. Optional
-`-ReuseReferenceOutputs` independently verifies existing frozen Perl outputs
-instead of reconverting them; it requires an Ada control and worker-scaled memory
-policy. The worker-scaled comparison reports a 2N-times-control peak budget and
-does not apply the previous below-Perl whole-process ceiling to parallel mode.
-Sequential measurements retain the original memory gate.
+On 2026-11-05, the same frozen native executable was compared with `--jobs 1`
+and `--jobs 16` in eight alternating pairs on the reserved 71-book Mixed holdout
+(68 Converted, 3 Preserved). The host is a Ryzen 9 7950X3D with 16 physical cores
+and 32 logical processors. The serial run was pinned to one selected logical
+processor; the parallel workers used one logical processor per physical core.
+Every measured output passed independent verification and exact frozen-Ada
+archive identity. Inputs were warmed, outputs were fresh, and publication,
+flush/close, hashing and entry verification were included.
 
-Use uninstrumented releases for timing. Require eight alternating pairs, at least
-3% median improvement with a paired 95% interval excluding no improvement, both
-aggregate compression floors, byte identity, and no repeatable regression above
-2% in another workload or sequential mode. The approved short-invocation
-exception allows at most 20 ms added median time when the frozen control median
-is below 250 ms. At 250 ms and above, the 2% limit applies. The absolute allowance
-does not add another 2%. Extend inconclusive runs to 16 and
-32 pairs. Measure single-file latency separately from batch throughput and record
-scaling at 1, 2 and the detected maximum.
+| Metric | One worker | Sixteen workers |
+| --- | ---: | ---: |
+| Median elapsed seconds | 18.816 | 1.942 |
+| Speedup | 1.00x | 9.69x |
+| Median process CPU seconds | 17.969 | 24.758 |
+| Median peak working set, MiB | 24.3 | 114.8 |
 
-`evaluate-performance.ps1` applies this latency rule to the three workload
-summaries. Include `-SequentialSummary` and `-SingleFileSummary` for the complete
-latency acceptance check; each additional summary must compare the same frozen
-and candidate binaries. `benchmark.ps1` records the applicable rule and result
-in each new comparison summary's `LatencyGate` field.
+The paired 95% speedup interval is 9.608–9.879. Parallel efficiency is 60.5%.
+Average CPU use is 12.75 of the 16 selected cores, while worker occupancy is
+87.1% of available worker wall time. Occupancy includes I/O and lock waits.
+Total CPU cost increases 37.8% for the same work.
 
-## Measured Windows workloads
+Accounting from the uninstrumented release measurements gives an ideal elapsed
+time of 1.176 s and an observed gap of 0.766 s. Approximately 0.424 s of that gap
+comes from increased aggregate CPU cost, 0.092 s from additional non-CPU time
+inside active jobs, and 0.250 s from time outside active jobs. The last category
+contains approximately 0.210 s of pool idle time, primarily the final book tail,
+and 0.039 s outside the pool. These are accounting estimates from median timings
+and worker busy totals, not independently timed exclusive phases.
 
-On 2026-11-05, the uninstrumented native PGO release was compared with the exact
-frozen Ada PGO executable on the Windows host's 16 eligible physical cores.
-Controls used one core; parallel workers used one logical processor per core.
-The complete reserved holdout contains 68 converted and three preserved books.
-Each workload below uses eight alternating pairs and independent verification.
+### Identified scaling bottleneck
 
-| Workload | Frozen Ada median | 16-worker median | Speedup (paired 95% interval) | Maximum process working set |
-| --- | ---: | ---: | ---: | ---: |
-| Converted, 68 books | 17.789 s | 2.113 s | 8.42x (8.18–9.02) | 143.99 MiB |
-| Preserved, 3 books | 0.421 s | 0.352 s | 1.20x (1.14–1.24) | 22.96 MiB |
-| Mixed, 71 books | 18.134 s | 2.303 s | 7.87x (7.62–8.54) | 139.15 MiB |
+Book-local XML data still uses shared compiler-managed finalization collections
+for `Epub.XML.Node_Lists.Element_Access` and
+`Epub.XML.Attribute_Lists.Element_Access`. Every controlled element allocation
+and deallocation touches its access type's collection lock. Independent books
+therefore contend on the same two collection locks. Repeated deep copies in
+`Epub.Lists.Element`, `Adjust` and `Replace_Element` amplify this traffic.
+`Epub.XML.Characters`, for example, copies a node and its attributes before
+replacing it on every character callback.
 
-All workload timing, compression and worker-scaled memory gates pass. These
-comparisons measure batch throughput; single-file latency is checked separately.
-Mixed-workload process CPU utilization is 76.9% of the 16-worker capacity.
+Isolated diagnostic builds timed the original GNAT lock functions without
+removing synchronization, changing dependency sources, or changing production
+code. Symbol mapping identified 3,726,676 node-collection acquisitions and
+4,007,008 attribute-collection acquisitions on this workload. Their combined
+acquisition time was 0.158 summed task-seconds with one worker and 5.77–6.24
+with sixteen workers in two diagnostic runs. Probe stacks balanced without
+errors, and independently checked diagnostic outputs matched frozen Ada exactly.
+These numbers include instrumentation overhead and overlapping task time; they
+are evidence of contention, not release elapsed seconds or an exact attribution
+of the entire release regression.
 
-The many-entry single-book case improves 1.70x (0.201 s to 0.118 s). The
-dominant-entry case takes 0.124 s versus 0.114 s and fails the original 2% relative
-latency gate. Its 10 ms increase meets the short-invocation allowance explicitly
-approved on 2026-11-05; the original gate outcome remains recorded. The pinned
-GNAT runtime's `Finalize_Global_Tasks` unconditionally
-waits 10 ms when tasking is linked; an isolated minimal-program comparison
-measured about 20 ms additional wall time on this Windows host, even without
-creating a worker. No runtime finalization or dependency source was bypassed.
-The serial dominant-entry diagnostic was also checked against the approved
-allowance. Combining its original and follow-up samples gives 16 pairs and
-18.4 ms added median time, within the 20 ms limit. The concurrency performance
-gates pass under the approved rule; the separate application coverage gate below
-remains unmet.
+Separate phase diagnostics support the same finding: exclusive XML parsing plus
+analysis increased from 2.188 to 7.587 summed task-seconds. Match finding grew
+from 7.972 to 8.573 and decompression from 4.942 to 5.133. Match finding remains
+the largest compute phase, but XML/container bookkeeping scales much worse.
+Allocator diagnostics counted roughly 15.7 million allocation/reallocation calls
+and 15.7 million frees; direct allocator/free time increased from 1.00 to 2.15
+summed task-seconds. This excludes compiler finalization-collection locking.
 
-All 337 output EPUBs are byte-identical to frozen Ada. Their compressed payload
-total is 3,053,535,091 bytes, versus Perl level 9's 3,054,746,896 bytes. Both the
-266-book tuning set and the 71-book holdout independently meet the Perl floor.
-No book grows relative to frozen Ada; 51 books remain larger than Perl, as in the
-baseline. Their individual deltas and the raw reports stay outside the checkout.
+The release diagnostic's busy-weighted Windows processor-performance counter
+changed from 121.3 to 118.5, approximately 2.3% lower. The mean system disk queue
+was 0.18 during the parallel run. These samples do not support a large clock
+drop or a saturated disk as the primary explanation. Hardware memory-bandwidth
+saturation was not measured.
 
-The separate scaling comparison on the same 71-book cohort measured:
-
-| Workers | Candidate median | Speedup against paired frozen control | Pairs |
-| --- | ---: | ---: | ---: |
-| 1 | 20.316 s | 0.996x | 32 |
-| 2 | 9.218 s | 1.967x | 8 |
-| 16 | 2.284 s | 7.842x | 8 |
-
-Each row has its own alternating control runs; the normalized speedups account
-for changing host conditions. Maximum observed admission was 16 active books,
-32 outstanding batches and 31 queued jobs, within the N/2N/4N bounds.
-
-PGO remains optional and is not promoted over the standard native build. Its
-32-pair comparison measured 0.972x native speed (95% interval 0.950–1.012), which
-does not establish a benefit. The throughput table above identifies the PGO
-variant explicitly and compares it with the exact frozen PGO baseline.
-
-The final diagnostic profile has no abandoned timers. Decompression accounts
-for about 38% of summed task-local wall time, match finding 23%, XML parsing 10%
-and analysis 9%. Blocking and overlap affect these fractions; they are not CPU
-shares or serial speedup ceilings. Per-book analysis, each DEFLATE stream,
-whole-file hashes and ordered ZIP assembly remain serial within a book. Further
-work should first measure shared-source I/O contention and dominant-entry load
-imbalance, keeping stream decisions and archive byte identity intact.
-
-## Validation status
-
-Windows: 134 unit cases, public CLI/independent verification of 21 books and 159
-entries, jobs 1/2/auto byte identity, concurrent native filesystem faults, and
-67 applicable proof checks pass. Linux: 86 unit cases and the static ELF,
-filesystem and public CLI/worker-mode checks pass. The standalone native
-destination-identity harness passes 19 casefold, unavailable-query and I/O-error
-cases. Native Windows imports contain
-only ADVAPI32, KERNEL32, msvcrt and SHELL32. Dependencies were not source-patched.
-Linux staging used a source-identical verified Zip-Ada cache after a fresh
-SourceForge download failed the pinned checksum; the checksum gate was retained.
-
-Coverage currently measures 94.16% statements and 75.80% decisions; required core
-coverage passes. The unchanged 95%/90% application gate remains unmet. The
-expanded concurrency error and topology branches increase the coverage denominator.
-See the checked-in verification reports for the measured units.
+The next owned-code targets are scoped node reads during analysis and in-place
+character accumulation that avoids cloning node attributes. Keep existing deep
+value-copy behavior for callers requiring ownership. After reducing that shared
+bookkeeping, consider enqueueing estimated expensive books first to shorten the
+final whole-book tail. Retain the fixed worker pool, runtime checks, exact output
+identity and full persisted verification. Raw profiles, diagnostic sources,
+scripts and reports remain outside the checkout; performance claims above use
+the unchanged release executable only.

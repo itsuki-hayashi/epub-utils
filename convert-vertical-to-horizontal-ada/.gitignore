@@ -17,3 +17,8 @@
 /coverage/config/
 *.srctrace
 __pycache__/
+/tests/xml_oracle/obj/
+/tests/xml_oracle/bin/
+/tests/xml_oracle/alire/*
+!/tests/xml_oracle/alire/alire.lock
+/tests/xml_oracle/config/

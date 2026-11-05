@@ -17,9 +17,12 @@ package Epub.Workers is
       Submitted, Completed, Queue_High_Water : Natural := 0;
    end record;
    type Pool is new Ada.Finalization.Limited_Controlled with private;
-   procedure Start (Item : in out Pool; Cores : Epub.CPUs.Processor_Lists.Vector);
+   procedure Start (Item : in out Pool; Cores : Epub.CPUs.Processor_Lists.Vector;
+                    Queue_Capacity : Natural := 0);
    --  Accepted jobs are owned and finalized by the pool, including failure paths.
    procedure Submit (Item : in out Pool; Work : in out Job_Access; Accepted : out Boolean);
+   --  No more jobs will be submitted. Workers drain the queue and then exit.
+   procedure Finish_Submission (Item : in out Pool);
    procedure Join (Item : in out Pool);
    procedure Stop (Item : in out Pool);
    function Snapshot (Item : Pool) return Statistics;

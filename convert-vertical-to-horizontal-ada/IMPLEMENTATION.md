@@ -5,11 +5,11 @@ This file records current evidence and does not replace the agreed plan.
 
 ## Concurrency implementation
 
-One shared Ada task pool now processes independent entries and books, with
-physical-core affinity, bounded batches, ordered archive assembly and reports,
-and publication as ready for independent destinations. See
+One fixed Ada task pool processes a FIFO queue of whole books, with
+physical-core affinity and immediate worker reuse. Books publish independently
+and reports arrive in completion order. Archive entry order is preserved. See
 [CONCURRENCY.md](CONCURRENCY.md) for ownership, failure handling, tests and
-measurement commands. The current coverage is 94.16% statements and 75.80%
+measurement commands. The current coverage is 93.89% statements and 75.88%
 decisions; required core coverage passes, and the unchanged 95%/90% application
 gate remains unmet.
 
@@ -17,8 +17,9 @@ gate remains unmet.
 
 Release and profiling builds now support portable and native CPU tuning, with
 separate object directories. Release optimization retains checks, assertions,
-static linking, and strict owned-code diagnostics. Dependency sources and their
-warning settings are unchanged.
+static linking, and strict owned-code diagnostics. The maintained XML/Ada fork
+is the approved source exception; other dependency sources and their warning
+settings remain unchanged.
 
 An owned, attributed subset of the Zip-Ada encoder now provides DEFLATE and
 stored fallback. It includes a level-9 lazy matcher, checked word comparisons,
@@ -36,7 +37,7 @@ both frozen Ada and the Perl reference's zlib level 9 in aggregate; a speed
 improvement cannot waive either gate.
 
 The current shared codec and file-stream tests pass on Windows and Linux:
-134 Windows cases and 86 Linux cases. Retained optimizations include a
+141 Windows cases and 91 Linux cases. Retained optimizations include a
 17-bit multiplicative-hash matcher with bounded bulk input and hoisted probes,
 adaptive search for unchanged resources, batched bit output, word-buffered
 decoding with an additional short-literal path, indexed resource lookup,
@@ -45,7 +46,7 @@ Unused RAM-cache and buffering experiments have been removed; the compression
 workspace experiment did not improve wall time enough to retain.
 The bounded analysis-cache and larger-token-block experiments were also rejected
 by paired timing checks. Optional source-bound PGO generation/use builds preserve
-checks, assertions, static linking and unmodified dependencies. See PERFORMANCE.md
+checks, assertions, static linking and the maintained dependency policy. See PERFORMANCE.md
 for training, holdout validation, dual compression gates and promotion criteria.
 Conversion now uses file-backed catalogues with shared handle ownership,
 on-demand payload loading, sequential output hashing, and entry-at-a-time
@@ -76,15 +77,16 @@ must remain outside the repository.
 Linux x86-64 is implemented using separate filesystem and CP932 adapters. It
 builds with the same pinned toolchain and strict owned-source diagnostics.
 The executable is a static ELF with no interpreter or dynamic dependencies.
-The 74 shared unit cases and the 21-fixture CLI suite pass on Ubuntu 26.04;
+The 86 Linux unit cases and the 21-fixture CLI suite pass on Ubuntu 26.04;
 filesystem acceptance checks pass on both native Linux storage and WSL's
 Windows mount. Windows retains its API fault-injection suite and passes all
-109 cases. Normal and optional PGO builds pass CLI and static-link checks on
-both platforms. See [LINUX.md](LINUX.md) for commands and platform details.
+135 cases. Native release builds pass CLI and static-link checks on both
+platforms. Earlier optional PGO validation predates the current book scheduler.
+See [LINUX.md](LINUX.md) for commands and platform details.
 
 ## Implemented and exercised
 
-The Windows CLI uses GNAT 16.1.0, GPRbuild 26.0.1, Ada 2022, XML/Ada 26.0.0
+The Windows CLI uses GNAT 16.1.0, GPRbuild 26.0.1, Ada 2022, xmlada_epub 26.0.0-epub.1
 and Zip-Ada 62.0.0. All 21 reference EPUBs match the expected classification,
 changed resources, decompressed payloads, entry order, attributes and timestamps.
 Nine books convert and twelve remain exact whole-file copies. Independent Perl
@@ -149,9 +151,10 @@ and all remaining required functional contracts are not yet complete.
 Application code, owned containers, tests and proof units retain every optional
 GNAT warning as an error, backend warnings as errors, assertions and runtime
 checks. Per the user's revised policy, third-party dependencies use upstream
-settings and their warnings are not release gates. Production and tests use
-unmodified dependency sources. All warning-cleanup source patches, forked vendor
-copies, generators and experimental strict-dependency projects are removed.
+settings and their warnings are not release gates. Production and tests use the
+explicitly approved, repository-managed XML/Ada fork for task-owned SAX contexts.
+Other dependency sources remain unmodified. See `XML_CONCURRENCY.md` for the
+ownership, preservation and performance evidence.
 The test-only JSON project has a GNAT 16 build-configuration adjustment, with no
 source changes. See `BUILD_POLICY.md` for the exact ownership boundary.
 

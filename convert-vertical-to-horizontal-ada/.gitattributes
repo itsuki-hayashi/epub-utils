@@ -1,2 +1,3 @@
-*.sh text eol=lf
-*.py text eol=lf
+# The maintained dependency identity hashes exact upstream/fork bytes. Preserve
+# its mixed original encodings and line endings on every checkout platform.
+/vendor/xmlada_epub/** -text

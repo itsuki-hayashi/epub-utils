@@ -8,7 +8,7 @@ abstract project Native_Options is
       "-Wl,--wrap=FindNextFileW", "-Wl,--wrap=FindClose",
       "-Wl,--wrap=GetCurrentDirectoryW", "-Wl,--wrap=GetFullPathNameW",
       "-Wl,--wrap=CommandLineToArgvW", "-Wl,--wrap=LocalFree",
-      "-Wl,--wrap=SetConsoleOutputCP", "-Wl,--wrap=GetProcAddress");
+      "-Wl,--wrap=SetConsoleOutputCP", "-Wl,--wrap=GetProcAddress", "-Wl,--wrap=malloc");
    C_Options :=
      ("-std=c11", "-Wall", "-Wextra", "-Werror", "-Wpedantic", "-Wconversion",
       "-Wsign-conversion", "-Wshadow", "-Wmissing-prototypes", "-Wstrict-prototypes",

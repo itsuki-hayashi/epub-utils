@@ -8,6 +8,7 @@ $runtimeProject = Join-Path $projectDirectory 'obj/gnatcov-runtime/share/gpr/gna
 New-Item -ItemType Directory -Path $traceDirectory, $reportDirectory | Out-Null
 
 function Run-Alire([string[]]$Arguments, [string]$LogName) {
+    if ($Arguments[1] -ne 'setup') { $Arguments += '-XEPUB_XML_ROLE=coverage' }
     & alr -n exec -- @Arguments *> (Join-Path $runDirectory $LogName)
     if ($LASTEXITCODE -ne 0) { throw ('Coverage command failed; see ' + (Join-Path $runDirectory $LogName)) }
 }

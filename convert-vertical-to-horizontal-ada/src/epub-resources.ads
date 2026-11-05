@@ -8,6 +8,9 @@ package Epub.Resources is
    function Contains (Items : String_Lists.Vector; Value : String) return Boolean;
    procedure Include (Items : in out String_Lists.Vector; Value : String);
    function Tokens (Value : String) return String_Lists.Vector;
+   generic
+      with procedure Process (Value : String);
+   procedure Query_Tokens (Value : String);
    function Imports (Stylesheet : String) return String_Lists.Vector;
    function Uses_Vertical
      (Stylesheet : String; Classes, Ids : String_Lists.Vector) return Boolean;

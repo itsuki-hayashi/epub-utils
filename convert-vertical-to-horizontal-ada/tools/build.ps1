@@ -11,6 +11,7 @@ param(
 $ErrorActionPreference = 'Stop'
 if ($Gprof -and $BuildKind -ne 'profile') { throw 'Use -BuildKind profile with -Gprof.' }
 $projectDirectory = Split-Path $PSScriptRoot -Parent
+& (Join-Path $PSScriptRoot 'audit-xml-fork.ps1')
 if ($PgoMode -ne 'off' -and ($BuildKind -ne 'release' -or $Gprof -or $LinkTimeOptimization -or -not $ProfileDirectory)) {
     throw 'PGO requires a release build, an external ProfileDirectory, and no gprof/LTO.'
 }
@@ -23,7 +24,10 @@ if ($PgoMode -ne 'off') {
     }
     $sources = @(Get-ChildItem -LiteralPath (Join-Path $projectDirectory 'src') -Recurse -File |
         Where-Object Extension -in '.adb','.ads','.c') + @(Get-ChildItem -LiteralPath $projectDirectory -Filter '*.gpr') +
-        @(Get-Item -LiteralPath (Join-Path $projectDirectory 'alire/alire.lock'))
+        @(Get-Item -LiteralPath (Join-Path $projectDirectory 'alire/alire.lock'), (Join-Path $projectDirectory 'alire.toml')) +
+        @(Get-ChildItem -LiteralPath (Join-Path $projectDirectory 'vendor/xmlada_epub') -Recurse -File |
+          Where-Object { $_.Extension -in '.adb','.ads','.gpr','.toml','.json' -and
+            $_.FullName.Substring((Join-Path $projectDirectory 'vendor/xmlada_epub').Length) -notmatch '[\\/](obj|lib|alire|config)[\\/]' })
     $sourceIdentity = (@($sources | Sort-Object FullName | ForEach-Object {
         $_.FullName.Substring($projectDirectory.Length) + ':' + (Get-FileHash -LiteralPath $_.FullName).Hash
     }) -join "`n")
@@ -79,6 +83,7 @@ try {
     if ($LinkTimeOptimization) { $switches += @('-largs', '-flto=auto') }
     & alr -n exec -- gprbuild @switches
     if ($LASTEXITCODE -ne 0) { throw 'Ada build failed.' }
+    & (Join-Path $PSScriptRoot 'audit-xml-fork.ps1') -LinkMap (Join-Path $projectDirectory "$mapDirectory/epub-v2h.map")
     if ($PgoMode -eq 'generate') {
         [pscustomobject]@{SourceSHA256=$sourceSHA256;CpuTuning=$CpuTuning;SectionGC=[bool]$SectionGC;
             Platform='windows';ObjectConfiguration=$buildSubdirectory} | ConvertTo-Json |

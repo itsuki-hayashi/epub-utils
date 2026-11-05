@@ -2,7 +2,7 @@
 
 This maps implemented behavior to executable checks and records gaps. Passing
 rows do not imply release completion. A numerical comparison with Perl coverage
-is pending the Devel::Cover baseline. The current Ada totals are 134 Windows and 86 Linux AUnit cases
+is pending the Devel::Cover baseline. The current Ada totals are 141 Windows and 91 Linux AUnit cases
 plus CLI integration; individual cases contain many assertions.
 
 | Requirement | Ada evidence | Perl reference / additional coverage | State |
@@ -33,12 +33,13 @@ plus CLI integration; individual cases contain many assertions.
 | Report schema, nullability, changed-entry sorting, escapes | Report Report_Schema, JSON_Escapes; test-cli.ps1 | 03-cli.t; test-only JSON parser and explicit control escapes | Passing |
 | Shared manifest classifications and complete changed-entry sets | Report Fixture_Manifest | 02-book-parity.t; JSON 6.0.0 inspection | Passing |
 | Container ownership and invalid indices | Core List_Ownership | Additional indefinite-element, deep-copy and growth checks | Passing |
+| Independent XML parser contexts and summaries | XML_Cases; Windows XML_Allocation_Recovery; isolated original XML/Ada oracle | Forced overlapping callbacks, equal symbol names, differing namespaces/sentinels, owner/reentry/stale-handle guards, malformed recovery and heap failures; 41,811 summary/acceptance comparisons; 337 identical archives | Passing current validation |
 | Patch preservation, writing-mode mapping, classification, publication proofs | proof/core.gpr | Additional SPARK contracts; 67 current checks discharged | Passing current boundary; ordered multi-edit proofs pending |
 | Owned-code warnings as errors | tools/build.ps1; tools/test.ps1 | Strict application, owned containers, tests and proof settings; third-party projects use upstream settings | Passing under revised ownership policy |
-| Unmodified dependencies | Alire pins and project imports; BUILD_POLICY.md | No vendor source forks or warning patches; JSON build configuration adapted without source edits | Passing |
-| Application coverage gates | tools/coverage.ps1 | 95% statement, 90% decision; separately required core coverage; entry point and owned decompression adapter included | Statement 94.16% and decision 75.80%; both application thresholds remain unmet |
+| Dependency ownership policy | Alire pins, closure and source identity audits; BUILD_POLICY.md | Approved maintained xmlada_epub fork; other dependency sources unchanged; strict owned diagnostics | Passing |
+| Application coverage gates | tools/coverage.ps1 | 95% statement, 90% decision; separately required core coverage; entry point and owned decompression adapter included | Statement 93.89% and decision 75.88%; both application thresholds remain unmet |
 | Static imports and clean PATH | objdump audit; test-cli.ps1 | Four Windows DLLs only; test tools excluded | Passing current binary; automated release audit pending |
-| Concurrent entries/books, ordered assembly and reports, failure isolation | Concurrency Archive_Equivalence, Failure_Isolation, Reversed_Completion, Worker_Continuations; jobs 1/2/auto CLI comparisons | Exact archive hashes, collision precedence, native concurrent I/O faults and bounded queue accounting | Passing tested cases |
+| Whole-book FIFO queue, fixed worker reuse, completion-order reports, failure isolation | Windows Rolling_Book_Queue; Concurrency Archive_Equivalence, Failure_Isolation, Reversed_Completion, Worker_Continuations; jobs 1/2/auto CLI comparisons | Blocked first book while another worker reports book 2 and starts book 3; exact archive hashes, atomic collision protection, native concurrent I/O faults and queue accounting | Passing tested cases |
 | Physical performance cores, SMT exclusion, restricted groups and affinity startup | Concurrency Topology_Selection, Native_Topology, Affinity_Failure; worker affinity readback | Synthetic hybrid/multi-group/restricted/unavailable topology and actual native pin verification | Passing tested cases; virtual hardware exposes OS topology only |
 | Shared source lifetime and exclusive temporary reservations | Concurrency Shared_Source_Readers, Temporary_Reservations | Eight concurrent readers retain bounded private cursors after releasing original ownership; 64 reservations | Passing |
 | Windows CI and Perl coverage baseline | Not yet implemented | Release acceptance requirements | Pending |

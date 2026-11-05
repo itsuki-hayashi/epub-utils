@@ -5,6 +5,12 @@ package body Native_Faults is
      with Import, Convention => C, External_Name => "epub_test_fail_next";
    procedure Set_Write_Then_Close
      with Import, Convention => C, External_Name => "epub_test_fail_write_then_close";
+   procedure Set_Output_Close (Skip : Interfaces.C.unsigned)
+     with Import, Convention => C, External_Name => "epub_test_fail_output_close";
+   procedure Arm_Output_Close (Skip : Natural) is
+   begin
+      Set_Output_Close (Interfaces.C.unsigned (Skip));
+   end Arm_Output_Close;
    procedure Arm_Write_Then_Close is
    begin
       Set_Write_Then_Close;

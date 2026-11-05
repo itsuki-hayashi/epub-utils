@@ -116,8 +116,8 @@ Copy-Item -LiteralPath (Join-Path $fixtureDirectory 'horizontal English [literal
 $mixedResult = Run-Converter @('--input-path', $mixed, '--output-directory', (Join-Path $runDirectory 'mixed-output'), '--json')
 $mixedRecords = @($mixedResult.Output | ConvertFrom-Json)
 Check ($mixedResult.Code -eq 1) 'Mixed batch must return failure'
-Check (($mixedRecords.Status -join '|') -ceq 'Error|Preserved') 'Per-book failure isolation'
-Check (-not [string]::IsNullOrWhiteSpace($mixedRecords[0].Error)) 'Malformed ZIP error must be explicit'
+Check ((@($mixedRecords.Status|Sort-Object) -join '|') -ceq 'Error|Preserved') 'Per-book failure isolation'
+Check (-not [string]::IsNullOrWhiteSpace(($mixedRecords|Where-Object Status -CEQ Error).Error)) 'Malformed ZIP error must be explicit'
 $scenarios.Add('Malformed archive isolation and continued batch processing')
 
 $tree = Join-Path $runDirectory 'tree'
@@ -158,7 +158,7 @@ foreach ($jobs in @('1','2','auto')) {
     $parallel = Run-Converter @('--input-path', $fixtureDirectory, '--output-directory', $target, '--Jobs', $jobs, '--json')
     Check ($parallel.Code -eq 0) ('Worker mode failed: ' + $jobs + ' ' + $parallel.Error)
     $parallelRecords = @($parallel.Output | ConvertFrom-Json)
-    Check (($parallelRecords.Book -join '|') -ceq ($records.Book -join '|')) 'Parallel report order'
+    Check ((@($parallelRecords.Book|Sort-Object) -join '|') -ceq (@($records.Book|Sort-Object) -join '|')) 'Every queued book reports once'
     foreach ($record in $parallelRecords) {
         $original = @($records | Where-Object Book -CEQ $record.Book)[0]
         Check ($original.OutputSHA256 -ceq $record.OutputSHA256) 'Worker modes preserve exact archive bytes'
@@ -168,7 +168,7 @@ foreach ($jobs in @('0','-1','invalid','999999')) {
     $invalid = Run-Converter @('--input-path', $fixtureDirectory, '--analyze-only', '--jobs', $jobs)
     Check ($invalid.Code -eq 1) ('Invalid worker count accepted: ' + $jobs)
 }
-$scenarios.Add('Jobs 1/2/auto archive byte identity, input-order reports and invalid count rejection')
+$scenarios.Add('Jobs 1/2/auto archive byte identity, unordered complete reports and invalid count rejection')
 
 & perl (Join-Path $PSScriptRoot 'verify-archive-roundtrip.pl') conversion $books
 if ($LASTEXITCODE -ne 0) { throw 'Independent Perl payload/metadata verification failed' }

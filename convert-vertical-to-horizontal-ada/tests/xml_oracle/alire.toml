@@ -1,0 +1,11 @@
+name = "epub_xml_original_oracle"
+version = "0.1.0-dev"
+description = "Isolated frozen original XML/Ada test oracle"
+licenses = "GPL-3.0-only"
+project-files = ["oracle.gpr"]
+[[depends-on]]
+gnat_native = "=16.1.0"
+gprbuild = "=26.0.1"
+xmlada = "=26.0.0"
+[gpr-set-externals]
+LIBRARY_TYPE = "static"

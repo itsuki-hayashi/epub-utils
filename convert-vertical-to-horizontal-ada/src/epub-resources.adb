@@ -25,6 +25,21 @@ package body Epub.Resources is
       end if;
    end Include;
 
+   procedure Query_Tokens (Value : String) is
+      Position : Integer := Value'First;
+   begin
+      while Position <= Value'Last loop
+         if Space (Value (Position)) then Position := Position + 1;
+         else
+            declare
+               First : constant Integer := Position;
+            begin
+               while Position <= Value'Last and then not Space (Value (Position)) loop Position := Position + 1; end loop;
+               Process (Value (First .. Position - 1));
+            end;
+         end if;
+      end loop;
+   end Query_Tokens;
    function Tokens (Value : String) return String_Lists.Vector is
       Result : String_Lists.Vector;
       Position : Integer := Value'First;

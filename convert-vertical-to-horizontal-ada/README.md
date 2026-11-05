@@ -9,9 +9,10 @@ An Ada implementation is feasible as one executable containing the application, 
 
 The **2–4 day feasibility milestone** is included in that estimate. Archive metadata tests, CP932 round trips, static packaging checks and selected SPARK proofs now run. Full release acceptance gates remain unfinished; current evidence is recorded below and in IMPLEMENTATION.md.
 
-Concurrent processing within one EPUB and across books uses one physical-core
-pool. See [CONCURRENCY.md](CONCURRENCY.md) for --jobs, scheduling, memory,
-publication ordering, and validation.
+Concurrent processing uses a fixed physical-core worker pool and a queue of
+whole books. Workers take another book immediately after each completion;
+results have no input-order guarantee. See [CONCURRENCY.md](CONCURRENCY.md)
+for --jobs, scheduling, memory, publication, and validation.
 
 ## Current executable
 
@@ -77,7 +78,7 @@ Alire 2.1.1 is installed locally. The following releases were checked against th
 | --- | --- | --- |
 | gnat_native | 16.1.0 on Windows x86-64 | Latest compatible Windows compiler in the checked index. |
 | gprbuild | 26.0.1 | Project builds; its manifest identifies the distributed artifact as 26.0.0-1. |
-| xmlada | 26.0.0 | Secure XML inspection through SAX or DOM; no output serialization. |
+| xmlada_epub | 26.0.0-epub.1 | Maintained, context-owned SAX/input/Unicode fork; relative source pin. |
 | zipada | 62.0.0 | Archive reading, decompression, ZIP structures and stream support; a preservation adapter is necessary. |
 | aunit | 26.0.0 | Modular unit and integration test suites. |
 | gnatprove | 16.1.0 | Development-only analysis and proofs of selected core packages. |
@@ -89,7 +90,7 @@ The catalog's newest gnat_native is **16.2.0-pre0**, but [that release manifest]
 
 Use **Ada 2022**, explicitly selected with `-gnat2022`. It is the latest standardized language mode listed by the [GNAT language-version documentation](https://gcc.gnu.org/onlinedocs/gnat_ugn/Compiling-Different-Versions-of-Ada.html). Keep proven units within the features accepted by the selected GNATprove release. Freeze exact tool versions, dependency resolutions and source checksums for releases, then recheck newest platform-compatible versions when implementation starts.
 
-The [XML/Ada manifest](https://github.com/alire-project/alire-index/blob/fda959dde3114c242d7bd5844281cc6345dc3ab2/index/xm/xmlada/xmlada-26.0.0.toml) exposes `LIBRARY_TYPE=static`. It also runs `sh configure` after fetching on applicable distributions, so Windows needs build-time shell tooling, normally supplied through Alire/MSYS2. That shell is not a runtime requirement of the converter.
+Production imports the checked-in `xmlada_epub` static SAX/input/Unicode projects. Their configuration is portable and requires no configure action or machine-specific paths. Original XML/Ada is confined to the isolated test oracle. Build audits reject mixed original/fork closures. See [XML concurrency](XML_CONCURRENCY.md).
 
 Use the documented runtime package [GNAT.SHA256](https://gcc.gnu.org/onlinedocs/gnat_rm/GNAT-SHA256-g-sha256-ads.html) for verification hashes, avoiding another cryptographic library. AUnit, GNATprove, provers, GNATcoverage and its instrumentation runtime remain outside the production executable.
 
@@ -139,7 +140,7 @@ Do not implement publication as an existence check followed by a potentially ove
 
 Use `-gnat2022 -gnatw.e -gnatwe` for Ada compilation. The [warning documentation](https://gcc.gnu.org/onlinedocs/gnat_ugn/Warning-Message-Control.html) distinguishes `-gnatw.e`, enabling every optional GNAT warning, from `-gnatwa`, which enables only most. `-gnatwe` makes warnings and enabled style diagnostics fatal. Add applicable GCC backend diagnostics such as `-Wall -Wextra -Werror`, and audit additional Ada-applicable backend warnings supported by the selected compiler. GCC has language-specific and mutually unsuitable warning switches; “every GCC -W switch” is not a usable cross-language build configuration.
 
-The user's revised policy limits strict diagnostics to owned application code, containers, tests and proof units. Third-party projects keep their upstream compiler settings; dependency warnings are not release gates. All experimental warning patches and vendor forks have been removed. Test-only JSON uses a compatible project configuration without source changes. See [BUILD_POLICY.md](BUILD_POLICY.md). Generated tooling code and compiler/runtime artifacts use their supplied configuration.
+The user's revised policy limits strict diagnostics to owned application code, containers, tests and proof units. Third-party projects keep their upstream compiler settings; dependency warnings are not release gates. The maintained XML/Ada fork is the approved exception; see [fork provenance](vendor/xmlada_epub/EPUB_FORK.md). Test-only JSON uses a compatible project configuration without source changes. See [BUILD_POLICY.md](BUILD_POLICY.md). Generated tooling code and compiler/runtime artifacts use their supplied configuration.
 
 Retain runtime checks and enable assertions/contracts with `-gnata` in validation builds. Keep separate release, test, coverage and proof projects so instrumentation and proof-only dependencies cannot leak into the shipped executable.
 

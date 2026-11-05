@@ -1,5 +1,12 @@
 # Performance builds and validation
 
+The thread-only XML fork is documented in [XML_CONCURRENCY.md](XML_CONCURRENCY.md).
+Use `-MemoryPolicy FrozenParallel` for its promotion comparisons: the candidate's
+worst measured peak must stay within four times the frozen matching-workload
+median of per-run peaks. `Sequential` and `WorkerScaled` retain their previous
+single-worker and pool-scaling safeguards. All promotion timings use release
+executables with profiling disabled.
+
 A full eight-pair native Windows comparison established faster end-to-end
 conversion and lower peak memory than Windows Perl, with independent output
 verification and the aggregate compression-quality gate enforced. The optimized
@@ -263,11 +270,15 @@ timestamps, attributes, reports, source/output hashes and aggregate compressed
 size. These results make no cross-platform Perl speedup claim. Linux peak RSS
 and Windows peak working set are different operating-system metrics.
 
-## Separate multicore follow-up
+## Whole-book concurrency
 
-Investigate isolated worker processes for independent books after single-core
-acceptance. Keep the default sequential, preserve deterministic reporting and
-per-book failure isolation, and budget total worker memory from measured peaks.
-Shared source handles currently seek and mutate reference counts without
-synchronization; they must not be shared across workers. Throughput scaling and
-total memory require separate measurements and are not single-core speed claims.
+The default automatic mode uses a fixed Ada worker pool pinned to the available
+physical performance cores. Every queued job owns a whole book. A worker takes
+its next job immediately after completing the previous book; results are emitted
+in completion order. Use `--jobs 1` for the direct serial path. There is no
+within-book parallelism. Shared source lifetimes and temporary reservations are
+synchronized, while book processing state remains worker-owned.
+
+See [CONCURRENCY.md](CONCURRENCY.md) for the queue, validation, and separately
+measured throughput and memory. Previous entry-stage scheduler measurements are
+historical; they are not performance claims for this implementation.

@@ -7,7 +7,7 @@ param(
     [ValidatePattern('^(auto|[1-9][0-9]*)$')][string]$Jobs = '1',
     [ValidateSet('SingleCore','PhysicalCores')][string]$AffinityMode = 'SingleCore',
     [ValidateSet('SingleCore','PhysicalCores')][string]$ControlAffinityMode = 'SingleCore',
-    [ValidateSet('Sequential','WorkerScaled')][string]$MemoryPolicy = 'Sequential',
+    [ValidateSet('Sequential','WorkerScaled','FrozenParallel')][string]$MemoryPolicy = 'Sequential',
     [string]$ControlJobs,
     [switch]$ReuseReferenceOutputs,
     [ValidateRange(0,[long]::MaxValue)][long]$MemoryBaselinePeakBytes = 0,
@@ -28,7 +28,7 @@ try {
     try { while (-not $benchmarkMutex.WaitOne(1000)) {} }
     catch [Threading.AbandonedMutexException] { }
     $ownsBenchmarkMutex = $true
-if ($ReuseReferenceOutputs -and (-not $BaselineAdaExecutable -or $MemoryPolicy -ne 'WorkerScaled')) {
+if ($ReuseReferenceOutputs -and (-not $BaselineAdaExecutable -or $MemoryPolicy -eq 'Sequential')) {
     throw 'Reusing frozen Perl outputs requires an Ada control and the worker-scaled memory policy.'
 }
 . (Join-Path $PSScriptRoot 'performance-statistics.ps1')
@@ -282,7 +282,8 @@ try {
         $candidateMaxPeak = ($rows | Where-Object Engine -eq Ada | Measure-Object PeakBytes -Maximum).Maximum
         $controlMaxPeak = ($rows | Where-Object Engine -eq ControlAda | Measure-Object PeakBytes -Maximum).Maximum
         $candidateWorkers = [int](Median @($rows | Where-Object Engine -eq Ada | ForEach-Object Workers))
-        $memoryLimit = if ($MemoryPolicy -eq 'WorkerScaled') { 2 * $candidateWorkers * $controlPeak } else { 2 * $controlPeak }
+        $memoryLimit = if ($MemoryPolicy -eq 'FrozenParallel') { 4 * $controlPeak }
+            elseif ($MemoryPolicy -eq 'WorkerScaled') { 2 * $candidateWorkers * $controlPeak } else { 2 * $controlPeak }
         $summary = [pscustomobject]@{CandidateWorkers=$candidateWorkers;
             CandidateWorkerUtilization=(Median @($rows | Where-Object Engine -eq Ada | ForEach-Object WorkerUtilization));
             MemoryLimitBytes=$memoryLimit;ArtifactDirectory=$session;Label=$Label;Workload=$Workload;Books=$selection.Count;Pairs=$Pairs;Limit=$Limit;
@@ -296,7 +297,7 @@ try {
             LatencyGate=(Get-PerformanceLatencyGate $controlMedian $candidateMedian);
             PairedConfidence=$interval;DualCompressionGate=($CompressionGate -ne 'Report');
             MemoryWithinBudget=($controlPeak -gt 0 -and $candidateMaxPeak -gt 0 -and
-                $candidateMaxPeak -le $memoryLimit -and ($MemoryPolicy -eq 'WorkerScaled' -or $candidateMaxPeak -lt $expected.PeakBytes));
+                $candidateMaxPeak -le $memoryLimit -and ($MemoryPolicy -ne 'Sequential' -or $candidateMaxPeak -lt $expected.PeakBytes));
             PromotionTimingMet=($Pairs -ge 8 -and $Limit -eq 0 -and $interval.Lower95 -gt 1 -and
                 $controlMedian/$candidateMedian -ge 1.03);
             ControlMedianCPUSeconds=(Median @($rows|Where-Object Engine -eq ControlAda|ForEach-Object CPUSeconds));

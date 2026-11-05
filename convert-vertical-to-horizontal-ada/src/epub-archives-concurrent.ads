@@ -3,6 +3,8 @@ with Epub.Resources;
 with Epub.CPUs;
 
 package Epub.Archives.Concurrent is
+   --  One queued job owns a complete book. Workers take another job as soon
+   --  as they finish; results and Observer calls follow completion order.
    procedure Process
      (Sources, Outputs : Epub.Resources.String_Lists.Vector;
       Settings : Epub.Conversion.Options; Cores : Epub.CPUs.Processor_Lists.Vector;

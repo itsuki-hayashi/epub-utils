@@ -1,0 +1,8 @@
+-- Upstream 26.0.0 checking/optimization profile, with assertions enabled.
+abstract project Xmlada_Epub_Shared is
+   Configuration := external ("EPUB_PLATFORM", "windows") & "/" &
+     external ("EPUB_XML_ROLE", "application") & "/" & external ("EPUB_BUILD", "development");
+   package Compiler is
+      for Default_Switches ("Ada") use ("-O2", "-gnatn", "-gnata", "-g");
+   end Compiler;
+end Xmlada_Epub_Shared;

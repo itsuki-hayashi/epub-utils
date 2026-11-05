@@ -9,8 +9,11 @@ executables = ["epub-v2h"]
 [[depends-on]]
 gnat_native = "=16.1.0"
 gprbuild = "=26.0.1"
-xmlada = "=26.0.0"
+xmlada_epub = "=26.0.0-epub.1"
 zipada = "=62.0.0"
 
 [gpr-set-externals]
 LIBRARY_TYPE = "static"
+
+[[pins]]
+xmlada_epub = { path = "vendor/xmlada_epub" }
